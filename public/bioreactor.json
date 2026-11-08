@@ -1,0 +1,16 @@
+{
+ "title": "Homunculus Bioreactor",
+ "checked": "Every reachable state checked (6 states, 8 steps). All 2 rules hold.",
+ "rules": [
+  {
+   "rule": "Every step can happen, and none is a dead end",
+   "says": "Each of the 5 states is reached from the start, and every path can still reach its end (lysis).",
+   "path": "Holds: all 5 reached, none stuck."
+  },
+  {
+   "rule": "Never catalyze without nutrients",
+   "says": "Crucible cannot initiate catalytic transmutation without $SNACC nutrient feedstock.",
+   "path": "Take away the has nutrients guard and it breaks in 3 steps: awaken culture, feed $SNACC, catalyze without nutrients."
+  }
+ ]
+}
