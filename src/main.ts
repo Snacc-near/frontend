@@ -239,6 +239,19 @@ class SnaccBiolabApp {
     document.getElementById("sim-burst")?.addEventListener("click", () => {
       this.simulateNutrientBurst();
     });
+
+    // Tinycharts Modal Dialog Trigger
+    const modal = document.getElementById("tinycharts-modal");
+    const openModal = () => {
+      if (modal) modal.hidden = false;
+      bioSound.playSporeAbsorb();
+    };
+    const closeModal = () => {
+      if (modal) modal.hidden = true;
+    };
+    document.getElementById("btn-open-tinycharts")?.addEventListener("click", openModal);
+    document.getElementById("btn-close-tinycharts")?.addEventListener("click", closeModal);
+    document.getElementById("tinycharts-backdrop")?.addEventListener("click", closeModal);
   }
 
   private applyTemperatureShift(nextTempMk: number, actor: string, reason: string): void {

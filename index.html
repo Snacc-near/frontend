@@ -62,8 +62,11 @@
               <button id="btn-render-mode" type="button" class="pill-btn" data-active="false">
                 2D SVG
               </button>
-              <a href="/tinycharts.html" target="_blank" rel="noopener noreferrer" class="pill-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; border:1px solid rgba(255,255,255,0.15);" title="Buka Statechart Hand-Drawn Tinycharts">
-                📜 Tinycharts Sheet ↗
+              <button id="btn-open-tinycharts" type="button" class="pill-btn" style="display:inline-flex; align-items:center; gap:4px; border:1px solid rgba(255,255,255,0.25);" title="Buka Statechart Hand-Drawn Tinycharts">
+                📜 Tinycharts Sheet
+              </button>
+              <a href="/tinycharts.html" target="_blank" rel="noopener noreferrer" class="pill-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; opacity:0.8;" title="Buka di Tab Baru">
+                ↗
               </a>
             </div>
           </div>
@@ -122,6 +125,26 @@
         </footer>
       </div>
     </div>
+
+    <!-- Tinycharts Interactive Modal Overlay (April Zhu Hand-Drawn Sheet) -->
+    <div id="tinycharts-modal" class="tinycharts-modal" hidden>
+      <div id="tinycharts-backdrop" class="tinycharts-modal__backdrop"></div>
+      <div class="tinycharts-modal__content">
+        <div class="tinycharts-modal__header">
+          <div class="tinycharts-modal__title">
+            <span>📜</span>
+            <span>Homunculus Bioreactor · Hand-Drawn Statechart</span>
+            <span class="badge">April Zhu · Tinycharts</span>
+          </div>
+          <div class="tinycharts-modal__actions">
+            <a href="/tinycharts.html" target="_blank" rel="noopener noreferrer" class="pill-btn">Tab Penuh ↗</a>
+            <button id="btn-close-tinycharts" type="button" class="pill-btn">✕ Tutup</button>
+          </div>
+        </div>
+        <iframe id="tinycharts-iframe" src="/tinycharts.html" title="Tinycharts Hand-Drawn Statechart" class="tinycharts-frame"></iframe>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

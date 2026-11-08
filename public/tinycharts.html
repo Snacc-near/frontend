@@ -106,7 +106,7 @@ text.tt[font-size="16"]{font-size:13px;letter-spacing:2.4px;text-transform:upper
 <nav id="tabs" aria-label="Sheets"></nav>
 <div id="stage"><div id="holder"><nav id="views" aria-label="Views"></nav><div id="frame"><div id="pin" hidden></div><svg id="sheet" viewBox="0 0 1400 1400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive hand-drawn isometric sheet"><g id="art"></g><rect id="tint" width="1400" height="1400" fill="#3b4a7a" opacity="0"/><g id="fx" pointer-events="none"></g></svg></div>
 <div id="panel"><div id="actions"></div><div id="status" aria-live="polite"></div><div id="hint"></div></div>
-<p id="credit">Field Notes · Snacc Homunculus Bioreactor · Inspired by <a href="https://april-zhu.com/tinycharts">Tinycharts</a> by April Zhu.</p></div></div>
+<p id="credit">Field Notes · Snacc Homunculus Bioreactor · Inspired by <a href="https://april-zhu.com/tinycharts">Tinycharts</a> by April Zhu. <span id="ruled">Kamus Angka: 310 mK homeostasis · 610 mK fever line.</span></p></div></div>
 <script>
 const SHEETS = {};
 /* Hand-drawn isometric sheet. Nothing here is an SVG wobble over clean art: every line is
@@ -954,7 +954,8 @@ function hive(x,y){ for (const [a,b] of [[4,4],[26,4],[4,26],[26,26]]) box(x+a,y
 function bucket(x,y,col = '#a9a7a7'){ cyl(x,y,0,10,15,col,{ink:1,cap:'#8c969e'}); const a = P(x-10,y+10,15), b = P(x+10,y-10,15); pen([a,[lerp(a[0],b[0],.5),a[1]-14],b],.7); }
 
 SHEETS.bioreactor = (() => {
-/* SNACC Homunculus Bioreactor · Interactive Hand-Drawn Statechart Sheet */
+/* SNACC Homunculus Bioreactor · Interactive Hand-Drawn 3D Statechart Sheet */
+/* Designed in the April Zhu Tinycharts / Copic wash isometric aesthetic */
 
 const ST = {
   dormant: 'dormant',
@@ -967,196 +968,309 @@ const ST = {
 function draw(seed) {
   begin(seed);
   OX = 700;
-  OY = 520;
+  OY = 500;
 
-  // Title block
+  // 1. Title Block (April Zhu Copic style)
   title('a flow machine · statechart', 'Homunculus Bioreactor');
-  out.push(`<text x="72" y="202" class="it" font-size="22" fill="${INK}" letter-spacing=".8">Crucible homeostasis, catalytic transmutation, and cell lysis</text>`);
+  out.push(`<text x="72" y="196" class="it" font-size="20" fill="${INK}" letter-spacing=".6">Crucible homeostasis, catalytic spore transmutation, and nutrient burst lysis</text>`);
 
-  // Main laboratory tiled platform
-  board(-220, -220, 440, 440, 24, '#ece7df', '#ccc3b0', 20);
+  // 2. Thick 3D Laboratory Slab (Stepped Strata with Bevelled Edge)
+  const slabW = 480, slabD = 480, slabH = 34;
+  board(-240, -240, slabW, slabD, slabH, '#efe9df', '#cbc0ab', 28);
 
-  // Isometric floor tile seams
-  const tileLines = [];
-  for (let k = -200; k <= 200; k += 50) {
-    tileLines.push([P(k, -200, 0), P(k, 200, 0)]);
-    tileLines.push([P(-200, k, 0), P(200, k, 0)]);
+  // Rock/masonry horizontal strata joint lines on vertical board rim
+  for (const k of [8, 17, 26]) {
+    rule([
+      [P(-240, 240, -k), P(240, 240, -k)],
+      [P(240, 240, -k), P(240, -240, -k)]
+    ], '#9f9686', 0.45);
   }
-  rule(tileLines, '#b7ae9d', 0.5);
 
-  // Cast shadows for structures
-  cast(-160, 40, 60, 60, 40);       // Hopper / feeder
-  castDisc(0, 0, 52, 120);          // Central crucible vat
-  cast(120, -60, 70, 70, 50);       // Transmutation condenser
-  cast(-140, -140, 60, 60, 36);     // Stasis incubator
-  cast(40, 140, 70, 70, 24);        // Lysis collection basin
+  // Laboratory floor tiled surface seams
+  const tiles = [];
+  for (let k = -200; k <= 200; k += 40) {
+    tiles.push([P(k, -200, 0), P(k, 200, 0)]);
+    tiles.push([P(-200, k, 0), P(200, k, 0)]);
+  }
+  rule(tiles, '#c0b6a3', 0.4);
+
+  // 3. Cast 3D Shadows
+  cast(-155, 45, 62, 62, 45);        // Hopper tower
+  castDisc(0, 0, 58, 130);           // Central crucible vat
+  cast(115, -65, 75, 75, 52);        // Transmutation desk & condenser
+  cast(-155, -155, 66, 66, 38);      // Stasis egg chamber
+  cast(55, 135, 76, 76, 26);         // Sump liquidation basin
+  cast(-20, -170, 48, 36, 40);       // Thermostat gauge mount
   layShades();
 
-  // 1. DORMANT STASIS INCUBATOR (data-state="dormant")
+  // -------------------------------------------------------------
+  // 4. DORMANT STASIS POD (data-state="dormant")
+  // -------------------------------------------------------------
   group('data-state="dormant"', () => {
-    const x = -130, y = -130;
-    box(x, y, 0, 54, 54, 18, { left: '#a9b2b8', top: '#ccd4d9', marks: false, ink: 1 });
-    lifeTurn(x + 27, y + 27, 18, [[20, 0], [22, 10], [16, 32], [4, 40]], '#d7e2e9', { cap: '#c3d1d9', wall: 1, sink: 4 });
-    // Dormant spore egg inside
-    const sp = P(x + 27, y + 27, 26);
-    const eb = blob(sp[0], sp[1], 10, 13);
-    flat(eb, '#8da27d');
-    rim(eb, 0.8, INK);
-    dot(sp[0] - 2, sp[1] - 2, 2, '#fdf9f1', 0.4);
-    tag(x + 5, y + 60, 44, 'STASIS');
+    const px = -140, py = -140;
+    // Stepped plinth
+    box(px, py, 0, 56, 56, 16, { left: '#9ca5ab', top: '#c9d1d6', marks: false, ink: 1 });
+    // Glass bell jar
+    lifeTurn(px + 28, py + 28, 16, [
+      [22, 0], [22, 12], [18, 30], [8, 42], [2, 46]
+    ], '#d7e3e9', { cap: '#becfd9', wall: 1.2, sink: 6, ink: 1 });
+
+    // Dormant Homunculus Spore Egg inside jar
+    const ep = P(px + 28, py + 28, 26);
+    const egg = blob(ep[0], ep[1], 12, 15);
+    flat(egg, '#8fa27f');
+    rim(egg, 1, INK);
+    dot(ep[0] - 2, ep[1] - 3, 2.5, '#fbfbfb', 0);
+    // Pulsing spore dots around egg
+    for (const [dx, dy] of [[-6, 4], [6, 2], [0, 8]]) {
+      dot(ep[0] + dx, ep[1] + dy, 1.4, '#b5c9a7', 0);
+    }
+
+    tag(px + 4, py + 62, 48, 'STASIS POD');
   });
 
-  // 2. FEEDING HOPPER & NUTRIENT PIPE
+  // -------------------------------------------------------------
+  // 5. FEEDING HOPPER & $SNACC SLURRY APPARATUS (Left Station)
+  // -------------------------------------------------------------
   {
-    const hx = -130, hy = 70;
-    box(hx - 10, hy - 10, 0, 50, 50, 20, { left: '#9ba1a5', top: '#bac0c4', marks: false, ink: 1 });
-    lifeHopper(hx + 15, hy + 15, 20, 16, 26, 36, '#86939c', '#819b71');
-    // Nutrient feed pipe into crucible
-    const p0 = P(hx + 15, hy + 15, 20);
-    const p1 = P(-50, 15, 40);
-    const p2 = P(-35, 10, 50);
-    lifePipe([p0, [p0[0] + 40, p0[1] - 10], p1, p2], 4, '#929fa9');
-    // Feed pellets in hopper
-    for (let i = 0; i < 7; i++) {
-      const q = P(hx + 7 + (i % 3) * 8, hy + 7 + Math.floor(i / 3) * 8, 54);
-      dot(q[0], q[1], 3, '#7da889', 0.6);
+    const hx = -135, hy = 65;
+    // Four structural support legs
+    for (const [lx, ly] of [[0, 0], [42, 0], [0, 42], [42, 42]]) {
+      box(hx + lx, hy + ly, 0, 5, 5, 24, { left: '#7e878e', marks: false, ink: 0.8 });
     }
+    // Hopper base plate
+    box(hx - 4, hy - 4, 24, 55, 55, 6, { left: '#8a9297', top: '#a3abb1', marks: false, ink: 1 });
+
+    // Conical sheet-metal hopper loaded with $SNACC nutrient pellets
+    lifeHopper(hx + 24, hy + 24, 30, 16, 26, 38, '#85929b', '#8aa57b');
+
+    // Pellet dots inside hopper mouth
+    for (let i = 0; i < 9; i++) {
+      const q = P(hx + 12 + (i % 3) * 8 + (rnd() - 0.5) * 4, hy + 12 + Math.floor(i / 3) * 8, 68);
+      dot(q[0], q[1], 2.8, '#6ca27c', 0.6);
+    }
+
+    // Overhead articulated copper/glass feed pipeline into crucible vat
+    const p0 = P(hx + 24, hy + 24, 28);
+    const p1 = [p0[0] + 36, p0[1] - 8];
+    const p2 = P(-44, 18, 48);
+    const p3 = P(-34, 12, 60);
+    lifePipe([p0, p1, p2, p3], 4.2, '#b59668');
+    // Glass viewing sight-glass section on pipe
+    dot(p1[0], p1[1], 4.5, '#86bb9c', 0.8);
   }
 
-  // 3. CENTRAL HOMUNCULUS CRUCIBLE VAT (data-state="homeostasis")
+  // -------------------------------------------------------------
+  // 6. CENTRAL CRUCIBLE & 3D HOMUNCULUS VAT (data-state="homeostasis")
+  // -------------------------------------------------------------
   group('data-state="homeostasis"', () => {
-    // Metal pedestal ring
-    cyl(0, 0, 0, 52, 16, '#757f88');
-    rule([[P(-46, 0, 8), P(46, 0, 8)]], INK, 0.5);
+    // Heavy flanged metal pedestal
+    cyl(0, 0, 0, 56, 18, '#656f78', { ink: 1.2, cap: '#7f8990' });
+    // Brass bolts along pedestal collar
+    for (let a = 0; a < 6.28; a += 0.8) {
+      const bp = P(48 * Math.cos(a), 48 * Math.sin(a), 12);
+      dot(bp[0], bp[1], 1.8, '#c3a36a', 0.4);
+    }
 
-    // Glass cylinder body (semi-transparent wash)
-    const glassProf = [[46, 0], [46, 105]];
-    lifeTurn(0, 0, 16, glassProf, '#dbe6ec', { cap: '#bacfda', wall: 1.5, sink: 12, ink: 1.1 });
+    // Glass cylinder body (semi-transparent wash with refraction sheen)
+    const vatH = 110, vatR = 48;
+    lifeTurn(0, 0, 18, [
+      [vatR, 0], [vatR, vatH]
+    ], '#dde7ed', { cap: '#b7cdd8', wall: 1.8, sink: 12, ink: 1.2 });
 
-    // Nutrient broth level (changes opacity/tint dynamically in state)
+    // Glass highlight reflections (curved vertical lines)
+    pen(lifeArc(0, 0, 30, vatR - 2, 210, 270), 0.9);
+    pen(lifeArc(0, 0, 80, vatR - 2, 210, 270), 0.9);
+
+    // Glowing nutrient broth liquid level inside vat
     group('id="broth"', () => {
-      cyl(0, 0, 16, 42, 75, '#98c5ad');
+      cyl(0, 0, 18, vatR - 4, 82, '#9ac6af', { ink: 0.8 });
     });
 
-    // Swimming Homunculus creature
+    // Carbonation & nutrient bubbles inside liquid
+    for (let i = 0; i < 8; i++) {
+      const bAng = rnd() * 6.28, bRad = 10 + rnd() * 26;
+      const bPt = P(bRad * Math.cos(bAng), bRad * Math.sin(bAng), 28 + rnd() * 60);
+      out.push(`<circle cx="${n1(bPt[0])}" cy="${n1(bPt[1])}" r="${n1(1.2 + rnd() * 2)}" fill="#fbfbfb" opacity=".6" stroke="${INK}" stroke-width=".3"/>`);
+    }
+
+    // 3D Homunculus Living Organism (floating in broth)
     group('id="homunculus"', () => {
-      const hc = P(0, 0, 56);
-      // Main soft body
-      const b = blob(hc[0], hc[1], 24, 20);
-      flat(b, '#e2b7c2');
-      rim(b, 1.2, INK);
-      // Big expressive eyes
-      dot(hc[0] - 7, hc[1] - 3, 3.2, INK, 0);
-      dot(hc[0] + 7, hc[1] - 3, 3.2, INK, 0);
-      dot(hc[0] - 8, hc[1] - 4, 1.2, '#fdf9f1', 0);
-      dot(hc[0] + 6, hc[1] - 4, 1.2, '#fdf9f1', 0);
-      // Little blush cheeks
-      dot(hc[0] - 11, hc[1] + 3, 2.5, '#d6826d', 0);
-      dot(hc[0] + 11, hc[1] + 3, 2.5, '#d6826d', 0);
-      // Tendrils/spores floating around it
-      for (const [dx, dy] of [[-18, -12], [18, -10], [-14, 14], [16, 12]]) {
-        dot(hc[0] + dx, hc[1] + dy, 2.2, '#a0cab4', 0.5);
+      const hc = P(0, 0, 62);
+
+      // Translucent cellular outer membrane halo
+      const halo = blob(hc[0], hc[1], 30, 25);
+      flat(halo, '#e7c4cc');
+      rim(halo, 0.7, '#c97c8f');
+
+      // Main biological body nucleus
+      const body = blob(hc[0], hc[1], 24, 20);
+      flat(body, '#d9a1af');
+      rim(body, 1.3, INK);
+
+      // Cute big alchemical eyes
+      dot(hc[0] - 8, hc[1] - 4, 3.5, INK, 0);
+      dot(hc[0] + 8, hc[1] - 4, 3.5, INK, 0);
+      // Eye reflection catchlights
+      dot(hc[0] - 9.2, hc[1] - 5.5, 1.4, '#fbfbfb', 0);
+      dot(hc[0] + 6.8, hc[1] - 5.5, 1.4, '#fbfbfb', 0);
+
+      // Rosy blushing cheeks
+      dot(hc[0] - 13, hc[1] + 3, 3, '#d37463', 0);
+      dot(hc[0] + 13, hc[1] + 3, 3, '#d37463', 0);
+
+      // Little mouth
+      pen([[hc[0] - 3, hc[1] + 3], [hc[0], hc[1] + 5], [hc[0] + 3, hc[1] + 3]], 1.1);
+
+      // Spores and mitochondria organelle tendrils waving around body
+      for (const [dx, dy] of [[-20, -14], [20, -12], [-18, 16], [18, 14], [0, -22]]) {
+        dot(hc[0] + dx, hc[1] + dy, 2.5, '#8dbfa5', 0.5);
       }
     });
 
-    // Top metal dome & seal ring
-    lifeTurn(0, 0, 121, [[48, 0], [46, 10], [28, 22], [14, 30]], '#757f88', { cap: '#8c949a', ink: 1.1 });
+    // Domed metal crucible lid with flanged seal & pressure collar
+    lifeTurn(0, 0, 18 + vatH, [
+      [50, 0], [48, 10], [32, 22], [16, 32], [14, 36]
+    ], '#717c85', { cap: '#8c949a', ink: 1.2 });
   });
 
-  // 4. THERMAL FEVER STEAM VENT & OVERHEAT INDICATOR (data-state="fever")
+  // -------------------------------------------------------------
+  // 7. THERMAL FEVER STEAM VENT (>610 mK) (data-state="fever")
+  // -------------------------------------------------------------
   group('data-state="fever"', () => {
-    // Chimney / pressure valve on dome
-    lifeTurn(0, 0, 151, [[8, 0], [8, 18], [12, 22]], '#a66c5f', { cap: '#cd7364' });
-    // Thermal warning wisps / steam
-    const vt = P(0, 0, 175);
+    // High-temperature relief chimney on crucible dome
+    lifeTurn(0, 0, 164, [
+      [8, 0], [8, 16], [13, 20]
+    ], '#ab6355', { cap: '#cd7364', ink: 1 });
+
+    // Animated thermal wisps and steam venting
+    const vp = P(0, 0, 186);
     for (let i = 0; i < 4; i++) {
-      out.push(`<g class="fever-wisp" data-x="${n1(vt[0])}" data-y="${n1(vt[1])}"><path d="M${n1(vt[0] - 4 + i * 3)} ${n1(vt[1])}q6-12 -2-24t8-20" fill="none" stroke="#cd7364" stroke-width="1.8" stroke-linecap="round"/></g>`);
+      out.push(`<g class="fever-wisp" data-x="${n1(vp[0])}" data-y="${n1(vp[1])}"><path d="M${n1(vp[0] - 5 + i * 3.5)} ${n1(vp[1])}q6-14 -3-26t7-24" fill="none" stroke="#cd7364" stroke-width="2" stroke-linecap="round"/></g>`);
     }
   });
 
-  // 5. TRANSMUTATION CONDENSER COIL & FLASK (data-state="transmuting")
+  // -------------------------------------------------------------
+  // 8. CATALYTIC TRANSMUTATION CONDENSER (Right Station) (data-state="transmuting")
+  // -------------------------------------------------------------
   group('data-state="transmuting"', () => {
-    const cx = 140, cy = -40;
-    // Wooden desk for apparatus
-    box(cx - 25, cy - 25, 0, 65, 65, 42, { left: '#ae936b', top: '#c1a67b', marks: false, ink: 1 });
+    const cx = 135, cy = -45;
+    // Wooden alchemical laboratory bench
+    box(cx - 28, cy - 28, 0, 72, 72, 44, { left: '#b19163', top: '#bda072', marks: false, ink: 1.1 });
+    // Wood grain detail
+    rule([
+      [P(cx - 24, cy - 10, 44), P(cx + 38, cy - 10, 44)],
+      [P(cx - 24, cy + 14, 44), P(cx + 38, cy + 14, 44)]
+    ], '#ad854d', 0.5);
 
-    // Glass condenser column
-    lifeTurn(cx + 8, cy + 8, 42, [[14, 0], [14, 48], [10, 56]], '#d8e4ea', { cap: '#fdf9f1', wall: 1 });
+    // Vertical glass condenser jacket column
+    lifeTurn(cx + 10, cy + 10, 44, [
+      [15, 0], [15, 52], [11, 60]
+    ], '#dae5eb', { cap: '#fdf9f1', wall: 1.2, ink: 1 });
 
-    // Spiral cooling pipe connecting crucible to condenser
-    const pipeStart = P(20, -10, 130);
-    const pipeMid = P(80, -20, 110);
-    const pipeEnd = P(cx + 8, cy + 8, 90);
-    lifePipe([pipeStart, pipeMid, pipeEnd], 3.2, '#c0a266');
+    // Spiral cooling coil connecting crucible to condenser
+    const pipe0 = P(18, -12, 138);
+    const pipe1 = P(75, -24, 118);
+    const pipe2 = P(cx + 10, cy + 10, 96);
+    lifePipe([pipe0, pipe1, pipe2], 3.4, '#c3a263');
 
-    // Collection flask with elixir
-    lifeTurn(cx + 25, cy + 25, 42, [[10, 0], [18, 12], [8, 28]], '#fdf9f1', { cap: '#e2b34d', wall: 1 });
-    const fl = P(cx + 25, cy + 25, 48);
-    dot(fl[0], fl[1], 7, '#e2b34d', 0);
+    // Alchemical distillate beaker collecting golden Elixir
+    lifeTurn(cx + 26, cy + 26, 44, [
+      [10, 0], [18, 14], [8, 30]
+    ], '#fbfbfb', { cap: '#e2b34d', wall: 1.2 });
+
+    const fl = P(cx + 26, cy + 26, 52);
+    dot(fl[0], fl[1], 7.5, '#e2b34d', 0.8);
   });
 
-  // 6. CELL LYSIS SUMP & NUTRIENT BURST BASIN (data-state="lysis")
+  // -------------------------------------------------------------
+  // 9. CELL LYSIS SUMP & NUTRIENT BURST VAULT (Foreground) (data-state="lysis")
+  // -------------------------------------------------------------
   group('data-state="lysis"', () => {
-    const lx = 70, ly = 130;
-    // Reinforced octagonal sump pit
-    box(lx - 25, ly - 25, 0, 65, 65, 16, { left: '#6f6c69', top: '#8b8884', marks: false, ink: 1.2 });
+    const lx = 75, ly = 135;
+    // Sunken octagonal drainage pit with heavy concrete rim
+    box(lx - 26, ly - 26, 0, 72, 72, 18, { left: '#696765', top: '#868480', marks: false, ink: 1.3 });
 
-    // Heavy brass drainage gate valve
-    lifeTurn(lx + 8, ly + 8, 16, [[16, 0], [16, 14]], '#a48f64', { cap: '#b5a276' });
-    const wh = P(lx + 8, ly + 8, 30);
-    dot(wh[0], wh[1], 12, '#b5a276', 1.2);
-    pen([[wh[0] - 10, wh[1]], [wh[0] + 10, wh[1]]], 1.2);
-    pen([[wh[0], wh[1] - 8], [wh[0], wh[1] + 8]], 1.2);
-
-    // Hazard stripes on sump rim
-    for (let s = -20; s <= 20; s += 8) {
-      pen([P(lx + s, ly + 25, 16), P(lx + s + 6, ly + 25, 0)], 1.2);
+    // Yellow & black hazard stripes around the sump rim
+    for (let s = -22; s <= 22; s += 8) {
+      pen([P(lx + s, ly + 26, 18), P(lx + s + 6, ly + 26, 0)], 1.4);
     }
 
-    // Golden Nutrient Burst crystals collected in basin
-    for (const [bx, by] of [[-10, -8], [6, -6], [-4, 6], [8, 8], [0, 0]]) {
-      const cp = P(lx + 8 + bx, ly + 8 + by, 18);
-      dot(cp[0], cp[1], 4, '#e2b34d', 0.8);
+    // Heavy brass spillway gate-valve wheel
+    lifeTurn(lx + 10, ly + 10, 18, [
+      [16, 0], [16, 14]
+    ], '#a68e5b', { cap: '#b5a276', ink: 1 });
+    const wh = P(lx + 10, ly + 10, 32);
+    dot(wh[0], wh[1], 12.5, '#b5a276', 1.3);
+    pen([[wh[0] - 11, wh[1]], [wh[0] + 11, wh[1]]], 1.3);
+    pen([[wh[0], wh[1] - 9], [wh[0], wh[1] + 9]], 1.3);
+
+    // Glistening golden Nutrient Burst crystal shards (2,000–3,000 bps)
+    for (const [bx, by] of [[-10, -8], [7, -6], [-4, 7], [9, 9], [0, 1]]) {
+      const cp = P(lx + 10 + bx, ly + 10 + by, 20);
+      dot(cp[0], cp[1], 4.2, '#e2b34d', 0.8);
+      // Small glint dot
+      dot(cp[0] - 1, cp[1] - 1, 1.2, '#fbfbfb', 0);
     }
   });
 
-  // 7. ISOMETRIC THERMOSTAT GAUGE (Crucible Temperature)
+  // -------------------------------------------------------------
+  // 10. CRUCIBLE THERMOSTAT GAUGE (Back-Center)
+  // -------------------------------------------------------------
   {
-    const gx = 0, gy = -160, gz = 30;
-    box(gx - 20, gy - 15, 0, 40, 30, gz, { left: '#798085', top: '#8f969a', marks: false, ink: 1 });
-    // Round gauge dial facing sheet
-    const gp = P(gx, gy, gz + 20);
-    const R = 28;
-    const gd = blob(gp[0], gp[1], R, R * 0.85);
+    const gx = -2, gy = -165, gz = 32;
+    // Heavy brass pedestal & casing
+    box(gx - 22, gy - 16, 0, 44, 32, gz, { left: '#757e84', top: '#899196', marks: false, ink: 1.1 });
+
+    // Round gauge dial face facing the viewer
+    const gp = P(gx, gy, gz + 22);
+    const R = 32;
+    const gd = blob(gp[0], gp[1], R, R * 0.88);
     flat(gd, '#fdf9f1');
-    rim(gd, 1.4, INK);
+    rim(gd, 1.5, INK);
 
-    // Colored thermal arcs
-    ticks(gp[0], gp[1], R - 6, -3.14, 0, 7, 5);
-    out.push(`<text x="${n1(gp[0] - 18)}" y="${n1(gp[1] + 12)}" class="cap" font-size="9" fill="#579a79">310 mK</text>`);
-    out.push(`<text x="${n1(gp[0] + 4)}" y="${n1(gp[1] + 12)}" class="cap" font-size="9" fill="#ba5f52">610 mK</text>`);
+    // Colored thermal zone indicator arcs
+    ticks(gp[0], gp[1], R - 6, -3.14, 0, 8, 6);
+    out.push(`<text x="${n1(gp[0] - 22)}" y="${n1(gp[1] + 14)}" class="cap" font-size="9.5" fill="#579a79">310 mK</text>`);
+    out.push(`<text x="${n1(gp[0] + 5)}" y="${n1(gp[1] + 14)}" class="cap" font-size="9.5" fill="#be5c4e">610 mK</text>`);
 
-    // Needle element moved dynamically in tick
-    out.push(`<g id="needle" transform="translate(${n1(gp[0])}, ${n1(gp[1])})"><line x1="0" y1="0" x2="0" y2="-18" stroke="${RED}" stroke-width="2" stroke-linecap="round"/><circle cx="0" cy="0" r="2.8" fill="${INK}"/></g>`);
+    // Needle element rotated in tick()
+    out.push(`<g id="needle" transform="translate(${n1(gp[0])}, ${n1(gp[1])})"><line x1="0" y1="0" x2="0" y2="-20" stroke="${RED}" stroke-width="2.2" stroke-linecap="round"/><circle cx="0" cy="0" r="3.2" fill="${INK}"/></g>`);
   }
 
-  // 8. LAB TECHNICIAN (ALCHEMIST OBSERVER)
-  who(-150, 160, {
-    hair: 'cap',
-    cap: PAL.sky,
-    shirt: PAL.sage,
+  // -------------------------------------------------------------
+  // 11. CHARACTERS (April Zhu Pear Figure Doll)
+  // -------------------------------------------------------------
+  // Arya: Chief Bio-Engineer
+  who(-155, 160, {
+    hair: 'bun',
+    hairCol: '#382e2a',
+    shirt: PAL.sky,
     apron: '#fdf9f1',
     arm: 'wave',
     look: 1,
-    say: 'Crucible must stay close to 310 mK! Fever above 610 mK will damage the strain.'
+    say: 'Crucible must stay close to 310 mK! Fever above 610 mK will trigger thermal stress!'
   });
 
-  // 9. MARGIN LABELS WITH LEADER LINES
-  label(72, 420, 'NUTRIENT HOPPER', 'Feeds $SNACC pellets to sustain basal metabolic rate (BMR)', [-130, 70, 36], 'start');
-  label(72, 720, 'GLASS CRUCIBLE', 'Regulates living culture in warm 310 mK nutrient broth', [0, 0, 70], 'start');
-  label(1020, 240, 'CRUCIBLE THERMOSTAT', '310 mK homeostasis · 610 mK fever threshold', [0, -160, 45], 'end');
-  label(1020, 480, 'TRANSMUTATION COIL', 'Catalyzes spores into high-potency elixirs', [148, -32, 56], 'end');
-  label(1020, 860, 'NUTRIENT BURST SUMP', 'Disburses 2,000–3,000 bps liquidation bounty', [78, 138, 20], 'end');
+  // Assistant Technician by the hopper
+  who(-175, 40, {
+    size: 0.8,
+    hair: 'cap',
+    cap: PAL.gold,
+    shirt: PAL.sage,
+    arm: 'front',
+    look: 1,
+    say: '$SNACC pellets loaded in the hopper, ready for feeding.'
+  });
+
+  // -------------------------------------------------------------
+  // 12. MARGIN CALLOUT LABELS WITH LEADER LINES
+  // -------------------------------------------------------------
+  label(72, 400, 'FEEDING HOPPER', 'Feeds $SNACC pellets to sustain basal metabolic rate (BMR)', [-135, 65, 42], 'start');
+  label(72, 700, 'GLASS CRUCIBLE', 'Houses living homunculus in 310 mK regulated broth', [0, 0, 72], 'start');
+  label(1020, 220, 'CRUCIBLE THERMOSTAT', '310 mK homeostasis · 610 mK fever line', [-2, -165, 50], 'end');
+  label(1020, 460, 'TRANSMUTATION COIL', 'Catalyzes spores into rare alchemical elixirs', [145, -35, 62], 'end');
+  label(1020, 840, 'NUTRIENT BURST SUMP', 'Liquidates cell into 2,000–3,000 bps bounty', [85, 145, 24], 'end');
 
   // Footnote
   out.push(`<text x="72" y="1360" class="it" font-size="15" fill="#8c806e">SNACC Protocol v0.1 · Kamus Angka: 310 mK homeostasis, 610 mK fever line, 2000–3000 bps burst bounty · Hand-drawn statechart</text>`);
@@ -1187,7 +1301,7 @@ function init(ctx) {
       if (at === ST.fever) broth.setAttribute('fill', '#d58775');
       else if (at === ST.transmuting) broth.setAttribute('fill', '#d8ba7c');
       else if (at === ST.lysis) broth.setAttribute('fill', '#9d9994');
-      else if (at === ST.homeostasis) broth.setAttribute('fill', '#98c5ad');
+      else if (at === ST.homeostasis) broth.setAttribute('fill', '#9ac6af');
       else broth.setAttribute('fill', '#b9d1c5');
     }
   };
@@ -1339,7 +1453,7 @@ const ctx = {
 };
 function open(key,keepHash){
   aim = null; camZ = 1; camX = camY = 700; $('sheet').style.transform = ''; current?.stop?.(); ctx.clear(); $('fx').replaceChildren(); $('tint').style.opacity = 0; ctx.say(''); ctx.hint('');
-  $('ruled').hidden = !['farm','coffee','metro','plants','saturday'].includes(key); whole = WHOLE.has(key); const fam = {coffee:'coffee',brew:'tea',pottery:'pottery',bakery:'bakery'}[HOME[key]] || ''; document.body.dataset.fam = fam; TINT = TINTS[fam] || null; active = SHEETS[key]; active.draw(seedNow); mirror(FLIPPED.has(key)); fitPills(); current = active.init(ctx) || {}; current.key = key;
+  if ($('ruled')) $('ruled').hidden = !['farm','coffee','metro','plants','saturday'].includes(key); whole = WHOLE.has(key); const fam = {coffee:'coffee',brew:'tea',pottery:'pottery',bakery:'bakery'}[HOME[key]] || ''; document.body.dataset.fam = fam; TINT = TINTS[fam] || null; active = SHEETS[key]; active.draw(seedNow); mirror(FLIPPED.has(key)); fitPills(); current = active.init(ctx) || {}; current.key = key;
   const home = HOME[key] || key; document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-current',b.dataset.key === home ? 'page' : 'false'));
   $('views').replaceChildren(...(VIEWS[home] || []).map(([k,n]) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `<svg viewBox="0 0 36 36" aria-hidden="true" stroke="#2f261e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICON[n]}</svg><b>${n}</b><small>${NOTE[n]}</small>`; b.setAttribute('aria-current',k === key ? 'page' : 'false'); b.onclick = () => open(k); return b; }));
   if (!keepHash) try { history.replaceState(null,'','#'+key); } catch {}
