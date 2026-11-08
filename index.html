@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Snacc ($SNACC) — 3D Living Cell & Crucible Telemetry Console</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app" class="biolab-shell" data-zone="Goldilocks" data-skin="biolab" data-render="3d">
+      <!-- Panggung 3D Akuarium Sel Hidup (Visual ≥ 65% sesuai Mandat FE-M0) -->
+      <div id="crucible-stage" class="crucible-stage" aria-label="Interactive 3D Homunculus Strain Bioreactor"></div>
+
+      <!-- Fallback 2D NEP-177 Dynamic SVG (UI-132 Aksesibilitas) -->
+      <div id="fallback-2d" class="fallback-2d-stage" aria-hidden="true">
+        <svg class="fallback-svg-vessel" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="160" cy="160" r="136" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="6 4" />
+          <circle cx="160" cy="160" r="96" fill="#064e3b" fill-opacity="0.55" stroke="#34d399" stroke-width="3" />
+          <circle cx="160" cy="160" r="38" fill="#10b981" />
+          <text x="160" y="165" text-anchor="middle" fill="#020810" font-family="monospace" font-size="14" font-weight="bold">
+            s-1.snacc
+          </text>
+        </svg>
+      </div>
+
+      <!-- HUD Perimeter Diegetic (Caption ≤ 35%, Tanpa Kartu Kotak M5) -->
+      <div class="hud-perimeter">
+        <header class="hud-top">
+          <div class="brand-cluster">
+            <div class="brand-cluster__row">
+              <span class="brand-crest">$SNACC · M6</span>
+              <h1 class="brand-title">THE LIVING CRUCIBLE</h1>
+            </div>
+            <p class="brand-subtitle">
+              Drag to orbit 360° · Click floating 3D spores to feed Strain #1 · Autonomous Central Bank
+            </p>
+          </div>
+
+          <div class="hud-top__controls">
+            <!-- Tempat Mount UI-117 Nutrient Burst Global Badge -->
+            <div id="mount-burst-badge"></div>
+
+            <!-- ADR-31 Dual-Skin Switch -->
+            <div class="pill-switch" role="group" aria-label="ADR-31 Skin Mode">
+              <button id="btn-skin-biolab" type="button" class="pill-btn" data-active="true">
+                Bio-Lab 3D
+              </button>
+              <button id="btn-skin-fintech" type="button" class="pill-btn" data-active="false">
+                FinTech Mode
+              </button>
+            </div>
+
+            <!-- Toggle Audio ZzFX & 2D Fallback -->
+            <div class="pill-switch" role="group" aria-label="Simulation & Accessibility Controls">
+              <button id="btn-sound" type="button" class="pill-btn" data-active="false">
+                SFX Off
+              </button>
+              <button id="btn-render-mode" type="button" class="pill-btn" data-active="false">
+                2D SVG
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div class="hud-middle">
+          <!-- Tempat Mount UI-119 Threshold Breach Log ("Siapa Menabrak Ambang") -->
+          <div id="mount-breach-log"></div>
+
+          <!-- KPI Terbuka & Dial Organel $ATP (EN-119) -->
+          <div class="organelle-cluster">
+            <div class="open-kpi">
+              <span class="open-kpi__label">STRAIN #1 VITALITY · s-1.snacc-v001.testnet</span>
+              <span id="kpi-vitality" class="open-kpi__value">8,500 / 10,000</span>
+            </div>
+            <div class="open-kpi">
+              <span class="open-kpi__label">INTERNAL $ATP ENERGY (NON-TRANSFERABLE)</span>
+              <span id="kpi-atp" class="open-kpi__value">1,420 ATP</span>
+            </div>
+            <div class="organelle-pills" role="group" aria-label="Allocate ATP to 3D Organelles">
+              <button id="btn-org-mito" type="button" class="organelle-pill">
+                + Mitokondria Lv.2 (+20% ATP)
+              </button>
+              <button id="btn-org-nukleus" type="button" class="organelle-pill">
+                + Nukleus Lv.1 (+10% Yield)
+              </button>
+              <button id="btn-org-lisosom" type="button" class="organelle-pill">
+                + Lisosom Lv.1 (-10% BMR)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <footer class="hud-bottom">
+          <!-- Tempat Mount UI-118 Zone Banner & Spektrum Termostat -->
+          <div id="mount-zone-banner"></div>
+
+          <!-- Deck Simulasi Interaktif untuk Juri & Demo 30 Detik -->
+          <div class="action-deck">
+            <span class="action-deck__hint">INTERACTIVE CRUCIBLE TRIGGERS (&lt;2s TELEMETRY SLA)</span>
+            <div class="action-deck__pills">
+              <button id="sim-hypo" type="button" class="pill-btn">
+                Cryo Cool (575 mK)
+              </button>
+              <button id="sim-gold" type="button" class="pill-btn">
+                Goldilocks (605 mK)
+              </button>
+              <button id="sim-fever" type="button" class="pill-btn">
+                Calcination Fever (632 mK)
+              </button>
+              <button id="sim-burst" type="button" class="pill-btn" data-active="true">
+                Harvest Starving #3 (Burst!)
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,756 @@
+/**
+ * Sistem Token Visual Snacc Biolab 3D (M6 biolab-ui — UI-117..119).
+ * Mengacu pada FE-M0 (Visual ≥ 65%, Caption ≤ 35%, tanpa kartu kotak M5),
+ * DS-00 (pill controls, angka besar terbuka, timeline bercabang DS-07),
+ * dan FE-01 (100% CSP style-src 'self' tanpa inline style).
+ */
+
+:root {
+  --bg-abyss: #040811;
+  --bg-deep: #081221;
+  --ink-primary: #f1f7fb;
+  --ink-secondary: #9cb3c9;
+  --ink-muted: #5e768f;
+
+  --accent-active: #10b981;
+  --accent-glow: rgba(16, 185, 129, 0.36);
+  --zone-hypo: #06b6d4;
+  --zone-gold: #10b981;
+  --zone-fever: #f97316;
+  --lysis-crimson: #ff2255;
+
+  --pill-glass: rgba(8, 18, 33, 0.68);
+  --pill-border: rgba(156, 179, 201, 0.22);
+
+  --font-display: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", "SFMono-Regular", monospace;
+
+  /* Kurva motionmaxxing (FE-26) */
+  --ease-soft-land: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap-settle: cubic-bezier(0.12, 0.98, 0.24, 1);
+  --ease-pop-over: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-abyss);
+  color: var(--ink-primary);
+  font-family: var(--font-display);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Mode Zona Global & Dual-Skin ADR-31 */
+.biolab-shell[data-zone="Hypothermia"] {
+  --accent-active: var(--zone-hypo);
+  --accent-glow: rgba(6, 182, 212, 0.38);
+}
+
+.biolab-shell[data-zone="Goldilocks"] {
+  --accent-active: var(--zone-gold);
+  --accent-glow: rgba(16, 185, 129, 0.36);
+}
+
+.biolab-shell[data-zone="Fever"] {
+  --accent-active: var(--zone-fever);
+  --accent-glow: rgba(249, 115, 22, 0.42);
+}
+
+.biolab-shell {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  background:
+    radial-gradient(circle at 54% 48%, var(--accent-glow) 0%, transparent 52%),
+    radial-gradient(ellipse at 50% 100%, #0b192e 0%, var(--bg-abyss) 78%);
+  transition: background 540ms var(--ease-soft-land);
+}
+
+/* Lapisan Akuarium 3D (>70% Luas Layar — Aturan M3) */
+.crucible-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  z-index: 1;
+}
+
+.crucible-stage:active {
+  cursor: grabbing;
+}
+
+.crucible-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Fallback 2D Live NEP-177 SVG (UI-132 Aksesibilitas) */
+.fallback-2d-stage {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.biolab-shell[data-render="2d-fallback"] .fallback-2d-stage {
+  display: flex;
+}
+
+.biolab-shell[data-render="2d-fallback"] .crucible-stage {
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.fallback-svg-vessel {
+  width: min(360px, 62vw);
+  height: auto;
+  filter: drop-shadow(0 0 32px var(--accent-glow));
+}
+
+/* HUD Perimeter Terbuka (Caption ≤ 35% Viewport, Tanpa Kartu Kotak M5) */
+.hud-perimeter {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 20px 28px;
+}
+
+.hud-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand-cluster {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.brand-cluster__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-crest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--accent-active);
+  color: #020810;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  transition: background-color 380ms var(--ease-soft-land);
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink-primary);
+}
+
+.brand-subtitle {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  max-width: 44ch;
+}
+
+.hud-top__controls {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Semua Kontrol Berbentuk Pill (Aturan DS-00) */
+.pill-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--pill-glass);
+  border: 1px solid var(--pill-border);
+  backdrop-filter: blur(14px);
+}
+
+.pill-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background-color 220ms var(--ease-soft-land),
+    color 220ms var(--ease-soft-land),
+    transform 160ms var(--ease-pop-over);
+}
+
+.pill-btn:hover {
+  color: var(--ink-primary);
+}
+
+.pill-btn:active {
+  transform: scale(0.96);
+}
+
+.pill-btn[data-active="true"] {
+  background: var(--accent-active);
+  color: #030914;
+}
+
+/* ==========================================================================
+   UI-117: Nutrient Burst Global Pill Badge
+   ========================================================================== */
+.burst-pill {
+  pointer-events: auto;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--pill-glass);
+  border: 1px solid var(--pill-border);
+  backdrop-filter: blur(16px);
+  color: var(--ink-primary);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 320ms var(--ease-soft-land),
+    box-shadow 320ms var(--ease-soft-land),
+    transform 380ms var(--ease-pop-over);
+}
+
+.burst-pill[data-state="active"] {
+  border-color: #10b981;
+  box-shadow: 0 0 28px rgba(16, 185, 129, 0.38);
+}
+
+.burst-pill--pop {
+  animation: burstSpringPop 520ms var(--ease-pop-over);
+}
+
+@keyframes burstSpringPop {
+  0% {
+    transform: scale(0.84);
+  }
+  65% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.burst-pill__beacon {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  flex-shrink: 0;
+}
+
+.burst-pill[data-state="active"] .burst-pill__beacon {
+  background: #10b981;
+  box-shadow: 0 0 12px #10b981;
+  animation: beaconPulse 1.5s infinite alternate;
+}
+
+@keyframes beaconPulse {
+  from {
+    transform: scale(0.88);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.22);
+    opacity: 1;
+  }
+}
+
+.burst-pill__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.burst-pill__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.burst-pill__tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-secondary);
+}
+
+.burst-pill__discount {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: #34d399;
+}
+
+.burst-pill[data-state="standby"] .burst-pill__discount {
+  color: var(--ink-muted);
+}
+
+.burst-pill__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-secondary);
+}
+
+.burst-pill__donor {
+  font-family: var(--font-mono);
+  color: #a7f3d0;
+}
+
+/* ==========================================================================
+   Area Tengah: Garis Waktu Ambang (Kiri) & Dial Organel (Kanan)
+   ========================================================================== */
+.hud-middle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  pointer-events: none;
+}
+
+/* UI-119: Threshold Breach Telemetry Rail (Garis Waktu Terbuka DS-07) */
+.breach-rail {
+  pointer-events: auto;
+  width: min(370px, 34vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.breach-rail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.breach-rail__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breach-rail__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-active);
+  box-shadow: 0 0 8px var(--accent-active);
+}
+
+.breach-rail__title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-secondary);
+}
+
+.breach-rail__sla {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+}
+
+.breach-rail__timeline {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 2px solid rgba(156, 179, 201, 0.22);
+  padding-left: 14px;
+}
+
+.breach-node {
+  position: relative;
+}
+
+.breach-node::before {
+  content: "";
+  position: absolute;
+  left: -19px;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-active);
+  transition: transform 220ms var(--ease-pop-over);
+}
+
+.breach-node[data-kind="strain_liquidated"]::before {
+  background: var(--lysis-crimson);
+}
+
+.breach-node[data-kind="zone_changed"]::before {
+  background: var(--zone-fever);
+}
+
+.breach-node__btn {
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: var(--ink-primary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+  transition: transform 180ms var(--ease-soft-land);
+}
+
+.breach-node__btn:hover {
+  transform: translateX(4px);
+}
+
+.breach-node__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.breach-node__badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pill-glass);
+  border: 1px solid var(--pill-border);
+  color: var(--accent-active);
+}
+
+.breach-node__actor {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.breach-node__delta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-secondary);
+}
+
+.breach-node__latency {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #34d399;
+  margin-left: auto;
+}
+
+.breach-node__summary {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  line-height: 1.35;
+}
+
+/* KPI Terbuka & Kontrol Organel $ATP (Kanan — Tanpa Kotak Kartu DS-01) */
+.organelle-cluster {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.open-kpi {
+  text-align: right;
+}
+
+.open-kpi__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-secondary);
+}
+
+.open-kpi__value {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink-primary);
+}
+
+.organelle-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.organelle-pill {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--pill-glass);
+  border: 1px solid var(--pill-border);
+  backdrop-filter: blur(12px);
+  color: var(--ink-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    border-color 220ms var(--ease-soft-land),
+    transform 160ms var(--ease-pop-over);
+}
+
+.organelle-pill:hover {
+  border-color: var(--accent-active);
+  transform: translateX(-3px);
+}
+
+/* ==========================================================================
+   HUD Bawah: UI-118 Zone Banner & Spektrum Termostat + Simulator
+   ========================================================================== */
+.hud-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.zone-instrument {
+  pointer-events: auto;
+  flex: 1 1 520px;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zone-instrument__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.zone-instrument__pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zone-pill,
+.rate-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--pill-glass);
+  border: 1px solid var(--accent-active);
+  color: var(--accent-active);
+  backdrop-filter: blur(12px);
+}
+
+.zone-instrument__readout {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.zone-instrument__temp {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink-primary);
+}
+
+.zone-instrument__epoch {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+.thermal-spectrum {
+  position: relative;
+  padding: 6px 0 16px;
+}
+
+.thermal-spectrum__bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--zone-hypo) 0%,
+    var(--zone-hypo) 48%,
+    var(--zone-gold) 50%,
+    var(--zone-gold) 53%,
+    var(--zone-fever) 56%,
+    #dc2626 100%
+  );
+}
+
+.thermal-spectrum__needle {
+  position: absolute;
+  top: -5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink-primary);
+  border: 3px solid var(--bg-abyss);
+  box-shadow: 0 0 14px var(--ink-primary);
+  transform: translateX(-50%);
+  left: 50%;
+  transition: left 380ms var(--ease-snap-settle);
+}
+
+/* Posisi Jarum Tanpa Inline Style (Patuh FE-01 CSP style-src 'self') */
+.thermal-spectrum__needle[data-pos="0"] { left: 4%; }
+.thermal-spectrum__needle[data-pos="5"] { left: 9%; }
+.thermal-spectrum__needle[data-pos="10"] { left: 14%; }
+.thermal-spectrum__needle[data-pos="15"] { left: 18%; }
+.thermal-spectrum__needle[data-pos="20"] { left: 22%; }
+.thermal-spectrum__needle[data-pos="25"] { left: 26%; }
+.thermal-spectrum__needle[data-pos="30"] { left: 31%; }
+.thermal-spectrum__needle[data-pos="35"] { left: 36%; }
+.thermal-spectrum__needle[data-pos="40"] { left: 41%; }
+.thermal-spectrum__needle[data-pos="45"] { left: 46%; }
+.thermal-spectrum__needle[data-pos="50"] { left: 51%; }
+.thermal-spectrum__needle[data-pos="55"] { left: 56%; }
+.thermal-spectrum__needle[data-pos="60"] { left: 62%; }
+.thermal-spectrum__needle[data-pos="65"] { left: 68%; }
+.thermal-spectrum__needle[data-pos="70"] { left: 74%; }
+.thermal-spectrum__needle[data-pos="75"] { left: 80%; }
+.thermal-spectrum__needle[data-pos="80"] { left: 85%; }
+.thermal-spectrum__needle[data-pos="85"] { left: 90%; }
+.thermal-spectrum__needle[data-pos="90"] { left: 93%; }
+.thermal-spectrum__needle[data-pos="95"] { left: 96%; }
+.thermal-spectrum__needle[data-pos="100"] { left: 98%; }
+
+.thermal-spectrum__tick {
+  position: absolute;
+  bottom: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-secondary);
+}
+
+.thermal-spectrum__tick--hypo {
+  left: 44%;
+}
+
+.thermal-spectrum__tick--fever {
+  left: 55%;
+}
+
+.zone-instrument__headline {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+
+.zone-instrument__rule {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  max-width: 68ch;
+}
+
+.action-deck {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.action-deck__hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-secondary);
+}
+
+.action-deck__pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Responsif Mobile (FE-64 / DS-MOB) */
+@media (max-width: 860px) {
+  .hud-perimeter {
+    padding: 14px 16px;
+  }
+  .breach-rail {
+    width: 100%;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .hud-middle {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .organelle-cluster {
+    display: none;
+  }
+  .zone-instrument__temp {
+    font-size: 24px;
+  }
+}
