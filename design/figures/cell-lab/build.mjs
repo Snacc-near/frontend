@@ -63,7 +63,7 @@ for (const it of heroItems) it.key = keyOf(HR, it.name, it.key);
 heroItems.sort((a, b) => a.key - b.key);
 emit(dep(F.MC[0], F.MC[1], 0), heroItems.map((i) => i.svg).join("") + `<g data-dyn="hero-tokens"></g>`, "hero");
 for (const it of rigItems) emit(keyOf(R, it.name, it.key), it.svg, it.name);
-for (const l of layers) if (l.name === "stage" || l.name === "clamps" || l.name === "clamps.back") l.key = keyOf(R, l.name, l.key);
+for (const l of layers) if (l.name === "stage" || l.name === "stage.steps" || l.name === "clamps" || l.name === "clamps.back") l.key = keyOf(R, l.name, l.key);
 emit(1e5, `<g data-dyn="tokens"></g>`, "tokens");
 emit(1e5 + 1, `<g data-dyn="over"></g>`, "over");
 layers.sort((a, b) => a.key - b.key);
@@ -185,6 +185,8 @@ html.embed,html.embed body{height:100%;margin:0;background:#efefec;overflow:hidd
 .labels[hidden]{display:none}
 .labels span{position:absolute;transform:translate(9px,-50%);font:700 9.5px/1 ui-monospace,Menlo,monospace;color:#161412;background:#fffdf6;border:1px solid #161412;border-radius:3px;padding:2px 4px;white-space:nowrap}
 .labels span::before{content:"";position:absolute;left:-11px;top:50%;width:6px;height:6px;margin-top:-4px;border-radius:50%;background:#f8aa06;border:1px solid #161412}
+.labels span.l{transform:translate(calc(-100% - 9px),-50%)}
+.labels span.l::before{left:auto;right:-11px}
 .seethru [data-glass]{opacity:.1;transition:opacity .25s}
 .calm *{transition:none!important;animation:none!important}
 .status-dim{opacity:.62}
