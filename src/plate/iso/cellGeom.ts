@@ -57,7 +57,6 @@ export interface CellGeometry {
   budScars: Array<{ outer: string; inner: string; dot: Flat }>;
   cracks: string;
   sideCrack: string;
-  tag: { slab: SolidPaths; matrix: string; size: number } | null;
   hit: { center: Flat; radius: number };
   spark: Flat;
 }
@@ -72,7 +71,19 @@ const viewerAngle = (P: Projection) => {
   return Math.atan2(sinA, cosA);
 };
 
-export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24, withTag = false): CellGeometry {
+/** The small engraved id tag that stands in front of the picked cell. */
+export function tagGeometry(cell: PlacedCell, P: Projection): { slab: SolidPaths; matrix: string; size: number } {
+  const va = viewerAngle(P);
+  const tx = cell.x + Math.cos(va) * (cell.radius * 1.12 + 3.2) - 5.5;
+  const ty = cell.y + Math.sin(va) * (cell.radius * 1.12 + 3.2) - 2.6;
+  return {
+    slab: slabOf({ x: tx, y: ty, w: 11, d: 5.2, r: 0.8 }, cell.z, 2.2, P, 4, 0.25),
+    matrix: topMatrix([tx + 1.4, ty + 3.9], cell.z + 2.2, P),
+    size: 3.3,
+  };
+}
+
+export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24): CellGeometry {
   const { x, y, z, radius: r } = cell;
   const h = r * DOME_H;
   const zc = h * DOME_CUT;
@@ -182,7 +193,7 @@ export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24, withT
 
   // --- bud scars (generation): rings on the wall facing the viewer -------------
   const scarCount = Math.min(5, Math.max(1, cell.generation));
-  const psi = 0.5;
+  const psi = 0.4;
   const budScars: CellGeometry["budScars"] = [];
   for (let i = 0; i < scarCount; i++) {
     const phi = va + (i - (scarCount - 1) / 2) * 0.6 + (rnd(41 + i) - 0.5) * 0.12;
@@ -192,7 +203,7 @@ export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24, withT
     const pz = z + h * Math.sin(psi);
     const normal: [number, number, number] = [Math.cos(psi) * Math.cos(phi) / r, Math.cos(psi) * Math.sin(phi) / r, Math.sin(psi) / h];
     if (!facesViewer(normal, P, 0.1)) continue;
-    const rho = Math.max(1.1, r * 0.17);
+    const rho = Math.max(0.9, r * 0.12);
     budScars.push({
       outer: surfaceRing([px, py, pz], normal, rho, P, 22),
       inner: surfaceRing([px, py, pz], normal, rho * 0.5, P, 16),
@@ -237,18 +248,6 @@ export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24, withT
   }
   const sideCrack = polyPath(sidePts);
 
-  // --- id tag (selected cell) ----------------------------------------------------
-  let tag: CellGeometry["tag"] = null;
-  if (withTag) {
-    const tx = x + Math.cos(va) * (r * 1.12 + 3.2) - 5.5;
-    const ty = y + Math.sin(va) * (r * 1.12 + 3.2) - 2.6;
-    tag = {
-      slab: slabOf({ x: tx, y: ty, w: 11, d: 5.2, r: 0.8 }, z, 2.2, P, 4, 0.25),
-      matrix: topMatrix([tx + 1.4, ty + 3.9], z + 2.2, P),
-      size: 3.3,
-    };
-  }
-
   const center = iso([x, y, z + zc * 0.55], P);
   return {
     shadow,
@@ -271,7 +270,6 @@ export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24, withT
     budScars,
     cracks,
     sideCrack,
-    tag,
     hit: { center, radius: Math.max(r * k * 1.15, minHit) },
     spark: iso([x, y, z + zc + 5], P),
   };

@@ -1,10 +1,10 @@
 /** Isometric SVG colony plate (anatomy kit, plain + marigold). Static geometry is
  * precomputed; the client component only writes the needle transform on a ref —
  * no per-frame re-renders. Needle motion: the kit's `follow` loop. */
-import React, { useMemo, useRef, useSyncExternalStore } from "react";
+import React, { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { MacroZone } from "../config/zones.ts";
 import { Dots, FaceText, IsoFigure, Line, Solid } from "./iso/draw.tsx";
-import { cellGeometry, DOME_CUT, DOME_H } from "./iso/cellGeom.ts";
+import { cellGeometry, DOME_CUT, DOME_H, tagGeometry } from "./iso/cellGeom.ts";
 import { DISH_Z, needleRatio, placeCells, statusLook, tempLabel, type PlateCellInput } from "./iso/layout.ts";
 import { magnifierGeometry, plateGeometry, plateProjection, VIEWS, zoneLabel, type PlateView } from "./iso/plateGeom.ts";
 import { follow, useLoop, useStillness } from "./iso/live.tsx";
@@ -32,8 +32,11 @@ function usePlateView(): PlateView {
   );
 }
 
-export const ColonyPlate: React.FC<ColonyPlateProps> = ({ cells, zone, selectedId, onCellSelect, crucibleTempMk }) => {
+export const ColonyPlate: React.FC<ColonyPlateProps> = ({ cells, zone, selectedId: pickedId, onCellSelect, crucibleTempMk }) => {
   const view = usePlateView();
+  // the magnifier, ring and id tag follow the picked cell, or the one under the pointer / focus
+  const [hoverId, setHoverId] = useState<number | null>(null);
+  const selectedId = pickedId ?? hoverId;
   const P = useMemo(() => plateProjection(view), [view]);
   const ratio = needleRatio(crucibleTempMk);
   const ratioStep = ratio === null ? null : Math.round(ratio * 50) / 50;
@@ -42,10 +45,11 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({ cells, zone, selectedI
   const stillness = useStillness();
   const minHit = view === "tall" ? 24 : 20;
   const cellGeos = useMemo(
-    () => new Map(placed.map((c) => [c.id, cellGeometry(c, P, minHit, c.id === selectedId)])),
-    [placed, P, minHit, selectedId],
+    () => new Map(placed.map((c) => [c.id, cellGeometry(c, P, minHit)])),
+    [placed, P, minHit],
   );
   const selected = placed.find((c) => c.id === selectedId) ?? null;
+  const tag = useMemo(() => (selected ? tagGeometry(selected, P) : null), [selected, P]);
   const arm = useMemo(
     () =>
       magnifierGeometry(
@@ -233,6 +237,10 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({ cells, zone, selectedI
               tabIndex={0}
               role="button"
               aria-label={`strain ${cell.id}, ${cell.status}`}
+              onPointerEnter={(event) => event.pointerType === "mouse" && setHoverId(cell.id)}
+              onPointerLeave={() => setHoverId((cur) => (cur === cell.id ? null : cur))}
+              onFocus={() => setHoverId(cell.id)}
+              onBlur={() => setHoverId((cur) => (cur === cell.id ? null : cur))}
               onClick={(event) => onCellSelect(cell.id, event.clientX, event.clientY)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
@@ -261,8 +269,8 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({ cells, zone, selectedI
                 {g.budScars.map((s, i) => (
                   <g className="scar" key={`scar-${i}`}>
                     <path className="scar-lip" d={s.outer} />
-                    <Line d={s.outer} tone="hi" />
-                    <Line d={s.inner} tone="mid" />
+                    <Line d={s.outer} tone="mid" />
+                    <Line d={s.inner} tone="lo" />
                   </g>
                 ))}
                 {look.cracked ? <Line d={g.sideCrack} tone="red" className="cell-crack" /> : null}
@@ -288,10 +296,10 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({ cells, zone, selectedI
                 <Dots points={g.ribosomes} size={0.5} tone="hi" />
                 {look.cracked ? <Line d={g.cracks} tone="red" className="cell-crack" /> : null}
               </g>
-              {g.tag ? (
+              {look.selectedRing && tag ? (
                 <g className="cell-tag">
-                  <Solid paths={g.tag.slab} tone="hi" className="tan" />
-                  <FaceText transform={g.tag.matrix} size={g.tag.size} tone="hi">
+                  <Solid paths={tag.slab} tone="hi" className="tan" />
+                  <FaceText transform={tag.matrix} size={tag.size} tone="hi">
                     #{cell.id}
                   </FaceText>
                 </g>

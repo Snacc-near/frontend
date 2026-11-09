@@ -167,7 +167,8 @@ export function arcAt(cx: number, cy: number, z: number, radius: number, a0: num
 }
 
 /** Closed ellipse on a tangent plane at world point p with unit normal n (bud scars). */
-export function surfaceRing(p: V3, n: V3, rho: number, P: Projection, steps = 20): string {
+export function surfaceRing(p: V3, normal: V3, rho: number, P: Projection, steps = 20): string {
+  const n = unit3(normal);
   const ref: V3 = Math.abs(n[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
   const e1 = unit3(cross3(ref, n));
   const e2 = cross3(n, e1);

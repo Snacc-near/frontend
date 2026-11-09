@@ -14,7 +14,7 @@ import {
   DISH_CY,
 } from "../src/plate/iso/layout.ts";
 import { magnifierGeometry, plateGeometry, plateProjection, VIEW_H, VIEW_W, VIEWS } from "../src/plate/iso/plateGeom.ts";
-import { cellGeometry } from "../src/plate/iso/cellGeom.ts";
+import { cellGeometry, tagGeometry } from "../src/plate/iso/cellGeom.ts";
 import { applyAction, collectProduction, createInitialSimulation, startProduction, tickSimulation } from "../src/game/simulation.ts";
 import { isLabAction, validateFigureMessage } from "../src/game/bridge.ts";
 
@@ -102,7 +102,6 @@ describe("iso plate geometry builds the full machine", () => {
     expect(g.budScars.length).toBeGreaterThanOrEqual(1);
     expect(g.selectRing).toContain("M");
     expect(g.bud).toBeNull();
-    expect(g.tag).toBeNull();
   });
 
   it("draws one bud scar per generation (capped at 5) that faces the viewer", () => {
@@ -114,10 +113,12 @@ describe("iso plate geometry builds the full machine", () => {
     expect(cellGeometry({ ...base, generation: 99 }, P).budScars.length).toBeLessThanOrEqual(5);
   });
 
-  it("grows a daughter bud only on a recently divided cell, and a tag only when selected", () => {
+  it("grows a daughter bud only on a recently divided cell, and has an id tag for the picked cell", () => {
     const base = placeCells(cells, P)[0]!;
+    expect(cellGeometry(base, P).bud).toBeNull();
     expect(cellGeometry({ ...base, budding: true }, P).bud).not.toBeNull();
-    expect(cellGeometry(base, P, 24, true).tag).not.toBeNull();
+    expect(tagGeometry(base, P).slab.fill).toContain("M");
+    expect(tagGeometry(base, P).matrix).toContain("matrix(");
   });
 
   it("is deterministic per strain id", () => {
