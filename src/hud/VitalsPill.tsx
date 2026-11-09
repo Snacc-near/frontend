@@ -35,17 +35,17 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-2 rounded-full bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg"
+      className="flex items-center gap-2 sm:gap-3 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg"
       role="region"
       aria-label={labels.vitality}
     >
       <div className="flex flex-col">
-        <div className="flex items-center justify-between gap-3 text-xs">
-          <span className="text-slate-300 lowercase">{labels.vitality}</span>
-          <span className="font-mono text-slate-100 font-bold">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 text-xs">
+          <span className="text-slate-300 lowercase hidden min-[380px]:inline">{labels.vitality}</span>
+          <span className="font-mono text-slate-100 font-bold text-[11px] sm:text-xs">
             {shownValue}{" "}
             {mode === "live" && liveVitality === null ? null : (
-              <span className="text-slate-400 font-normal">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
+              <span className="text-slate-400 font-normal hidden sm:inline">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
             )}
           </span>
         </div>
@@ -68,8 +68,9 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
 
         {/* Progress bar with a striped animation while pending (UI-126) */}
         <div
-          className="w-36 h-2 mt-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden relative"
+          className="w-20 sm:w-36 h-2 mt-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden relative"
           role="progressbar"
+          aria-label={labels.vitality}
           aria-valuenow={mode === "live" ? liveVitality ?? 0 : optimistic.currentVitality}
           aria-valuemin={0}
           aria-valuemax={VITALITY_MAX}
@@ -97,7 +98,7 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
         disabled={mode === "live"}
         title={mode === "live" ? labels.feedDisabled : labels.feedAction}
         aria-label={labels.feedAction}
-        className={`px-4 py-2 rounded-full text-xs font-semibold lowercase transition-all min-h-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none ${
+        className={`px-2.5 sm:px-4 py-2 rounded-full text-xs font-semibold lowercase transition-all min-h-[40px] sm:min-h-[44px] flex items-center justify-center focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none max-w-[110px] sm:max-w-none truncate ${
           mode === "live"
             ? "bg-slate-900 text-slate-500 cursor-not-allowed border border-slate-800"
             : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 active:scale-95 shadow-md shadow-emerald-500/20 cursor-pointer font-bold"

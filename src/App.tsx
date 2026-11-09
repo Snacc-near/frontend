@@ -4,12 +4,16 @@ import { classifyZone } from "./config/zones.ts";
 import type { SkinMode } from "./config/constants.ts";
 import { INITIAL_ATP } from "./config/constants.ts";
 import type {
+  AppetiteViewModel,
   BreachLogItem,
   NutrientBurstState,
   StrainDetail,
   StrainSummary,
+  SvgLoadStatus,
 } from "./data/types.ts";
-import { fetchStrain } from "./data/api.ts";
+import { fetchStrain, fetchStrainSvg } from "./data/api.ts";
+import { mapAppetite } from "./data/appetite.ts";
+import { buildDemoSvgDataUri, svgToSafeDataUri } from "./data/svg.ts";
 import { filterLogsForMode, resolveSelectedStrain } from "./data/liveView.ts";
 import { OptimisticManager, type OptimisticVitalityState } from "./data/optimistic.ts";
 import { TelemetryPoller } from "./data/poller.ts";
@@ -61,6 +65,11 @@ export const App: React.FC = () => {
   const [indexerIncomplete, setIndexerIncomplete] = useState(false);
   const [selectedStrain, setSelectedStrain] = useState<StrainDetail | null>(null);
   const [isLoadingStrain, setIsLoadingStrain] = useState(false);
+  const [svgDataUri, setSvgDataUri] = useState<string | null>(null);
+  const [svgStatus, setSvgStatus] = useState<SvgLoadStatus>("idle");
+  const [appetite, setAppetite] = useState<AppetiteViewModel | null>(null);
+  const [appetiteLoading, setAppetiteLoading] = useState(true);
+  const [appetiteError, setAppetiteError] = useState(false);
 
   const [burst, setBurst] = useState<NutrientBurstState>({
     isActive: false,
@@ -127,15 +136,29 @@ export const App: React.FC = () => {
             status: "Active",
             effective_vitality: optimisticManagerRef.current.getState().currentVitality,
           });
+          setSvgDataUri(buildDemoSvgDataUri(1));
+          setSvgStatus("ready");
           return;
         }
 
-        // Live mode: fetch the on-chain data from /api/strains/:id.
-        // If the API has no record, show nothing rather than inventing values.
+        // Live mode: fetch the on-chain data from /api/strains/:id and the
+        // real nft_token SVG from /api/strains/:id/svg. If the API has no
+        // record, show nothing rather than inventing values.
         setIsLoadingStrain(true);
+        setSvgStatus("loading");
+        setSvgDataUri(null);
         try {
-          const detail = await fetchStrain(cellId);
+          const [detail, svgRes] = await Promise.all([
+            fetchStrain(cellId),
+            fetchStrainSvg(cellId),
+          ]);
           setSelectedStrain(detail ?? resolveSelectedStrain(cellId, liveStrainsRef.current));
+          const uri = svgRes.svg ? svgToSafeDataUri(svgRes.svg) : null;
+          setSvgDataUri(uri);
+          if (uri) setSvgStatus("ready");
+          else if (svgRes.svg !== null) setSvgStatus("no-data");
+          else if (svgRes.status === 404) setSvgStatus("no-data");
+          else setSvgStatus("error");
         } finally {
           setIsLoadingStrain(false);
         }
@@ -164,6 +187,18 @@ export const App: React.FC = () => {
   useEffect(() => {
     atpBalanceRef.current = atpBalance;
   }, [atpBalance]);
+
+  // If the appetite poll never answers, surface the honest unavailable state.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (appetite === null) {
+        setAppetiteLoading(false);
+        setAppetiteError(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Push the live strains into the dish whenever the data or the mode changes
   useEffect(() => {
@@ -208,6 +243,12 @@ export const App: React.FC = () => {
       onStrainsUpdate: (strains) => {
         setIsBackendConnected(true);
         setLiveStrains(strains);
+      },
+      onAppetiteUpdate: (raw) => {
+        setIsBackendConnected(true);
+        setAppetite(mapAppetite(raw));
+        setAppetiteLoading(false);
+        setAppetiteError(false);
       },
       onNewEvents: (_events) => {
         setIsBackendConnected(true);
@@ -255,6 +296,8 @@ export const App: React.FC = () => {
     if (nextMode === "live") {
       setLogs([]);
       setSelectedStrain(null);
+      setSvgDataUri(null);
+      setSvgStatus("idle");
     } else {
       setLogs(demoSeedLogs);
     }
@@ -369,6 +412,11 @@ export const App: React.FC = () => {
         matchedStrainsCount={matchedStrainsCount}
         selectedStrain={selectedStrain}
         isLoadingStrain={isLoadingStrain}
+        svgDataUri={svgDataUri}
+        svgStatus={svgStatus}
+        appetite={appetite}
+        appetiteLoading={appetiteLoading}
+        appetiteError={appetiteError}
         onCloseStrainModal={() => setSelectedStrain(null)}
         onFeedClick={handleFeedClick}
         onTriggerBurst={handleTriggerBurst}

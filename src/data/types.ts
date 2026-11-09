@@ -148,3 +148,44 @@ export interface NutrientBurstState {
   releasedVita: string;
   triggeringStrainId?: number | null;
 }
+
+export interface AppetiteTopFeeder {
+  account_id: string;
+  amount: string;
+}
+
+export interface AppetiteTelemetry {
+  zone?: string;
+  crucible_temp?: number;
+  current_epoch?: number;
+  burst_bps?: number;
+  burst_until?: number;
+  burst_epochs_left?: number;
+  dormant?: boolean;
+  feast_volume?: string;
+  feast_target?: string;
+  risk_heat?: number;
+  top_feeders?: AppetiteTopFeeder[];
+  contractId?: string;
+  blockHeight?: number;
+}
+
+export interface AppetiteViewModel {
+  zone: string;
+  crucibleTempMk: number | null;
+  currentEpoch: number | null;
+  burstBps: number | null;
+  burstUntil: number | null;
+  burstEpochsLeft: number | null;
+  dormant: boolean | null;
+  feastVolume: string | null;
+  feastTarget: string | null;
+  riskHeat: number | null;
+  feastProgressPct: number | null;
+  riskHeatPct: number | null;
+  topFeeders: AppetiteTopFeeder[];
+  contractId: string | null;
+  blockHeight: number | null;
+}
+
+export type SvgLoadStatus = "idle" | "loading" | "ready" | "error" | "no-data";

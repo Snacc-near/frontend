@@ -4,8 +4,8 @@
  */
 
 import { EVENT_POLL_INTERVAL_MS, SLA_LATENCY_MAX_MS, MAX_BURST_BPS } from "../config/constants.ts";
-import { fetchEvents, fetchMacro, fetchStrains } from "./api.ts";
-import type { CrucibleEvent, BreachLogItem, NutrientBurstState, MacroTelemetry, StrainSummary } from "./types.ts";
+import { fetchAppetite, fetchEvents, fetchMacro, fetchStrains } from "./api.ts";
+import type { CrucibleEvent, BreachLogItem, NutrientBurstState, MacroTelemetry, StrainSummary, AppetiteTelemetry } from "./types.ts";
 
 /**
  * Build the unique dedupe key for each event.
@@ -118,6 +118,7 @@ export interface PollerCallbacks {
   onStrainsUpdate?: (strains: StrainSummary[]) => void;
   onStrainFed?: (strainId: number) => void;
   onStrainLiquidated?: (strainId: number) => void;
+  onAppetiteUpdate?: (appetite: AppetiteTelemetry) => void;
   /** Reports the API's `indexer_incomplete` flag; true also when a poll failed (honest degradation). */
   onIndexerIncomplete?: (incomplete: boolean) => void;
 }
@@ -153,10 +154,11 @@ export class TelemetryPoller {
     this.isPolling = true;
 
     try {
-      const [macro, eventsRes, strainsRes] = await Promise.all([
+      const [macro, eventsRes, strainsRes, appetiteRes] = await Promise.all([
         fetchMacro(),
         fetchEvents(),
         fetchStrains(),
+        fetchAppetite(),
       ]);
 
       if (strainsRes?.strains) {
@@ -168,6 +170,10 @@ export class TelemetryPoller {
 
       if (macro) {
         this.callbacks.onMacroUpdate(macro);
+      }
+
+      if (appetiteRes) {
+        this.callbacks.onAppetiteUpdate?.(appetiteRes);
       }
 
       // Honest indexer status: unknown/failed polls must read as incomplete
