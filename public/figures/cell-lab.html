@@ -1191,9 +1191,11 @@ function placeLabels() {
       q.y = Math.max(q.y, prev + GAP);
       prev = q.y;
       q.el.classList.toggle("l", left);
-      q.el.style.left = f1(q.x) + "px";
+      // anchor on the point (CSS transform offsets the chip); clamp right chips inside the box
+      const lx = left ? q.x : Math.min(q.x, Math.max(2, b.width - (q.el.offsetWidth || 56) - 14));
+      q.el.style.left = f1(lx) + "px";
       q.el.style.top = f1(Math.min(q.y, Math.max(4, b.height - 10))) + "px";
-      q.el.style.display = q.x > 4 && q.x < b.width - 30 ? "" : "none";
+      q.el.style.display = q.x > 4 && q.x < b.width - 10 ? "" : "none";
     }
   }
 }
