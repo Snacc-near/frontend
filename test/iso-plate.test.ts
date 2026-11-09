@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   cellRadius,
+  crowdScale,
   hashRand,
   irisMode,
   needleRatio,
@@ -12,7 +13,7 @@ import {
   DISH_CX,
   DISH_CY,
 } from "../src/plate/iso/layout.ts";
-import { plateGeometry, plateProjection, VIEW_H, VIEW_W } from "../src/plate/iso/plateGeom.ts";
+import { magnifierGeometry, plateGeometry, plateProjection, VIEW_H, VIEW_W, VIEWS } from "../src/plate/iso/plateGeom.ts";
 import { cellGeometry } from "../src/plate/iso/cellGeom.ts";
 import { applyAction, collectProduction, createInitialSimulation, startProduction, tickSimulation } from "../src/game/simulation.ts";
 import { isLabAction, validateFigureMessage } from "../src/game/bridge.ts";
@@ -40,15 +41,15 @@ describe("iso colony plate layout determinism", () => {
 
   it("keeps every cell inside the dish world radius", () => {
     for (const cell of placeCells(cells, P)) {
-      const dist = Math.hypot(cell.x - DISH_CX, cell.y - DISH_CY / 0.78);
-      expect(dist).toBeLessThan(DISH_R);
+      const dist = Math.hypot(cell.x - DISH_CX, cell.y - DISH_CY);
+      expect(dist + cell.radius).toBeLessThan(DISH_R);
     }
   });
 
   it("sizes cells from vitality (null vitality is mid size)", () => {
     expect(cellRadius(1)).toBeGreaterThan(cellRadius(0.5));
     expect(cellRadius(0.5)).toBeGreaterThan(cellRadius(0));
-    expect(cellRadius(null)).toBe(11);
+    expect(cellRadius(null)).toBe(13.5);
   });
 
   it("produces different jitter per strain id", () => {
@@ -60,29 +61,103 @@ describe("iso colony plate layout determinism", () => {
 describe("iso plate geometry builds the full machine", () => {
   it("emits static geometry with non-empty paths for plate, dish and dial", () => {
     const g = plateGeometry("Goldilocks", P);
-    for (const d of [g.base.fill, g.base.top, g.base.outline, g.groove, g.dish.fill, g.dish.top, g.rimRing, g.guideRing, g.thermoPost.top, g.thermoDial.top, g.needlePath, g.label.top, g.ruler.top]) {
+    for (const d of [g.shadow, g.base.fill, g.base.top, g.base.outline, g.groove, g.dish.fill, g.dish.top, g.rimRing, g.rimWell, g.agar, g.guideRing, g.dialBody.top, g.needlePath, g.label.top, g.ruler.top, g.box.top, g.tube.glass.fill, g.tube.liquid.fill, g.rack.top, g.pipette.body.fill, g.lid.body.fill]) {
       expect(d).toContain("M");
     }
     expect(g.feet).toHaveLength(4);
-    expect(g.screws.rings).toHaveLength(4);
-    expect(g.screws.slots).toHaveLength(8);
-    expect(g.dishTicks.minor + g.dishTicks.major).toContain("M");
-    expect(g.thermoTicks.minor + g.thermoTicks.major).toContain("M");
+    expect(g.screws.rings).toHaveLength(6);
+    expect(g.screws.slots).toHaveLength(12);
+    expect(g.clips).toHaveLength(3);
+    expect(g.vials).toHaveLength(3);
+    expect(g.cables.length).toBeGreaterThanOrEqual(3);
+    expect(g.rimTicks.minor + g.rimTicks.major).toContain("M");
+    expect(g.dialTicks.minor + g.dialTicks.major).toContain("M");
+    expect(g.dialBands).toHaveLength(3);
   });
 
-  it("builds yeast cells with membrane, nucleus, mitochondria and bud scars", () => {
+  it("is a pure function of its inputs (same plate every time)", () => {
+    expect(plateGeometry("Goldilocks", P, 0.5)).toEqual(plateGeometry("Goldilocks", P, 0.5));
+  });
+
+  it("raises the thermometer liquid with the temperature ratio", () => {
+    const low = plateGeometry("Goldilocks", P, 0.1).tube.liquid.top;
+    const high = plateGeometry("Goldilocks", P, 0.9).tube.liquid.top;
+    expect(low).not.toEqual(high);
+  });
+
+  it("builds yeast cells: domed body, rim band, membrane, nucleus, beans, vacuole, scars", () => {
     const [placed] = placeCells(cells, P);
     const g = cellGeometry(placed!, P);
-    expect(g.wall.fill).toContain("M");
-    expect(g.membrane).toContain("M");
+    expect(g.dome.fill).toContain("M");
+    expect(g.dome.shades.filter(Boolean).length).toBeGreaterThanOrEqual(3);
+    expect(g.rimOuter).toContain("C");
+    expect(g.rimInner).toContain("C");
     expect(g.nucleus.fill).toContain("M");
+    expect(g.nucleolus.fill).toContain("M");
+    expect(g.pores.length).toBeGreaterThanOrEqual(8);
     expect(g.mitochondria.length).toBeGreaterThanOrEqual(2);
+    expect(g.mitochondria[0]!.cristae.length).toBeGreaterThanOrEqual(8);
+    expect(g.vacuole.fill).toContain("M");
+    expect(g.ribosomes.length).toBeGreaterThanOrEqual(4);
     expect(g.budScars.length).toBeGreaterThanOrEqual(1);
     expect(g.selectRing).toContain("M");
+    expect(g.bud).toBeNull();
+    expect(g.tag).toBeNull();
   });
 
-  it("scales the projection into the viewBox at phone width", () => {
+  it("draws one bud scar per generation (capped at 5) that faces the viewer", () => {
+    const base = placeCells(cells, P)[0]!;
+    const gen1 = cellGeometry({ ...base, generation: 1 }, P);
+    const gen4 = cellGeometry({ ...base, generation: 4 }, P);
+    expect(gen1.budScars).toHaveLength(1);
+    expect(gen4.budScars.length).toBeGreaterThan(gen1.budScars.length);
+    expect(cellGeometry({ ...base, generation: 99 }, P).budScars.length).toBeLessThanOrEqual(5);
+  });
+
+  it("grows a daughter bud only on a recently divided cell, and a tag only when selected", () => {
+    const base = placeCells(cells, P)[0]!;
+    expect(cellGeometry({ ...base, budding: true }, P).bud).not.toBeNull();
+    expect(cellGeometry(base, P, 24, true).tag).not.toBeNull();
+  });
+
+  it("is deterministic per strain id", () => {
+    const base = placeCells(cells, P)[0]!;
+    expect(cellGeometry(base, P)).toEqual(cellGeometry({ ...base }, P));
+    const other = placeCells(cells, P)[1]!;
+    expect(cellGeometry(base, P).nucleus.fill).not.toEqual(cellGeometry(other, P).nucleus.fill);
+  });
+
+  it("keeps the ≥44px tap target on phones", () => {
+    const tall = plateProjection("tall");
+    const base = placeCells(cells, tall)[0]!;
+    const g = cellGeometry(base, tall, 24);
+    expect(g.hit.radius).toBeGreaterThanOrEqual(22);
+  });
+
+  it("moves the magnifier arm to the selected cell and parks it otherwise", () => {
+    const parked = magnifierGeometry(null, P);
+    const aimed = magnifierGeometry({ x: -30, y: 20, z: 16, rho: 14 }, P);
+    expect(parked.rim).not.toEqual(aimed.rim);
+    expect(aimed.links).toHaveLength(2);
+    expect(magnifierGeometry({ x: -30, y: 20, z: 16, rho: 14 }, P)).toEqual(aimed);
+  });
+
+  it("scales the projection into the viewBox (wide on desktop, tall on phones)", () => {
     expect(VIEW_W / VIEW_H).toBeCloseTo(1.4667, 3);
+    expect(VIEWS.tall.w / VIEWS.tall.h).toBeLessThan(1);
+  });
+
+  it("shrinks crowded colonies so every cell fits the dish without overlapping", () => {
+    const many = Array.from({ length: 9 }, (_, i) => ({ id: i + 1, vitalityRatio: 0.5 + (i % 3) * 0.2, status: "Active", highlighted: false, index: i }));
+    const spots = placeCells(many, P);
+    expect(crowdScale(9)).toBeLessThan(1);
+    for (const a of spots) {
+      expect(Math.hypot(a.x - DISH_CX, a.y - DISH_CY) + a.radius).toBeLessThanOrEqual(DISH_R + 0.5);
+    }
+    let worst = Infinity;
+    for (let i = 0; i < spots.length; i++)
+      for (let j = i + 1; j < spots.length; j++) worst = Math.min(worst, Math.hypot(spots[i]!.x - spots[j]!.x, spots[i]!.y - spots[j]!.y) - spots[i]!.radius - spots[j]!.radius);
+    expect(worst).toBeGreaterThan(-3);
   });
 });
 

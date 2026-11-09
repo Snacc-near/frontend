@@ -474,7 +474,7 @@ export const App: React.FC = () => {
     if (mode === "demo") {
       const producing = sim.queue.some((item) => item.kind === "atp" && !item.ready);
       return [
-        { id: 1, vitalityRatio: sim.vitality / 10000, status: "Active", highlighted: true, index: 0, generation: sim.generation, producing },
+        { id: 1, vitalityRatio: sim.vitality / 10000, status: "Active", highlighted: true, index: 0, generation: sim.generation, producing, budding: sim.generation > 1 },
         { id: 2, vitalityRatio: 0.72, status: "Active", highlighted: false, index: 1, generation: 1, producing: false },
         { id: 3, vitalityRatio: 0.31, status: "Distressed", highlighted: false, index: 2, generation: 1, producing: false },
       ];

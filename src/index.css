@@ -253,36 +253,169 @@ canvas {
 .iso {
   --anatomy-page: transparent;
   --anatomy-card: transparent;
-  --anatomy-text: #5d6165;
-  --anatomy-strong: #16181a;
-  --anatomy-muted: #8d9194;
-  --anatomy-paper: #fbfbf9;
-  --anatomy-face: #fffdf5;
-  --anatomy-top: #ffffff;
-  --anatomy-shade-0: #e7d9b4;
-  --anatomy-shade-1: #efe3c2;
-  --anatomy-shade-2: #f6eed4;
-  --anatomy-shade-3: #fbf6e3;
-  --anatomy-lit-top: #ffffff;
-  --anatomy-lit-shade: #f6eccd;
-  --anatomy-hi: #16181a;
-  --anatomy-mid: #5d6165;
-  --anatomy-lo: #8d9194;
-  --anatomy-faint: #c9cdce;
-  --anatomy-lit: #16181a;
+  --anatomy-text: #6b6252;
+  --anatomy-strong: #161412;
+  --anatomy-muted: #9a8f78;
+  --anatomy-paper: #fbfaf5;
+  --anatomy-face: #fef8ed;
+  --anatomy-top: #fffdf8;
+  --anatomy-shade-0: #c3a972;
+  --anatomy-shade-1: #d8c399;
+  --anatomy-shade-2: #ecdcb8;
+  --anatomy-shade-3: #fef8ed;
+  --anatomy-lit-top: #ffd57a;
+  --anatomy-lit-shade: #f8aa06;
+  --anatomy-hi: #161412;
+  --anatomy-mid: #5e5340;
+  --anatomy-lo: #9d8e6c;
+  --anatomy-faint: #d6c8a6;
+  --anatomy-lit: #161412;
   --anatomy-halo: #2a2218;
-  --anatomy-halo-opacity: 0.26;
-  --anatomy-dot: #16181a;
-  --anatomy-red: #b3402e;
-  --anatomy-green: #3f7d4e;
-  --anatomy-blue: #2b7a8c;
-  --anatomy-weight: 0.7px;
+  --anatomy-halo-opacity: 0;
+  --anatomy-dot: #161412;
+  --anatomy-red: #d94135;
+  --anatomy-green: #4a8b3a;
+  --anatomy-blue: #3e6fb0;
+  --anatomy-weight: 0.95px;
+  --mari: #f8aa06;
+  --mari-hi: #ffd57a;
+  --mari-dk: #b87800;
+  --ink: #161412;
+  --brown: #2a2218;
+  --agar: #f3e8c9;
+  --agar-edge: #e2d1a2;
+}
+
+/* medium tint per zone: Fever warm, Goldilocks neutral, Hypothermia cool (subtle) */
+.zone-Fever { --agar: #f6e0c4; --agar-edge: #e8c19a; }
+.zone-Goldilocks { --agar: #f3e8c9; --agar-edge: #e2d1a2; }
+.zone-Hypothermia { --agar: #e6ecde; --agar-edge: #c8d6c9; }
+
+/* tan base edge, marigold solid, tinted bodies: the kit shade vars, re-pointed per class */
+.iso .tan {
+  --anatomy-shade-0: #8f7a52;
+  --anatomy-shade-1: #a48d5e;
+  --anatomy-shade-2: #b9a06c;
+  --anatomy-shade-3: #c9b07e;
+  --anatomy-paper: #c9b07e;
+  --anatomy-face: #c9b07e;
+  --anatomy-top: #fffdf8;
+}
+.iso .mari {
+  --anatomy-paper: #f8aa06;
+  --anatomy-face: #f8aa06;
+  --anatomy-top: #ffd57a;
+  --anatomy-shade-0: #b87800;
+  --anatomy-shade-1: #d68f00;
+  --anatomy-shade-2: #eea102;
+  --anatomy-shade-3: #f8aa06;
+}
+.iso .ice {
+  --anatomy-paper: #cfe3ea;
+  --anatomy-face: #cfe3ea;
+  --anatomy-top: #eaf5f8;
+  --anatomy-shade-0: #86adbd;
+  --anatomy-shade-1: #a0c0cd;
+  --anatomy-shade-2: #bad2dc;
+  --anatomy-shade-3: #cfe3ea;
+}
+.iso .cyto-solid {
+  --anatomy-paper: #f1e2bb;
+  --anatomy-face: #f1e2bb;
+  --anatomy-top: #f7ebcb;
+  --anatomy-shade-0: #c9b27c;
+  --anatomy-shade-1: #d9c590;
+  --anatomy-shade-2: #e6d4a6;
+  --anatomy-shade-3: #f1e2bb;
+}
+.iso .steel {
+  --anatomy-paper: #dedbd2;
+  --anatomy-face: #e8e5dc;
+  --anatomy-top: #faf8f1;
+  --anatomy-shade-0: #a8a597;
+  --anatomy-shade-1: #bdbaab;
+  --anatomy-shade-2: #d0cdc0;
+  --anatomy-shade-3: #e4e1d6;
+}
+.iso .glassbody {
+  --anatomy-paper: #f8f3e4;
+  --anatomy-face: #f8f3e4;
+  --anatomy-top: #ffffff;
+  --anatomy-shade-0: #cfc4a4;
+  --anatomy-shade-1: #e0d6b8;
+  --anatomy-shade-2: #ece4cb;
+  --anatomy-shade-3: #f8f3e4;
+}
+
+.shadow-flat {
+  fill: var(--brown);
+  stroke: var(--brown);
+  stroke-width: 12;
+  stroke-linejoin: round;
+}
+
+.iso-svg .cable-ink {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.iso-svg .cable-core {
+  fill: none;
+  stroke: #fffdf8;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.iso-svg .cable-core--mari { stroke: var(--mari); }
+.iso-svg .label-stripe { fill: var(--mari); stroke: var(--ink); stroke-width: 0.6; stroke-linejoin: round; }
+.iso-svg .vent-slot { fill: var(--brown); stroke: var(--ink); stroke-width: 0.5; }
+.iso-svg .rack-hole { fill: var(--brown); stroke: var(--ink); stroke-width: 0.7; }
+.iso-svg .well-wall { fill: #d8c399; stroke: none; }
+.iso-svg .agar { fill: var(--agar); stroke: none; }
+.iso-svg .agar-vig { stroke: none; pointer-events: none; }
+.iso-svg .agar-ripple { fill: none; stroke: #b89d60; stroke-width: 0.7; stroke-linecap: round; }
+.iso-svg .glass-fill { fill: #fffdf6; fill-opacity: 0.26; stroke: none; }
+.iso-svg .glass-fill--lid { fill-opacity: 0.2; }
+.iso-svg .glass-top { fill: #ffffff; fill-opacity: 0.22; stroke: none; }
+.iso-svg .glass-edge { fill: none; stroke: var(--ink); stroke-width: 0.95; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
+.iso-svg .glass-edge-b { fill: none; stroke: var(--anatomy-mid); stroke-width: 0.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+.iso-svg .glass-hi-line { fill: none; stroke: #ffffff; stroke-width: 1.5; stroke-linecap: round; opacity: 0.9; }
+.iso-svg .dial-band { fill: none; stroke-width: 1.8; stroke-linecap: butt; }
+.iso-svg .dial-band--cool { stroke: #5f93a4; }
+.iso-svg .dial-band--mari { stroke: var(--mari); stroke-width: 2.4; }
+.iso-svg .dial-band--warm { stroke: #d9663d; }
+
+.iso-svg .arm-ink { fill: none; stroke: var(--ink); stroke-width: 7; stroke-linecap: round; }
+.iso-svg .arm-core { fill: none; stroke: #f3e7c6; stroke-width: 5; stroke-linecap: round; }
+.iso-svg .arm-hi { fill: none; stroke: #ffffff; stroke-width: 1.2; stroke-linecap: round; transform: translate(-1px, -1.2px); }
+.iso-svg .joint-ring { fill: #fffdf8; stroke: var(--ink); stroke-width: 0.9; }
+.iso-svg .joint-dot { fill: var(--ink); stroke: none; }
+.iso-svg .yoke { fill: none; stroke: var(--ink); stroke-width: 1.1; stroke-linecap: round; stroke-linejoin: round; }
+.iso-svg .lens-glass { fill: #fffdf6; fill-opacity: 0.16; stroke: none; pointer-events: none; }
+.iso-svg .lens-ink { fill: none; stroke: var(--ink); stroke-width: 4.4; pointer-events: none; }
+.iso-svg .lens-rim { fill: none; stroke: var(--mari); stroke-width: 2.8; pointer-events: none; }
+.magnifier { animation: arm-in 0.45s cubic-bezier(0.32, 0.72, 0, 1); pointer-events: none; }
+@keyframes arm-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .plate-wrap {
   width: min(100%, calc((100dvh - 190px) * 1.4667));
   max-width: 1100px;
 }
+
+/* phones: the dish fills the width (a taller, higher-camera crop), between header and dock */
+.plate-wrap--tall {
+  width: 100%;
+  max-width: 560px;
+  margin-top: -60px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 7%, #000 93%, transparent 100%);
+}
+.plate-wrap--tall .iso-svg { overflow: hidden; }
 
 .plate-wrap .iso-svg {
   width: 100%;
@@ -306,10 +439,106 @@ canvas {
   outline: none;
 }
 
-.cell:focus-visible .cell-wall .iso-edge {
+.cell:focus-visible .cw .iso-edge {
   stroke: var(--accent-dk);
-  stroke-width: 1.4px;
+  stroke-width: 2px;
 }
+
+/* the cell: warm cream wall, tan rim band, tinted cytoplasm; statuses re-point the vars */
+.iso .cw {
+  --anatomy-paper: #f3e6c4;
+  --anatomy-face: #f3e6c4;
+  --anatomy-top: #fff6dc;
+  --anatomy-shade-0: #c4a868;
+  --anatomy-shade-1: #d7be86;
+  --anatomy-shade-2: #e7d3a2;
+  --anatomy-shade-3: #f3e6c4;
+}
+.iso .cw .iso-edge { stroke-width: 1.15px; }
+.iso-svg .wall-band { fill: #d9c18a; stroke: none; }
+.iso-svg .cyto { fill: var(--cyto, #f6ebc9); stroke: none; }
+.iso-svg .cyto-sheen { fill: #fffaf0; fill-opacity: 0.55; stroke: none; }
+.iso-svg .cell-shadow { fill: var(--brown); fill-opacity: 0.2; stroke: none; }
+.iso-svg .scar-lip { fill: #fff6dc; fill-opacity: 0.7; stroke: none; }
+.iso .bean {
+  --anatomy-paper: #f0dfb4;
+  --anatomy-face: #f0dfb4;
+  --anatomy-top: #fff3d2;
+  --anatomy-shade-0: #b79c5c;
+  --anatomy-shade-1: #cdb374;
+  --anatomy-shade-2: #e1c98f;
+  --anatomy-shade-3: #f0dfb4;
+}
+.iso .nuc {
+  --anatomy-paper: #fbf5e4;
+  --anatomy-face: #fbf5e4;
+  --anatomy-top: #ffffff;
+  --anatomy-shade-0: #cbbd9a;
+  --anatomy-shade-1: #ddd1b0;
+  --anatomy-shade-2: #ece3c8;
+  --anatomy-shade-3: #fbf5e4;
+}
+.iso .nucleolus {
+  --anatomy-paper: #b98a3e;
+  --anatomy-face: #b98a3e;
+  --anatomy-top: #e1b866;
+  --anatomy-shade-0: #6e4a17;
+  --anatomy-shade-1: #8f6424;
+  --anatomy-shade-2: #a77832;
+  --anatomy-shade-3: #b98a3e;
+}
+.iso .vac {
+  --anatomy-paper: #e6efe9;
+  --anatomy-face: #e6efe9;
+  --anatomy-top: #ffffff;
+  --anatomy-shade-0: #a9c0b8;
+  --anatomy-shade-1: #c0d3cb;
+  --anatomy-shade-2: #d4e3dc;
+  --anatomy-shade-3: #e6efe9;
+}
+.iso-svg .vac-shine { fill: #fff; stroke: none; opacity: 0.95; }
+.iso-svg .crista { stroke-width: 0.5px; }
+.cell--distressed {
+  --cyto: #f1ecd9;
+}
+.cell--distressed .cw {
+  --anatomy-paper: #ece8d8;
+  --anatomy-face: #ece8d8;
+  --anatomy-top: #f8f6ec;
+  --anatomy-shade-0: #b9b49b;
+  --anatomy-shade-1: #cbc7b0;
+  --anatomy-shade-2: #dcd8c5;
+  --anatomy-shade-3: #ece8d8;
+}
+.cell--distressed .wall-band { fill: #cfc9b0; }
+.cell--liquidated {
+  --cyto: #e9c5b4;
+}
+.cell--liquidated .cw {
+  --anatomy-paper: #e8c3b2;
+  --anatomy-face: #e8c3b2;
+  --anatomy-top: #f6dccf;
+  --anatomy-shade-0: #a8604c;
+  --anatomy-shade-1: #c27a63;
+  --anatomy-shade-2: #d79d88;
+  --anatomy-shade-3: #e8c3b2;
+}
+.cell--liquidated .wall-band { fill: #cf9a84; }
+.cell--liquidated .cyto-sheen { fill-opacity: 0.2; }
+.cell--ghost {
+  --cyto: #e3e5e6;
+}
+.cell--ghost .cw {
+  --anatomy-paper: #dcdedf;
+  --anatomy-face: #dcdedf;
+  --anatomy-top: #f0f1f2;
+  --anatomy-shade-0: #a3a7a9;
+  --anatomy-shade-1: #b6babc;
+  --anatomy-shade-2: #c9cccd;
+  --anatomy-shade-3: #dcdedf;
+}
+.cell--ghost .wall-band { fill: #c2c5c7; }
+.cell--ghost .cell-body { filter: grayscale(1); }
 
 .cell--breathe {
   animation: cell-breathe 3.6s ease-in-out infinite;
@@ -334,34 +563,32 @@ canvas {
   75% { transform: translateX(-0.7px); }
 }
 
-.cell-ring {
-  stroke: var(--accent);
-  stroke-width: 1.3;
-  stroke-dasharray: 5 4;
+.iso-svg .sel-ring {
+  fill: none;
+  stroke: var(--mari);
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+}
+
+.iso-svg .sel-halo {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.9;
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
 }
 
 .cell-crack {
-  stroke-width: 1.1;
-}
-
-.cell--liquidated .iso-fill {
-  fill: #f5ddd2;
-}
-
-.cell--distressed .iso-fill {
-  fill: #f3ead3;
-}
-
-.cell--ghost .iso-fill {
-  fill: #e4e7ea;
-}
-
-.mito--lit .iso-fill {
-  fill: var(--accent);
+  stroke-width: 1.2;
 }
 
 .mito--lit .iso-top {
-  fill: #ffc857;
+  animation: mito-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes mito-glow {
+  0%, 100% { fill: #ffd57a; }
+  50% { fill: #fff0bd; }
 }
 
 .atp-spark {
