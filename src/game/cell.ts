@@ -141,7 +141,7 @@ export class LivingCell {
       ctx.restore();
     }
 
-    // 3. Pendaran luar bioluminescent (outer glow)
+    // 3. The bioluminescent outer glow
     const haloRadius = r * (this.isHighlighted ? 2.1 : 1.7);
     const haloGrad = ctx.createRadialGradient(this.x, this.y, r * 0.6, this.x, this.y, haloRadius);
     haloGrad.addColorStop(0, cellColor);

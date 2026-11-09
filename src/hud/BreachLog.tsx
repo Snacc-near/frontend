@@ -22,9 +22,9 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs }) => {
           aria-expanded={isExpanded}
           aria-controls="breach-log-list"
         >
-          <span>log ambang & peristiwa</span>
+          <span>threshold log & events</span>
           <span className="text-slate-500 text-[10px]">
-            [{isExpanded ? "tutup" : "buka"}]
+            [{isExpanded ? "close" : "open"}]
           </span>
         </button>
         <span className="text-slate-500 font-mono">sla &lt; 2000 ms</span>

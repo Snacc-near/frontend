@@ -59,7 +59,7 @@ export class SporeManager {
 
   public update(timeSec: number): void {
     for (const sp of this.spores) {
-      // Gerakan mengambang harmonik lembut
+      // The gentle harmonic floating movement
       sp.x = sp.baseX + Math.sin(timeSec * sp.speed + sp.phase) * 6;
       sp.y = sp.baseY + Math.cos(timeSec * sp.speed * 0.8 + sp.phase) * 5;
     }

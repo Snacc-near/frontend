@@ -79,7 +79,7 @@ export class PetriDish {
     ctx.lineWidth = 14;
     ctx.stroke();
 
-    // Pantulan cahaya kaca (rim highlight)
+    // The glass light reflection (rim highlight)
     const rimGrad = ctx.createLinearGradient(
       this.centerX - this.radiusX,
       this.centerY - this.radiusY,

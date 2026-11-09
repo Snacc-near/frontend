@@ -76,7 +76,7 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
           <span className="font-semibold lowercase">{theme.label}</span>
         </span>
         <span className="text-slate-400 font-mono text-[10px]">
-          ambang 600 / 610
+          thresholds 600 / 610
         </span>
       </div>
     </div>

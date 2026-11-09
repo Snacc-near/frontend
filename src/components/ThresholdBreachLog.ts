@@ -82,7 +82,7 @@ export class ThresholdBreachLogController {
 
     const title = document.createElement("h3");
     title.className = "breach-rail__title";
-    title.textContent = "THRESHOLD BREACH LOG · SIAPA MENABRAK AMBANG";
+    title.textContent = "THRESHOLD BREACH LOG · WHO CROSSED THE THRESHOLD";
 
     titleWrap.append(dot, title);
 

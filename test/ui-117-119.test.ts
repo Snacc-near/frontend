@@ -120,12 +120,12 @@ describe("UI-119: Threshold Breach Telemetry Log ('who crossed the threshold')",
 });
 
 describe("Motionmaxxing Easing Curves (FE-26)", () => {
-  it("memastikan seluruh fungsi kurva gerak terikat pada f(0)=0 dan f(1)=1", () => {
+  it("binds every motion curve function to f(0)=0 and f(1)=1", () => {
     for (const fn of [ease.softLand, ease.snapSettle, ease.popOver, ease.softInOut, ease.accelExit]) {
       assert.equal(fn(0), 0);
       assert.ok(Math.abs(fn(1) - 1) < 1e-3);
     }
-    // popOver harus sedikit melampaui 1.0 (overshoot pegas) di pertengahan kurva
+    // popOver must slightly exceed 1.0 (the spring overshoot) mid-curve
     assert.ok(ease.popOver(0.55) > 1.0);
   });
 });
