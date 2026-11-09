@@ -3,7 +3,7 @@ import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
 import type { AppetiteViewModel, BreachLogItem, NutrientBurstState, StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
-import type { GameMode } from "../game/engine.ts";
+import type { GameMode } from "../config/constants.ts";
 import { VitalsPill } from "./VitalsPill.tsx";
 import { AtpPill } from "./AtpPill.tsx";
 import { ThermalGauge } from "./ThermalGauge.tsx";

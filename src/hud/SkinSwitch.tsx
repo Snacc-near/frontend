@@ -9,7 +9,7 @@ interface SkinSwitchProps {
 export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
   return (
     <div
-      className="inline-flex items-center p-1 rounded-full bg-slate-950/80 border border-slate-700/50 backdrop-blur-md"
+      className="inline-flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1 shadow-[0_2px_0_var(--edge)]"
       role="group"
       aria-label="the ADR-31 terminology choice"
     >
@@ -17,11 +17,7 @@ export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
         type="button"
         onClick={() => onChange("biolab")}
         aria-pressed={skin === "biolab"}
-        className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-semibold lowercase transition-all min-h-[40px] sm:min-h-[44px] cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none ${
-          skin === "biolab"
-            ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
-            : "text-slate-300 hover:text-slate-100"
-        }`}
+        className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${skin === "biolab" ? "keycap--primary" : ""} focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none`}
       >
         bio-lab
       </button>
@@ -30,11 +26,7 @@ export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
         type="button"
         onClick={() => onChange("fintech")}
         aria-pressed={skin === "fintech"}
-        className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-semibold lowercase transition-all min-h-[40px] sm:min-h-[44px] cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none ${
-          skin === "fintech"
-            ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
-            : "text-slate-300 hover:text-slate-100"
-        }`}
+        className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${skin === "fintech" ? "keycap--primary" : ""} focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none`}
       >
         fintech
       </button>

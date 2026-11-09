@@ -1,0 +1,13 @@
+# anatomy kit — license note
+
+`iso-kit.ts`, `iso.css`, `draw.tsx`, `live.tsx` in this directory are copied
+from the anatomy skill's kit (`~/.claude/skills/anatomy/kit/`, including
+`kit/react/draw.tsx` and `kit/react/live.tsx`).
+
+- Origin: anatomy skill (Claude Code / OpenCode / Antigravity / Codex /
+  MiniMax). Package license: MIT.
+- Small adaptations for this repo: `draw.tsx` imports `./iso-kit` (was
+  `../iso-kit`); `live.tsx` drops the `"use client"` directive (no Next.js
+  server in this Vite app); a provenance header comment was added to
+  `iso-kit.ts` and `iso.css`. Geometry/rendering code is otherwise verbatim.
+- No other files from the skill (examples, scripts, `.mjs` builds) are copied.

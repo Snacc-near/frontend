@@ -6,7 +6,7 @@
  */
 
 import type { ThresholdBreachEvent } from "../types.ts";
-import { KAMUS_ANGKA } from "../types.ts";
+import { OFFICIAL_CONSTANTS } from "../types.ts";
 
 export interface BreachLogItemViewModel {
   id: string;
@@ -24,7 +24,7 @@ export interface BreachLogItemViewModel {
  */
 export function buildBreachLogItemViewModel(evt: ThresholdBreachEvent): BreachLogItemViewModel {
   const latencyMs = Math.max(1, evt.renderedAtMs - evt.emittedAtMs);
-  const meetsSla = latencyMs < KAMUS_ANGKA.RENDER_LATENCY_SLA_MS;
+  const meetsSla = latencyMs < OFFICIAL_CONSTANTS.RENDER_LATENCY_SLA_MS;
 
   let kindBadge = "THERMAL SHIFT";
   if (evt.kind === "zone_changed") {

@@ -17,6 +17,7 @@ export const VITALITY_MAX = 10000;
 export const INITIAL_ATP = 50;
 
 export type SkinMode = "biolab" | "fintech";
+export type GameMode = "demo" | "live";
 
 /**
  * The ADR-31 label map (Bio-Lab vs FinTech Institutional).

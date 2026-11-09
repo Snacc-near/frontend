@@ -10,7 +10,7 @@ import type {
   SkinMode,
 } from "../types.ts";
 import {
-  KAMUS_ANGKA,
+  OFFICIAL_CONSTANTS,
   classifyZone,
   computeThermalGaugeRatio,
   describeZonePolicy,
@@ -110,11 +110,11 @@ export class ZoneBannerController {
 
     const tickHypo = document.createElement("span");
     tickHypo.className = "thermal-spectrum__tick thermal-spectrum__tick--hypo";
-    tickHypo.textContent = `${KAMUS_ANGKA.HYPOTHERMIA_THRESHOLD_MK} mK Hypo`;
+    tickHypo.textContent = `${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK} mK Hypo`;
 
     const tickFever = document.createElement("span");
     tickFever.className = "thermal-spectrum__tick thermal-spectrum__tick--fever";
-    tickFever.textContent = `${KAMUS_ANGKA.FEVER_THRESHOLD_MK} mK Fever`;
+    tickFever.textContent = `${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK Fever`;
 
     this.markerEl = document.createElement("div");
     this.markerEl.className = "thermal-spectrum__needle";

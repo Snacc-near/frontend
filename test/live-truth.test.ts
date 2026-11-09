@@ -6,7 +6,7 @@ import {
   isTerminalStrainStatus,
   resolveSelectedStrain,
 } from "../src/data/liveView.ts";
-import { LivingCell } from "../src/game/cell.ts";
+import { statusLook } from "../src/plate/iso/layout.ts";
 import type { BreachLogItem, StrainSummary } from "../src/data/types.ts";
 
 // Fixture shaped after the real /api/strains response (StrainVesselView rows).
@@ -117,22 +117,7 @@ describe("UI-123..126: live-mode data truthfulness", () => {
   });
 
   it("carries the API status onto the dish cells without fabricating vitality", () => {
-    const burned = new LivingCell({
-      id: 1,
-      label: "strain #1",
-      x: 0,
-      y: 0,
-      status: "SplicedBurned",
-    });
-    expect(burned.status).toBe("SplicedBurned");
-
-    const live = new LivingCell({
-      id: 2,
-      label: "strain #2",
-      x: 0,
-      y: 0,
-      status: "Active",
-    });
-    expect(live.status).toBe("Active");
+    expect(statusLook("SplicedBurned", false).ghost).toBe(true);
+    expect(statusLook("Active", false).tone).toBe("hi");
   });
 });

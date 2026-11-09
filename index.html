@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; object-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https:; frame-src 'self'; child-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
-    <meta name="theme-color" content="#030712" />
+    <meta name="theme-color" content="#efefec" />
     <meta
       name="description"
       content="snacc — a living-cell petri dish arena game on NEAR testnet. nurture living strains, watch the crucible temperature, and react to nutrient bursts."
@@ -17,7 +17,7 @@
     <link rel="preload" href="/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
   </head>
-  <body class="bg-slate-950 text-slate-100 overflow-hidden">
+  <body class="overflow-hidden" style="background-color:#efefec;color:#16181a">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
