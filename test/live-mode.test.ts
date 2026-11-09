@@ -3,7 +3,7 @@ import { LivingCell } from "../src/game/cell.ts";
 import { resolveEventActor, buildEventDedupeKey } from "../src/data/poller.ts";
 import type { CrucibleEvent } from "../src/data/types.ts";
 
-describe("Tahap 2: Live Mode & Game World Integration", () => {
+describe("Stage 2: Live Mode & Game World Integration", () => {
   describe("LivingCell Hit-Testing & Highlighting", () => {
     it("detects an exact click on a cell and ignores clicks outside its bounds", () => {
       const cell = new LivingCell({
@@ -55,7 +55,7 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
     });
   });
 
-  describe("Event Mapping & Korelasi Pelaku", () => {
+  describe("Event Mapping & Actor Correlation", () => {
     it("matches the receipt_id on zone_changed to find the account that crossed the threshold", () => {
       const allEvents: CrucibleEvent[] = [
         {

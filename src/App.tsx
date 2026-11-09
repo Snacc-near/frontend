@@ -78,7 +78,7 @@ export const App: React.FC = () => {
     return liveStrains.filter((s) => s.owner_id.toLowerCase().includes(q)).length;
   }, [userAccount, liveStrains, mode]);
 
-  // 1. Inisialisasi engine canvas
+  // 1. Initialize the engine canvas
   useEffect(() => {
     if (!canvasRef.current) return;
 

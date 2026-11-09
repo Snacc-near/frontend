@@ -1311,7 +1311,7 @@ function init(ctx) {
   // Button 1: Feed $SNACC
   ctx.button('feed $SNACC', () => {
     if (at === ST.lysis) {
-      return ctx.say('Refused: Specimen has lysed; no living cells remain to metabolise nutrients.');
+      return ctx.say('Refused: Specimen has lysed; no living cells remain to metabolize nutrients.');
     }
     if (at === ST.fever) {
       return ctx.say('Refused: Feeding an overheated crucible risks rupture; vent the thermal core first.');

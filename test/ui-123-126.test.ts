@@ -58,7 +58,7 @@ describe("Stage 3: UI-123..126 Polish & Verification", () => {
     });
   });
 
-  describe("UI-125: Aksesibilitas & Prefers-Reduced-Motion", () => {
+  describe("UI-125: Accessibility & Prefers-Reduced-Motion", () => {
     it("initializes the shake damper and particles of EffectsManager safely", () => {
       const effects = new EffectsManager();
       expect(effects.shockwaves).toEqual([]);

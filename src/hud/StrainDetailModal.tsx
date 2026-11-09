@@ -150,7 +150,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Statistik Genetik & Organel */}
+            {/* Genetic stats & organelles */}
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2 rounded-xl bg-slate-900/40 border border-slate-800/60 flex flex-col">
                 <span className="text-slate-500 text-[10px] lowercase">mitokondria</span>

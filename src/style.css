@@ -25,7 +25,7 @@
   --font-display: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "Cascadia Mono", "Consolas", "SFMono-Regular", monospace;
 
-  /* Kurva motionmaxxing (FE-26) */
+  /* Motionmaxxing curves (FE-26) */
   --ease-soft-land: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-snap-settle: cubic-bezier(0.12, 0.98, 0.24, 1);
   --ease-pop-over: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -97,7 +97,7 @@ body {
   display: block;
 }
 
-/* Fallback 2D Live NEP-177 SVG (UI-132 Aksesibilitas) */
+/* Fallback 2D Live NEP-177 SVG (UI-132 Accessibility) */
 .fallback-2d-stage {
   display: none;
   position: absolute;
@@ -733,7 +733,7 @@ body {
   justify-content: flex-end;
 }
 
-/* Responsif Mobile (FE-64 / DS-MOB) */
+/* Responsive Mobile (FE-64 / DS-MOB) */
 @media (max-width: 860px) {
   .hud-perimeter {
     padding: 14px 16px;
