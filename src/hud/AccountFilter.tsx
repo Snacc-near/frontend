@@ -1,9 +1,3 @@
-/**
- * Input Filter Akun NEAR untuk Penyorotan Strain (UI-117..119 Live Mode).
- * Memungkinkan pemain memasukkan nama akun NEAR (tanpa login wallet) untuk
- * menyorot posisi sel NFT miliknya di dalam arena cawan petri.
- */
-
 import React from "react";
 
 interface AccountFilterProps {
@@ -24,7 +18,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
       aria-label="penyorot akun near"
     >
       <div className="flex items-center gap-2">
-        <label htmlFor="near-account-input" className="text-[11px] text-slate-400 lowercase whitespace-nowrap">
+        <label htmlFor="near-account-input" className="text-[11px] text-slate-300 lowercase whitespace-nowrap">
           sorot akun:
         </label>
         <input
@@ -33,7 +27,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
           value={account}
           onChange={(e) => onChange(e.target.value)}
           placeholder="contoh: alice.testnet"
-          className="bg-slate-900/90 border border-slate-800 text-slate-200 placeholder-slate-600 rounded-xl px-2.5 py-1 text-xs font-mono focus:outline-none focus:border-cyan-500/70 min-h-[36px] w-44"
+          className="bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2 text-xs font-mono focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[44px] w-48 transition-all"
           spellCheck={false}
           autoComplete="off"
         />
@@ -42,7 +36,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
             type="button"
             onClick={() => onChange("")}
             aria-label="hapus filter akun"
-            className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-900 text-slate-400 hover:text-slate-100 text-xs font-mono cursor-pointer"
+            className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-900 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-mono cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none"
           >
             ✕
           </button>
@@ -52,11 +46,11 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
       {account.trim().length > 0 && (
         <span className="text-[10px] lowercase font-mono">
           {matchedCount > 0 ? (
-            <span className="text-cyan-400">
+            <span className="text-cyan-300 font-semibold">
               menyorot {matchedCount} strain di cawan
             </span>
           ) : (
-            <span className="text-slate-500">
+            <span className="text-slate-400">
               tidak ada strain milik akun ini di cawan
             </span>
           )}

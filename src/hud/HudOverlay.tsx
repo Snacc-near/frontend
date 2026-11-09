@@ -61,10 +61,10 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
   onShiftZone,
 }) => {
   return (
-    <div className="absolute inset-0 pointer-events-none p-4 sm:p-6 flex flex-col justify-between z-10 select-none">
+    <div className="absolute inset-0 pointer-events-none p-3 sm:p-6 flex flex-col justify-between z-10 select-none overflow-hidden">
       {/* Bilah Atas: Brand, Mode Switch, Filter Akun, Burst Badge, Vitals, ATP */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-2.5 pointer-events-auto">
+      <header className="flex flex-wrap items-start justify-between gap-2.5">
+        <div className="flex flex-col gap-2 pointer-events-auto">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-slate-100 tracking-wider">
               $SNACC
@@ -86,12 +86,12 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2.5 pointer-events-auto">
+        <div className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
           <NutrientBurstBadge burst={burst} skin={skin} />
           <ZoneBanner zone={zone} skin={skin} />
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2.5 pointer-events-auto">
+        <div className="flex flex-wrap items-center justify-end gap-2 pointer-events-auto">
           <SkinSwitch skin={skin} onChange={onSkinChange} />
           <AtpPill atpBalance={atpBalance} skin={skin} />
           <VitalsPill
@@ -105,34 +105,34 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
 
       {/* Kontrol Cepat Uji Simulasi (Khusus Mode Demo untuk Demo Juri) */}
       {mode === "demo" && (
-        <div className="flex items-center justify-center gap-2 pointer-events-auto my-auto opacity-75 hover:opacity-100 transition-opacity">
-          <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-950/70 border border-slate-800 text-[11px] backdrop-blur-md">
+        <div className="flex items-center justify-center gap-2 pointer-events-auto my-auto opacity-80 hover:opacity-100 transition-opacity flex-wrap">
+          <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-950/75 border border-slate-800 text-[11px] backdrop-blur-md flex-wrap justify-center">
             <span className="text-slate-400 px-2 lowercase">simulasi cawan:</span>
             <button
               type="button"
               onClick={() => onShiftZone?.("Hypothermia")}
-              className="px-2.5 py-1 rounded-full text-cyan-400 hover:bg-cyan-950/50 cursor-pointer lowercase"
+              className="px-3 py-1.5 rounded-full text-cyan-300 hover:bg-cyan-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[36px]"
             >
               hipotermia (575)
             </button>
             <button
               type="button"
               onClick={() => onShiftZone?.("Goldilocks")}
-              className="px-2.5 py-1 rounded-full text-emerald-400 hover:bg-emerald-950/50 cursor-pointer lowercase"
+              className="px-3 py-1.5 rounded-full text-emerald-300 hover:bg-emerald-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none min-h-[36px]"
             >
               goldilocks (605)
             </button>
             <button
               type="button"
               onClick={() => onShiftZone?.("Fever")}
-              className="px-2.5 py-1 rounded-full text-orange-400 hover:bg-orange-950/50 cursor-pointer lowercase"
+              className="px-3 py-1.5 rounded-full text-orange-300 hover:bg-orange-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-orange-400 focus:outline-none min-h-[36px]"
             >
               demam (632)
             </button>
             <button
               type="button"
               onClick={onTriggerBurst}
-              className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-semibold cursor-pointer lowercase"
+              className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-semibold cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none min-h-[36px]"
             >
               lisis / burst!
             </button>
@@ -141,7 +141,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
       )}
 
       {/* Bilah Bawah: Log Ambang & Alat Ukur Suhu */}
-      <footer className="flex flex-wrap items-end justify-between gap-4 mt-auto">
+      <footer className="flex flex-wrap items-end justify-between gap-3 sm:gap-4 mt-auto">
         <div className="pointer-events-auto">
           <BreachLog logs={logs} />
         </div>

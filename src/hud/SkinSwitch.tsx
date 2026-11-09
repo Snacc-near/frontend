@@ -17,10 +17,10 @@ export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
         type="button"
         onClick={() => onChange("biolab")}
         aria-pressed={skin === "biolab"}
-        className={`px-3 py-1.5 rounded-full text-xs font-semibold lowercase transition-all min-h-[36px] cursor-pointer ${
+        className={`px-3.5 py-2 rounded-full text-xs font-semibold lowercase transition-all min-h-[44px] cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none ${
           skin === "biolab"
-            ? "bg-emerald-500 text-slate-950 shadow-md"
-            : "text-slate-400 hover:text-slate-200"
+            ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
+            : "text-slate-300 hover:text-slate-100"
         }`}
       >
         bio-lab
@@ -30,10 +30,10 @@ export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
         type="button"
         onClick={() => onChange("fintech")}
         aria-pressed={skin === "fintech"}
-        className={`px-3 py-1.5 rounded-full text-xs font-semibold lowercase transition-all min-h-[36px] cursor-pointer ${
+        className={`px-3.5 py-2 rounded-full text-xs font-semibold lowercase transition-all min-h-[44px] cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none ${
           skin === "fintech"
-            ? "bg-emerald-500 text-slate-950 shadow-md"
-            : "text-slate-400 hover:text-slate-200"
+            ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
+            : "text-slate-300 hover:text-slate-100"
         }`}
       >
         fintech

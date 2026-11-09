@@ -28,53 +28,53 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
 
   return (
     <div
-      className="flex flex-col gap-1 px-4 py-2.5 rounded-2xl bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg min-w-[210px]"
+      className="flex flex-col gap-1 px-4 py-2.5 rounded-2xl bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg min-w-[210px] select-none"
       role="region"
       aria-label={`${labels.zone} ${crucibleTempMk} milikelvin`}
     >
       <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-400 lowercase">{labels.zone}</span>
+        <span className="text-slate-300 lowercase">{labels.zone}</span>
         <span className="font-mono font-bold text-slate-100">
-          {crucibleTempMk} <span className="text-slate-400 font-normal">mk</span>
+          {crucibleTempMk} <span className="text-slate-300 font-normal">mk</span>
         </span>
       </div>
 
-      {/* Skala termometer horizontal dengan penanda batas ambang */}
-      <div className="relative w-full h-2.5 my-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
+      {/* Skala termometer horizontal dengan penanda batas ambang (UI-118) */}
+      <div className="relative w-full h-3 my-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
         {/* Indikator zona Hypothermia (<600 mK) */}
         <div
-          className="absolute top-0 bottom-0 left-0 bg-cyan-500/25"
+          className="absolute top-0 bottom-0 left-0 bg-cyan-500/30"
           style={{ width: `${hypoPct}%` }}
           title={`batas hipotermia: < ${HYPOTHERMIA_THRESHOLD_MK} mk`}
         />
 
         {/* Indikator zona Goldilocks (600..610 mK) */}
         <div
-          className="absolute top-0 bottom-0 bg-emerald-500/30"
+          className="absolute top-0 bottom-0 bg-emerald-500/35"
           style={{ left: `${hypoPct}%`, width: `${feverPct - hypoPct}%` }}
           title={`rentang goldilocks: ${HYPOTHERMIA_THRESHOLD_MK}..${FEVER_THRESHOLD_MK} mk`}
         />
 
         {/* Indikator zona Fever (>610 mK) */}
         <div
-          className="absolute top-0 bottom-0 right-0 bg-orange-500/30"
+          className="absolute top-0 bottom-0 right-0 bg-orange-500/35"
           style={{ left: `${feverPct}%` }}
           title={`batas demam: > ${FEVER_THRESHOLD_MK} mk`}
         />
 
         {/* Jarum penunjuk suhu saat ini */}
         <div
-          className="absolute top-0 bottom-0 w-1.5 bg-white shadow-[0_0_6px_#fff] rounded-full transition-all duration-500 -ml-0.5"
+          className="absolute top-0 bottom-0 w-2 bg-white shadow-[0_0_8px_#fff] rounded-full transition-all duration-500 -ml-1"
           style={{ left: `${ratio * 100}%` }}
         />
       </div>
 
-      <div className="flex items-center justify-between text-[10px]">
+      <div className="flex items-center justify-between text-[11px]">
         <span className="flex items-center gap-1.5" style={{ color: theme.color }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.color }} />
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.color }} />
           <span className="font-semibold lowercase">{theme.label}</span>
         </span>
-        <span className="text-slate-500 font-mono">
+        <span className="text-slate-400 font-mono text-[10px]">
           ambang 600 / 610
         </span>
       </div>

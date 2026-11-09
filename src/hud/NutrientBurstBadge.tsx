@@ -14,18 +14,18 @@ export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, s
 
   return (
     <div
-      className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border backdrop-blur-md transition-all ${
+      className={`flex items-center gap-2.5 px-3.5 py-2 rounded-full border backdrop-blur-md transition-all select-none ${
         isActive
-          ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-200 shadow-md shadow-emerald-500/10"
-          : "bg-slate-950/70 border-slate-800 text-slate-400"
+          ? "bg-emerald-950/80 border-emerald-500/60 text-emerald-200 shadow-md shadow-emerald-500/15"
+          : "bg-slate-950/80 border-slate-800 text-slate-300"
       }`}
       role="status"
       aria-label={`${labels.burst}: ${isActive ? `diskon ${burst.activeBurstBps / 100}%` : "siaga"}`}
     >
       <span
-        className={`w-2 h-2 rounded-full ${
+        className={`w-2.5 h-2.5 rounded-full ${
           isActive
-            ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"
+            ? "bg-emerald-400 motion-safe:animate-pulse shadow-[0_0_8px_#34d399]"
             : "bg-slate-600"
         }`}
       />
@@ -36,12 +36,12 @@ export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, s
             <span className="font-mono font-bold text-emerald-300">
               -{(burst.activeBurstBps / 100).toFixed(2)}%
             </span>
-            <span className="text-[10px] text-emerald-400/80 font-mono">
+            <span className="text-[10px] text-emerald-300 font-mono">
               sampai epoch {burst.untilEpoch}
             </span>
           </>
         ) : (
-          <span className="text-[10px] text-slate-500 lowercase">siaga</span>
+          <span className="text-[10px] text-slate-400 lowercase">siaga</span>
         )}
       </div>
     </div>

@@ -17,9 +17,15 @@ export class PetriDish {
   public resize(width: number, height: number): void {
     this.centerX = width / 2;
     this.centerY = height / 2;
-    // Skala cawan elips memenuhi ruang tanpa menabrak batas
-    this.radiusX = Math.min(width * 0.44, 460);
-    this.radiusY = Math.min(height * 0.42, 310);
+
+    // Skala responsif cawan elips untuk potret (HP) dan lanskap (desktop)
+    if (width < height) {
+      this.radiusX = Math.min(width * 0.43, 360);
+      this.radiusY = this.radiusX * 0.78;
+    } else {
+      this.radiusX = Math.min(width * 0.44, 460);
+      this.radiusY = Math.min(height * 0.42, 310);
+    }
   }
 
   public render(ctx: CanvasRenderingContext2D, width: number, height: number, timeSec: number): void {
