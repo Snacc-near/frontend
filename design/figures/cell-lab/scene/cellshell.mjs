@@ -38,7 +38,7 @@ export function cellShell() {
     `<path d="${O.pathOf(wi, true)}" class="ink" style="stroke-width:.8px"/>` +
     `<path d="${O.pathOf(mi, true)}" fill="none" style="stroke:#f8aa06;stroke-width:1.7px"/>`;
   // interior backdrop: concave inner wall banded toward the centre
-  const bands = [[RH - 6, RV - 6, "#eddcae"], [RH - 10, RV - 10, "#f1e3b9"], [RH - 17, RV - 17, "#f5ead0"], [RH - 27, RV - 28, "#f9f0da"]];
+  const bands = [[RH - 6, RV - 6, "#ecdbad"], [RH - 10, RV - 10, "#f2e5bc"], [RH - 17, RV - 17, "#f7edd2"], [RH - 27, RV - 28, "#fbf4e2"]];
   out.backdrop = bands.map(([rh, rv, col]) => `<path d="${O.pathOf(cutEll(rh, rv), true)}" fill="${col}"/>`).join("");
   const grain = [];
   let seed = 7;

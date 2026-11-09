@@ -6,7 +6,7 @@ import { makeMech } from "../mech.mjs";
 
 export const GEO = {
   MC: F.MC,
-  wheel: { u: -27, v: 0, z: 32, R: 15, n: 8, rv: 3.7, labels: ["CIT", "ISO", "AKG", "SCA", "SUC", "FUM", "MAL", "OAA"] },
+  wheel: { u: -27, v: 0, z: 33, R: 15, n: 8, rv: 2.8, labels: ["CIT", "ISO", "AKG", "SCA", "SUC", "FUM", "MAL", "OAA"] },
   turb: { u: 59, v: -2, z0: 9, n: 10, zf1: 24 },
   tank: { u0: 4, u1: 49, v: -19, z: 27, r: 3.6 },
   complexes: [{ name: "I", u: 5, w: 10 }, { name: "III", u: 21, w: 10 }, { name: "IV", u: 37, w: 10 }],
@@ -57,7 +57,7 @@ export function hero() {
   const lowQ = F.wallQuads(INN, wall.z0, wall.rim, { mode: "inner", pred: (u, v) => v >= vc });
   const outQ = F.wallQuads(OUT, wall.z0, wall.top, { mode: "outer", pred: (u, v) => v < vc });
   const bw = [];
-  bw.push(F.quadSvg(backQ), F.quadSvg(lowQ), F.quadSvg(outQ));
+  bw.push(`<g class="cyto">${F.quadSvg(backQ)}${F.quadSvg(lowQ)}</g>`, F.quadSvg(outQ));
   // top ring of the tall back part: outer run (v<vc) + inner run
   const runOf = (loc) => loc.filter(([, v]) => v < vc);
   // keep ring order: rotate so the run is contiguous
@@ -179,7 +179,7 @@ export function hero() {
   const wf = [];
   // base saddle + A frame legs at the back (v = -6.4) and front (v = +6.4)
   for (const vv of [-1, 1]) {
-    const vl = w.v + vv * (w.rv + 2.6);
+    const vl = w.v + vv * (vv > 0 ? w.rv + 7.4 : w.rv + 2.6);
     const legPoly = (sign) => {
       const top = [w.u + sign * 0.6, w.z - 0.5], bot = [w.u + sign * 10, FLOOR_Z()];
       return [at(F.W3(top[0] - 1.1, vl, top[1])), at(F.W3(top[0] + 1.1, vl, top[1])), at(F.W3(bot[0] + 1.3, vl, bot[1])), at(F.W3(bot[0] - 1.3, vl, bot[1]))];

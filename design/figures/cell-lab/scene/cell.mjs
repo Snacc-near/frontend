@@ -62,9 +62,9 @@ function nucleus() {
   const rx = w.rx, rz = w.rz;
   const a = [];
   a.push(`<g clip-path="url(#cp-nuc)"><g transform="${M}">`);
-  a.push(`<ellipse cx="0" cy="0" rx="${f1(rx + 2)}" ry="${f1(rz + 2)}" fill="#f4ecd6"/>`);
+  a.push(`<ellipse cx="0" cy="0" rx="${f1(rx + 2)}" ry="${f1(rz + 2)}" fill="#d2b273"/>`);
   // inner envelope ring (second membrane)
-  a.push(`<ellipse cx="0" cy="0" rx="${f1(rx - 2.4)}" ry="${f1(rz - 2.4)}" fill="#fbf5e4" class="ink" style="stroke-width:.6px"/>`);
+  a.push(`<ellipse cx="0" cy="0" rx="${f1(rx - 2.4)}" ry="${f1(rz - 2.4)}" fill="#fff7de" class="ink" style="stroke-width:.9px"/>`);
   // pore gaps: breaks drawn as small cream blocks across both membranes
   for (let i = 0; i < 12; i++) {
     const t = (i / 12) * TAU + 0.15;
@@ -116,7 +116,7 @@ function er() {
   const dots = [];
   for (const rb of rbs) {
     const pts = [...flip(rb.top), ...flip(rb.bot).reverse()];
-    parts.push(`<path d="${d2(pts)}" fill="#f1dca8" class="ink" style="stroke-width:.7px"/>`);
+    parts.push(`<path d="${d2(pts)}" fill="#ecc77a" class="ink" style="stroke-width:.9px"/>`);
     parts.push(`<path d="${d2(flip(rb.top), false)}" fill="none" class="ink3" style="stroke-width:.35px;stroke:#fff"/>`);
     for (let i = 1; i < 18; i += 1) {
       const [x, y] = flip(rb.top)[i];
@@ -145,8 +145,8 @@ function golgi() {
       bot.push([Math.sin(t) * (R0 - 0.2), -Math.cos(t) * R0 * 0.34 + dy + 2.7]);
     }
     const ring = [...top, ...bot.reverse()];
-    const tone = i % 2 ? "#f6e6c0" : "#fbf1d6";
-    a.push(`<path d="${d2(ring)}" fill="#c9b27c" class="ink" style="stroke-width:.8px" transform="translate(0 1.2)"/>`);
+    const tone = i % 2 ? "#f4cf7e" : "#f9dc96";
+    a.push(`<path d="${d2(ring)}" fill="#c9b27c" class="ink" style="stroke-width:.8px" transform="translate(0 1.6)"/>`);
     a.push(`<path d="${d2(ring)}" fill="${tone}" class="ink" style="stroke-width:.8px"/>`);
     a.push(`<path d="${d2(top.slice(1, -1), false)}" fill="none" class="ink3" style="stroke:#fff;stroke-width:.5px"/>`);
     // fenestrations: tiny ellipses
@@ -261,9 +261,9 @@ export function beanArt(L, W, level = 2, accent = false) {
   const body = O.smoothPath(beanPts(L, W), true);
   const inner = O.smoothPath(beanPts(L, W, 0.8), true);
   const a = [];
-  a.push(`<path d="${body}" fill="#c9b27c" class="ink" style="stroke-width:.85px" transform="translate(0 2)"/>`);
-  a.push(`<path d="${body}" fill="${accent ? "#ffe6a0" : "#f6e4b4"}" class="ink" style="stroke-width:.85px"/>`);
-  a.push(`<path d="${inner}" fill="${accent ? "#ffd77a" : "#fbf1d4"}" class="ink" style="stroke-width:.55px"/>`);
+  a.push(`<path d="${body}" fill="#b98a2c" class="ink" style="stroke-width:1px" transform="translate(0 2)"/>`);
+  a.push(`<path d="${body}" fill="${accent ? "#ffe6a0" : "#f0b93c"}" class="ink" style="stroke-width:1px"/>`);
+  a.push(`<path d="${inner}" fill="${accent ? "#ffd77a" : "#fbe6a6"}" class="ink" style="stroke-width:.7px"/>`);
   const n = Math.max(4, Math.round(L / 2.7));
   for (let i = 0; i < n; i++) {
     const t = -0.74 + (1.48 * i) / (n - 1);
@@ -272,7 +272,7 @@ export function beanArt(L, W, level = 2, accent = false) {
     const yEdge = (top ? -1 : 1) * W * 0.8 * Math.sqrt(Math.max(0.05, 1 - (x / (L * 0.8)) ** 2)) * (top ? 1 : 0.84);
     const s = top ? 1 : -1;
     const depth = W * (0.62 + (level / 8) * 0.12);
-    a.push(`<path d="M${f1(x - 1.1)} ${f1(yEdge)}C${f1(x - 1.6)} ${f1(yEdge - s * depth * 0.4)} ${f1(x + 1.4)} ${f1(yEdge - s * depth * 0.6)} ${f1(x + 0.5)} ${f1(yEdge - s * depth * 0.98)}C${f1(x + 1.9)} ${f1(yEdge - s * depth * 0.6)} ${f1(x - 0.6)} ${f1(yEdge - s * depth * 0.4)} ${f1(x + 1.1)} ${f1(yEdge)}" fill="${accent ? "#f8aa06" : "#e8c98a"}" class="ink" style="stroke-width:.5px"/>`);
+    a.push(`<path d="M${f1(x - 1.1)} ${f1(yEdge)}C${f1(x - 1.6)} ${f1(yEdge + s * depth * 0.4)} ${f1(x + 1.4)} ${f1(yEdge + s * depth * 0.6)} ${f1(x + 0.5)} ${f1(yEdge + s * depth * 0.98)}C${f1(x + 1.9)} ${f1(yEdge + s * depth * 0.6)} ${f1(x - 0.6)} ${f1(yEdge + s * depth * 0.4)} ${f1(x + 1.1)} ${f1(yEdge)}" fill="${accent ? "#f8aa06" : "#d98a14"}" class="ink" style="stroke-width:.6px"/>`);
   }
   return a.join("");
 }

@@ -205,6 +205,15 @@ export function rig() {
     add(dep(sx + 28, sy + 12, 8), o.join(""), "output-shelf");
   }
 
+  // ================= pneumatic tube: enclave roof -> bell jar wall port =================
+  {
+    const t = tubePieces(ATTEST_ROUTE, 1.7, P, { maxLength: 22 }).map((q) => tubeSvg(q, { tone: "hi" })).join("");
+    const end = ATTEST_ROUTE[ATTEST_ROUTE.length - 1], prev = ATTEST_ROUTE[ATTEST_ROUTE.length - 2];
+    const dir = G.unit3(G.sub3(end, prev));
+    const fl = S(G.disc(-0.4, 1.4, 3.3, G.frameAlong(end, dir), P, { steps: 24 }), { tone: "hi", className: "steel" });
+    add(dep(-160, 0, 20) + 0.7, `<g class="bone">${t}</g>` + fl, "attest-tube");
+  }
+
   // ================= ATP glass tube =================
   {
     const t = tubePieces(ATP_ROUTE, 2.4, P, { maxLength: 24 }).map((q) => tubeSvg(q, { tone: "hi" })).join("");
@@ -213,5 +222,6 @@ export function rig() {
   return out;
 }
 
-export const FEED_PORT = [CELLC[0] + 74 * Math.cos((122 * Math.PI) / 180), CELLC[1] + 74 * Math.sin((122 * Math.PI) / 180)];
+export const ATTEST_ROUTE = G.fillet([[-166, 4, 30], [-166, 4, 66], [-153.2 - 1.2, -3.2 + 0.7, 66]], 6, 7, { P, tube: 1.7 });
+export const FEED_PORT =[CELLC[0] + 74 * Math.cos((122 * Math.PI) / 180), CELLC[1] + 74 * Math.sin((122 * Math.PI) / 180)];
 export const FEED_ROUTE = G.fillet([[-150, 55, 24], [-150, 55, 14], [-150, FEED_PORT[1] + 1, 14], [FEED_PORT[0] - 4.6, FEED_PORT[1] + 1, 14]], 5, 7, { P, tube: 1.9 });

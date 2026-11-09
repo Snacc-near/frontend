@@ -37,20 +37,7 @@ export function makeMech(k, P, GEO) {
       gs.push({ i, gu, gz, key: gz });
     }
     gs.sort((a, b) => a.key - b.key);
-    for (const g of gs) {
-      const hot = glow === g.i || carrying[g.i];
-      const body = box(g.gu - 2.7, v - 2.2, 5.4, 4.4, g.gz - 6.4, 4.2, { cls: hot ? "mari" : "", bevel: 0.2, r: 0.8 });
-      // hangers from both rims
-      const h1 = `<path class="ink" style="stroke-width:.7px" d="${pts([A(W3(g.gu - 1.8, v - rv, g.gz)), A(W3(g.gu - 1.8, v - 2.2, g.gz - 2.3))])}"/>`;
-      const h2 = `<path class="ink" style="stroke-width:.7px" d="${pts([A(W3(g.gu + 1.8, v - rv, g.gz)), A(W3(g.gu + 1.8, v - 2.2, g.gz - 2.3))])}"/>`;
-      const h3 = `<path class="ink" style="stroke-width:.7px" d="${pts([A(W3(g.gu - 1.8, v + rv, g.gz)), A(W3(g.gu - 1.8, v + 2.2, g.gz - 2.3))])}"/>`;
-      const h4 = `<path class="ink" style="stroke-width:.7px" d="${pts([A(W3(g.gu + 1.8, v + rv, g.gz)), A(W3(g.gu + 1.8, v + 2.2, g.gz - 2.3))])}"/>`;
-      const M = k.iso ? planeMat(W3(g.gu - 2.5, v + 2.2, g.gz - 2.4), [s2, -s2, 0], [0, 0, -1]) : "";
-      const lab = `<g transform="${M}"><text x="2.5" y="0" text-anchor="middle" class="txt" style="font-size:1.6px">${w.labels[g.i]}</text></g>`;
-      const cell = carrying[g.i] ? `<g class="mari">${S(k.cylinder(W3(g.gu, v, 0)[0], W3(g.gu, v, 0)[1], 1.2, g.gz - 2.2, 2.2, P, 12, 0.1), { tone: "hi" })}</g>` : "";
-      out.push(h1, h2, body, h3, h4, lab, cell);
-    }
-    // front rim + spokes + hub
+    // front rim + spokes + hub (gondolas hang in front of it, below)
     out.push(band(v + rv));
     for (let i = 0; i < n; i++) { const t = ang + (i / n) * TAU; out.push(`<path class="ink3" style="stroke-width:.6px" d="${pts([A(W3(u, v + rv, z)), A(W3(u + Math.cos(t) * (R - 1), v + rv, z + Math.sin(t) * (R - 1)))])}"/>`); }
     // hub: small drum along v
@@ -58,6 +45,18 @@ export function makeMech(k, P, GEO) {
     out.push(`<circle cx="${f1(hubC[0])}" cy="${f1(hubC[1])}" r="2.7" class="f-tan"/><circle cx="${f1(hubC[0])}" cy="${f1(hubC[1])}" r="1.1" class="f-mari"/>`);
     // tooth marks around the rim (gear teeth) to show rotation
     for (let i = 0; i < n * 2; i++) { const t = ang + (i / (n * 2)) * TAU + 0.2; const p0 = A(W3(u + Math.cos(t) * (R + 1.1), v + rv, z + Math.sin(t) * (R + 1.1))), p1 = A(W3(u + Math.cos(t) * (R + 2.2), v + rv, z + Math.sin(t) * (R + 2.2))); out.push(`<path class="ink2" style="stroke-width:.55px" d="${pts([p0, p1])}"/>`); }
+    // gondolas: hang upright from the front rim, in front of it, each with an engraved label
+    for (const g of gs) {
+      const hot = glow === g.i || carrying[g.i];
+      const vg = v + rv + 0.9;
+      const h1 = `<path class="ink" style="stroke-width:.75px" d="${pts([A(W3(g.gu - 1.9, v + rv, g.gz)), A(W3(g.gu - 1.9, vg + 0.3, g.gz - 2.0))])}"/>`;
+      const h2 = `<path class="ink" style="stroke-width:.75px" d="${pts([A(W3(g.gu + 1.9, v + rv, g.gz)), A(W3(g.gu + 1.9, vg + 0.3, g.gz - 2.0))])}"/>`;
+      const body = box(g.gu - 3.0, vg, 6.0, 4.2, g.gz - 6.6, 4.6, { cls: hot ? "mari" : "", bevel: 0.25, r: 0.9 });
+      const Mx = planeMat(W3(g.gu - 2.6, vg + 4.21, g.gz - 3.0), [s2, -s2, 0], [0, 0, -1]);
+      const lab = `<g transform="${Mx}"><text x="2.6" y="0" text-anchor="middle" class="txt" style="font-size:1.75px;font-weight:700">${w.labels[g.i]}</text><path d="M-0.3 0.9L5.5 0.9" class="ink3" style="stroke-width:.3px"/></g>`;
+      const cell = carrying[g.i] ? `<g class="mari">${S(k.cylinder(W3(g.gu, vg + 2, 0)[0], W3(g.gu, vg + 2, 0)[1], 1.2, g.gz - 2.0, 2.2, P, 12, 0.1), { tone: "hi" })}</g>` : "";
+      out.push(h1, h2, body, lab, cell);
+    }
     return out.join("");
   }
   function planeMat(o3, e1, e2) {

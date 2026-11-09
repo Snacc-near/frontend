@@ -31,7 +31,8 @@ export const PLAIN_CSS = `
 .water{--anatomy-paper:#bfe0f0;--anatomy-face:#bfe0f0;--anatomy-top:#e6f5fb;--anatomy-shade-0:#80b4cf;--anatomy-shade-1:#98c6dc;--anatomy-shade-2:#aed3e6;--anatomy-shade-3:#bfe0f0}
 .acid{--anatomy-paper:#d8e58a;--anatomy-face:#d8e58a;--anatomy-top:#f0f6bb;--anatomy-shade-0:#a3b24a;--anatomy-shade-1:#b8c862;--anatomy-shade-2:#c9d975;--anatomy-shade-3:#d8e58a}
 .iso-line[data-tone="mari"]{stroke:var(--mari)}
-.ink{fill:none;stroke:var(--ink);stroke-width:.95px;stroke-linecap:round;stroke-linejoin:round}
+.ink:not([fill]){fill:none}
+.ink{stroke:var(--ink);stroke-width:.95px;stroke-linecap:round;stroke-linejoin:round}
 .ink2{fill:none;stroke:var(--anatomy-mid);stroke-width:.7px;stroke-linecap:round;stroke-linejoin:round}
 .ink3{fill:none;stroke:var(--anatomy-lo);stroke-width:.55px;stroke-linecap:round;stroke-linejoin:round}
 .inkf{fill:var(--ink);stroke:none}
@@ -42,7 +43,7 @@ export const PLAIN_CSS = `
 .f-tan{fill:#d8c399;stroke:var(--ink);stroke-width:.8px;stroke-linejoin:round}
 .f-dk{fill:#3a2f22;stroke:var(--ink);stroke-width:.7px;stroke-linejoin:round}
 .f-none{fill:none}
-.glass-fill{fill:#fffdf6;fill-opacity:.2;stroke:none}
+.glass-fill{fill:#fffdf6;fill-opacity:.07;stroke:none}
 .glass-fill-b{fill:#e9f2f4;fill-opacity:.22;stroke:none}
 .glass-edge{fill:none;stroke:var(--ink);stroke-width:.9px;stroke-linecap:round;stroke-linejoin:round;opacity:.92}
 .glass-edge-b{fill:none;stroke:var(--anatomy-mid);stroke-width:.6px;stroke-linecap:round;stroke-linejoin:round;opacity:.7}

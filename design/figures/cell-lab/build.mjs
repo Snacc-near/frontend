@@ -5,14 +5,14 @@
 import { writeFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { k, A, R, P, W, H, layers, emit, dep, CELLC, PLATE, A as AUD } from "./ctx.mjs";
+import { k, A, R, P, W, H, layers, emit, dep, CELLC, PLATE, at } from "./ctx.mjs";
 import { PLAIN_CSS } from "./theme.mjs";
 import { base } from "./scene/base.mjs";
 import { chamber, glass } from "./scene/chamber.mjs";
-import { cellShell } from "./scene/cellshell.mjs";
+import { cellShell, CC } from "./scene/cellshell.mjs";
 import { cellInside, ORG } from "./scene/cell.mjs";
 import { hero, GEO } from "./scene/mito.mjs";
-import { rig, ATP_ROUTE, FEED_ROUTE, FEED_PORT, DIAL } from "./scene/rig.mjs";
+import { rig, ATP_ROUTE, FEED_ROUTE, FEED_PORT, DIAL, ATTEST_ROUTE } from "./scene/rig.mjs";
 import { lensStatic, LENS } from "./scene/lens.mjs";
 import * as F from "./scene/frame.mjs";
 
@@ -23,6 +23,8 @@ const kitNames = [...kitSrc.matchAll(/^export (?:function|const) (\w+)/gm)].map(
 const kitScript = `const k=(()=>{${stripExport(kitSrc)}\nreturn {${kitNames.join(",")}};})();`;
 const mechScript = stripExport(readFileSync(join(HERE, "mech.mjs"), "utf8"));
 const liveSrc = readFileSync(join(HERE, "live.js"), "utf8");
+const scenesSrc = readFileSync(join(HERE, "scenes.js"), "utf8");
+const live2Src = readFileSync(join(HERE, "live2.js"), "utf8");
 
 /* ---------- assemble the static scene ---------- */
 base();
@@ -31,7 +33,7 @@ const g = glass();
 const sh = cellShell();
 const D0 = dep(CELLC[0], CELLC[1], 0);
 const bodyCell = cellInside();
-emit(D0, g.back + sh.shell + sh.rim + sh.backdrop + `<g data-part="cell-inside">${bodyCell}</g><g data-dyn="cell-fx"></g>`, "cell");
+emit(D0, g.back + `<g data-dyn="cellroot"><g data-dyn="bud"></g>` + sh.shell + sh.rim + sh.backdrop + `<g data-part="cell-inside">${bodyCell}</g><g data-dyn="cell-fx"></g></g>`, "cell");
 emit(D0 + 1, g.front + g.foot + g.fin + `<g data-dyn="glass-fx"></g>`, "glass-front");
 const heroItems = hero();
 emit(dep(F.MC[0], F.MC[1], 0), heroItems.map((i) => i.svg).join("") + `<g data-dyn="hero-tokens"></g>`, "hero");
@@ -57,8 +59,9 @@ const svg = k.figureSvg({
 const geoJson = JSON.stringify({
   P, GEO, W, H,
   ORG: Object.fromEntries(Object.entries(ORG).map(([n, o]) => [n, { screen: o.screen, cx: o.cx, cz: o.cz, dn: o.dn }])),
-  ATP_ROUTE, FEED_ROUTE, FEED_PORT, DIAL, CELLC, LENS: LENS,
+  ATP_ROUTE, FEED_ROUTE, FEED_PORT, DIAL, CELLC, LENS: LENS, ATTEST_ROUTE,
   SCARS: Array.from({ length: 8 }, (_, i) => sh.scarPoint(i)),
+  CELLSCR: at(CC), KS: k.cameraOf(P).k,
 });
 
 /* ---------- audit (recorded solids and tubes only) ---------- */
@@ -113,7 +116,10 @@ const bodyHtml = k.plateHtml({
   body: `<div class="iso-stage stage-shell" tabindex="0" role="group" aria-label="Cell Lab actions">${svg}<div class="counters"><span data-counter-atp>ATP 0</span><span data-counter-vit>Vitality 70</span></div><div class="dock" role="group" aria-label="Cell Lab action buttons">${dockButtons}</div><span class="credit">Drawn with the Anatomy kit (MIT) by April Zhu — plain marigold</span></div>`,
 });
 
-const live = `${kitScript}\n${mechScript}\nconst GEOM=${geoJson};\nconst ACTIONS=${JSON.stringify(ACTIONS)};\n${liveSrc}`;
+const live = `${kitScript}\n${mechScript}\nconst GEOM=${geoJson};\nconst ACTIONS=${JSON.stringify(ACTIONS)};\n${liveSrc}
+${live2Src}
+${scenesSrc}
+boot();`;
 const html = k.pageHtml({ title: "Cell Lab", theme: "light", width: 1100, body: `<style>${PLAIN_CSS}${PAGE_CSS}</style>${bodyHtml}`, script: live });
 const outPath = join(HERE, "..", "..", "..", "public", "figures", "cell-lab.html");
 writeFileSync(outPath, html);

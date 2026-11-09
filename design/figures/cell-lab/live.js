@@ -202,7 +202,7 @@ function idlePose(now) {
 function chip(title, step, note) {
   const g = dyn.chip || (dyn.chip = (() => { const e = document.createElementNS("http://www.w3.org/2000/svg", "g"); e.setAttribute("class", "chip"); e.setAttribute("data-dyn", "chip"); svg.appendChild(e); return e; })());
   if (!title) { g.setAttribute("opacity", "0"); return; }
-  const w = 430, h = 46, x = VW / 2 - w / 2, y = VH - 62;
+  const w = Math.max(400, Math.min(620, step.length * 5.9 + 48)), h = 48, x = VW / 2 - w / 2 + 40, y = VH - 64;
   g.setAttribute("opacity", "1");
   g.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><rect x="${x}" y="${y}" width="6" height="${h}" rx="3" style="fill:#f8aa06;stroke:#161412"/><text class="t" x="${x + 16}" y="${y + 16}">${title}</text><text class="s" x="${x + 16}" y="${y + 30}">${step}</text><text class="n" x="${x + 16}" y="${y + 41}">${note || ""}</text>`;
 }
@@ -252,76 +252,3 @@ function applyState() {
   drawCounter();
 }
 
-/* ---------------- runner ---------------- */
-let run = null, lastNow = 0, freezeT = null;
-const ANIMS = {
-  atp: { dur: ATP_DUR, update(t) { const p = atpPose(t); drawHero(p); drawDial(sstep(0, 1, Math.min(1, p.coinsArrived / 3)) * 0.0 + (p.coinsArrived ? 0.012 * Math.min(8, p.coinsArrived) : 0)); let st = ATP_STEPS[0][1]; for (const [a, txt] of ATP_STEPS) if (t >= a) st = txt; chip("Mitochondrion · power plant", st, "textbook: 3 ATP per rotor turn · ≈30–32 ATP per glucose"); glow(dyn.wheel, t > 0.28 && t < 0.78); glow(dyn.rotor, t > 0.5); glow(dyn.f1, t > 0.5); glow(dyn.car, t > 0.35 && t < 0.78); glow(dyn.gate, t < 0.18); glow(dyn.split, t > 0.17 && t < 0.3); glow(dyn["tank-level"], t > 0.4);
-    glow($('[data-org="mito1"]'), true); return p; }, end() { ["wheel", "rotor", "f1", "car", "gate", "split", "tank-level"].forEach((n) => glow(dyn[n], false)); glow($('[data-org="mito1"]'), false); } },
-};
-function startAction(action) {
-  if (run) return;
-  const an = ANIMS[action] || ANIMS.atp;
-  window.parent.postMessage({ type: "snacc:action", action }, ORIGIN);
-  setReadout(LABEL[action] + "…");
-  if (calm) {
-    an.update(0.52); setTimeout(() => finish(action), 700); run = { action, an, calm: true }; return;
-  }
-  run = { action, an, t0: performance.now(), dur: an.dur };
-}
-function finish(action) {
-  const an = run && run.an; if (an && an.end) an.end();
-  if (action === "atp" && !EMBED_STATE) S.atp += 2;
-  applyState();
-  chip(null);
-  run = null;
-  setReadout(LABEL[action] + " done · ATP " + S.atp);
-  window.parent.postMessage({ type: "snacc:done", action }, ORIGIN);
-}
-const EMBED_STATE = false;
-let t0 = performance.now();
-function frame(now) {
-  const dt = Math.min(0.05, (now - lastNow) / 1000); lastNow = now;
-  if (run && !run.calm) {
-    const t = clamp((now - run.t0) / run.dur);
-    run.an.update(t);
-    if (t >= 1) finish(run.action);
-  } else if (!run) {
-    drawHero(idlePose(now - t0)); drawDial(0);
-  }
-  cellIdle(now);
-  if (!calm || freezeT === null) requestAnimationFrame(frame);
-}
-
-/* ---------------- bridge ---------------- */
-const KNOWN = new Set(["snacc:state", "snacc:play"]);
-window.addEventListener("message", (e) => {
-  if (e.origin !== ORIGIN) return;
-  const d = e.data; if (!d || typeof d.type !== "string" || !KNOWN.has(d.type)) return;
-  if (d.type === "snacc:state") {
-    const s = d.strain || {};
-    if (typeof s.status === "string") S.status = s.status;
-    const ev = typeof s.effective_vitality === "number" ? s.effective_vitality : s.vitality;
-    if (typeof ev === "number") { S.evit = ev; S.vitality = typeof s.vitality === "number" ? s.vitality : ev; }
-    if (typeof s.atp_balance === "number") S.atp = s.atp_balance;
-    if (s.organel && typeof s.organel === "object") for (const key of ["mitokondria", "nukleus", "lisosom"]) if (typeof s.organel[key] === "number") S.org[key] = s.organel[key];
-    if (typeof s.generation === "number") S.gen = s.generation;
-    if (typeof s.role_mask === "number") S.role = s.role_mask;
-    if (typeof d.zone === "string") S.zone = d.zone;
-    applyState();
-  } else if (d.type === "snacc:play") {
-    if (typeof d.action === "string" && ACTIONS.includes(d.action)) startAction(d.action);
-  }
-});
-document.querySelectorAll("[data-action]").forEach((b) => b.addEventListener("click", () => startAction(b.dataset.action)));
-
-/* ---------------- boot ---------------- */
-applyState();
-if (FREEZE) {
-  const [, name, tv] = FREEZE; freezeT = parseFloat(tv);
-  const an = ANIMS[name] || ANIMS.atp; an.update(freezeT);
-  setReadout(LABEL[name] || name);
-} else {
-  setReadout(calm ? "Still — highlights and numbers shown" : "Ready");
-  if (calm) { drawHero(idlePose(0)); drawDial(0); } else requestAnimationFrame((n) => { lastNow = n; frame(n); });
-}
-window.parent.postMessage({ type: "snacc:ready" }, ORIGIN);
