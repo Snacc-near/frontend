@@ -9,7 +9,7 @@ import React, { useEffect, useRef } from "react";
 import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS, VITALITY_MAX } from "../config/constants.ts";
-import type { GameMode } from "../game/engine.ts";
+import type { GameMode } from "../config/constants.ts";
 
 interface StrainDetailModalProps {
   strain: StrainDetail | null;

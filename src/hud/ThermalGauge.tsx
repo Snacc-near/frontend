@@ -9,18 +9,19 @@ import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS } from "../config/constants.ts";
 
 interface ThermalGaugeProps {
-  crucibleTempMk: number;
+  crucibleTempMk: number | null;
   skin: SkinMode;
 }
 
 export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin }) => {
-  const zone = classifyZone(crucibleTempMk);
+  const temp = crucibleTempMk ?? 0;
+  const zone = classifyZone(temp);
   const theme = ZONE_THEMES[zone];
   const labels = SKIN_LABELS[skin];
 
   const minTemp = 0;
   const maxTemp = FEVER_THRESHOLD_MK * 2;
-  const ratio = Math.max(0, Math.min(1, (crucibleTempMk - minTemp) / (maxTemp - minTemp)));
+  const ratio = Math.max(0, Math.min(1, (temp - minTemp) / (maxTemp - minTemp)));
 
   const hypoPct = ((HYPOTHERMIA_THRESHOLD_MK - minTemp) / (maxTemp - minTemp)) * 100;
   const feverPct = ((FEVER_THRESHOLD_MK - minTemp) / (maxTemp - minTemp)) * 100;
@@ -29,12 +30,12 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
     <div
       className="plate-panel flex min-w-[210px] flex-col gap-1 px-4 py-2.5 select-none"
       role="region"
-      aria-label={`${labels.zone} ${crucibleTempMk} milikelvin`}
+      aria-label={`${labels.zone} ${crucibleTempMk === null ? "—" : crucibleTempMk} milikelvin`}
     >
       <div className="flex items-center justify-between text-xs">
         <span className="lowercase text-[var(--ink)]">{labels.zone}</span>
         <span className="font-mono font-bold text-[var(--ink-hi)]">
-          {crucibleTempMk} <span className="font-normal text-[var(--ink)]">mk</span>
+          {crucibleTempMk === null ? "—" : crucibleTempMk} <span className="font-normal text-[var(--ink)]">mk</span>
         </span>
       </div>
 

@@ -1,5 +1,5 @@
 import React from "react";
-import type { GameMode } from "../game/engine.ts";
+import type { GameMode } from "../config/constants.ts";
 
 interface ModeSwitchProps {
   mode: GameMode;

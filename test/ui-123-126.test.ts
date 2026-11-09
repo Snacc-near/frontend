@@ -1,31 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { PetriDish } from "../src/game/petriDish.ts";
-import { EffectsManager } from "../src/game/effects.ts";
 import { SKIN_LABELS } from "../src/config/constants.ts";
 import { ZONE_THEMES } from "../src/config/zones.ts";
 import { OptimisticManager } from "../src/data/optimistic.ts";
+import { placeCells, DISH_R } from "../src/plate/iso/layout.ts";
+import { plateProjection, VIEW_H, VIEW_W } from "../src/plate/iso/plateGeom.ts";
 
 describe("Stage 3: UI-123..126 Polish & Verification", () => {
-  describe("UI-123: Responsive Petri Dish Layout", () => {
-    it("scales the dish ellipse proportionally on a portrait phone screen (360x640)", () => {
-      const dish = new PetriDish();
-      dish.resize(360, 640);
-
-      expect(dish.centerX).toBe(180);
-      expect(dish.centerY).toBe(320);
-      expect(dish.radiusX).toBeLessThanOrEqual(360 * 0.44);
-      // In portrait, radiusY stays proportional to radiusX so the dish does not become overly elongated
-      expect(dish.radiusY).toBeLessThan(dish.radiusX);
+  describe("UI-123: Responsive colony plate layout (SVG viewBox)", () => {
+    it("fits the full machine in the viewBox so it scales to any screen", () => {
+      const P = plateProjection();
+      expect(P.scale).toBeGreaterThan(0);
+      expect(VIEW_W / VIEW_H).toBeGreaterThan(1);
     });
 
-    it("scales the elliptical dish proportionally on landscape desktop (1920x1080)", () => {
-      const dish = new PetriDish();
-      dish.resize(1920, 1080);
-
-      expect(dish.centerX).toBe(960);
-      expect(dish.centerY).toBe(540);
-      expect(dish.radiusX).toBe(460); // caps at the max radiusX of 460
-      expect(dish.radiusY).toBe(310); // caps at the max radiusY of 310
+    it("keeps the dish world radius inside the plate at every placement", () => {
+      const P = plateProjection();
+      const cells = Array.from({ length: 12 }, (_, i) => ({
+        id: i + 1,
+        vitalityRatio: 0.5 + (i % 4) * 0.12,
+        status: "Active",
+        highlighted: i === 0,
+        index: i,
+      }));
+      for (const cell of placeCells(cells, P)) {
+        expect(Math.abs(cell.x)).toBeLessThan(DISH_R + 20);
+        expect(Math.abs(cell.y)).toBeLessThan(DISH_R + 20);
+      }
     });
   });
 
@@ -59,22 +59,10 @@ describe("Stage 3: UI-123..126 Polish & Verification", () => {
   });
 
   describe("UI-125: Accessibility & Prefers-Reduced-Motion", () => {
-    it("initializes the shake damper and particles of EffectsManager safely", () => {
-      const effects = new EffectsManager();
-      expect(effects.shockwaves).toEqual([]);
-      expect(effects.particles).toEqual([]);
-
-      // The shake and particle triggers
-      effects.triggerShake(8);
-      effects.triggerNutrientBurst(100, 100, 10, "#34d399");
-
-      expect(effects.shockwaves.length).toBeGreaterThan(0);
-      expect(effects.particles.length).toBeGreaterThan(0);
-
-      // Update the visual effects
-      const { offsetX, offsetY } = effects.update(0.016);
-      expect(typeof offsetX).toBe("number");
-      expect(typeof offsetY).toBe("number");
+    it("exposes an iris fallback branch for reduced motion", async () => {
+      const { irisMode } = await import("../src/plate/iso/layout.ts");
+      expect(irisMode(true)).toBe("fade");
+      expect(irisMode(false)).toBe("iris");
     });
   });
 

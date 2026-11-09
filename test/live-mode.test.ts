@@ -1,57 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { LivingCell } from "../src/game/cell.ts";
 import { resolveEventActor, buildEventDedupeKey } from "../src/data/poller.ts";
+import { placeCells, statusLook } from "../src/plate/iso/layout.ts";
+import { plateProjection } from "../src/plate/iso/plateGeom.ts";
 import type { CrucibleEvent } from "../src/data/types.ts";
 
 describe("Stage 2: Live Mode & Game World Integration", () => {
-  describe("LivingCell Hit-Testing & Highlighting", () => {
-    it("detects an exact click on a cell and ignores clicks outside its bounds", () => {
-      const cell = new LivingCell({
-        id: 7,
-        label: "strain #7",
-        x: 200,
-        y: 150,
-        radius: 30,
-      });
-
-      // Exactly at the center
-      expect(cell.containsPoint(200, 150)).toBe(true);
-      // Within the tolerance radius (30 * 1.35 = 40.5)
-      expect(cell.containsPoint(230, 150)).toBe(true);
-      // Outside the radius
-      expect(cell.containsPoint(300, 300)).toBe(false);
+  describe("Colony plate cell placement & highlighting", () => {
+    it("places owner-highlighted strains deterministically like every strain", () => {
+      const P = plateProjection();
+      const cells = [
+        { id: 7, vitalityRatio: 0.5, status: "Active", highlighted: false, index: 1 },
+        { id: 12, vitalityRatio: 0.9, status: "Active", highlighted: true, index: 0 },
+      ];
+      const placed = placeCells(cells, P);
+      expect(placed.map((c) => c.id)).toEqual([7, 12]);
+      expect(placed.find((c) => c.id === 12)?.highlighted).toBe(true);
+      expect(placeCells(cells, P)).toEqual(placed);
     });
 
-    it("activates the bioluminescent pulse when a cell is fed", () => {
-      const cell = new LivingCell({
-        id: 3,
-        label: "strain #3",
-        x: 100,
-        y: 100,
-      });
-
-      expect(cell.fedPulse).toBe(0);
-      cell.triggerFedPulse();
-      expect(cell.fedPulse).toBe(1.0);
-
-      // After a time update (dt = 0.2), the pulse decays
-      cell.update(0.2, 400, 300, 200, 150);
-      expect(cell.fedPulse).toBeLessThan(1.0);
-      expect(cell.fedPulse).toBeGreaterThan(0);
-    });
-
-    it("supports the owner-account NEAR highlight marker", () => {
-      const cell = new LivingCell({
-        id: 12,
-        label: "strain #12",
-        owner: "alice.testnet",
-        isHighlighted: true,
-        x: 120,
-        y: 180,
-      });
-
-      expect(cell.isHighlighted).toBe(true);
-      expect(cell.owner).toBe("alice.testnet");
+    it("gives the highlighted owner strain a selected marigold ring when chosen", () => {
+      expect(statusLook("Active", true).selectedRing).toBe(true);
+      expect(statusLook("Active", false).selectedRing).toBe(false);
     });
   });
 

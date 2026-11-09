@@ -182,26 +182,36 @@ export const CellLab: React.FC<CellLabProps> = ({
                       : "figure preview: pressing a button plays the mechanism without changing live numbers."}
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    {(
-                      [
-                        ["feed", "feed"],
-                        ["atp", "produce atp"],
-                        ["extract", "extract"],
-                        ["transmute", "transmute"],
-                        ["synthesize", "synthesize"],
-                      ] as [LabAction, string][]
-                    ).map(([action, label]) => (
-                      <button
-                        key={action}
-                        type="button"
-                        onClick={() => play(action)}
-                        title={liveDisabled ? disabledNote : label}
-                        aria-label={`${label}${liveDisabled ? ` — ${disabledNote}` : ""}`}
-                        className={`keycap min-h-[44px] px-4 text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${action === "atp" ? "keycap--primary" : ""}`}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                      {(
+                        [
+                          ["feed", "feed"],
+                          ["atp", "produce atp"],
+                          ["extract", "extract"],
+                          ["transmute", "transmute"],
+                          ["synthesize", "synthesize"],
+                          ["vacuole", "vacuole"],
+                          ["attest", "attest (tee)"],
+                        ] as [LabAction, string][]
+                      ).map(([action, label]) => {
+                        const previewOnly = action === "vacuole" || action === "attest";
+                        const note = liveDisabled
+                          ? previewOnly
+                            ? "preview only (live numbers unchanged)"
+                            : disabledNote
+                          : label;
+                        return (
+                          <button
+                            key={action}
+                            type="button"
+                            onClick={() => play(action)}
+                            title={note}
+                            aria-label={`${label}${liveDisabled ? ` — ${note}` : ""}`}
+                            className={`keycap min-h-[44px] px-4 text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${action === "atp" ? "keycap--primary" : ""}`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                   </div>
                 </div>
               ) : null}
@@ -283,8 +293,9 @@ export const CellLab: React.FC<CellLabProps> = ({
             <section className="plate-panel p-3" aria-label="on chain svg">
               <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">on-chain svg</h3>
               {mode === "live" && svgStatus === "loading" ? (
-                <div className="flex h-32 items-center justify-center rounded-xl border border-[var(--edge)] bg-white text-xs lowercase text-[var(--ink)] animate-pulse">
-                  loading…
+                <div className="eyepiece relative h-32 flex-col rounded-xl border border-[var(--edge)]" role="status" aria-label="focusing">
+                  <div className="eyepiece-ring" aria-hidden="true" />
+                  <span className="absolute bottom-2 font-mono text-[10px] lowercase text-[var(--ink)]">focusing…</span>
                 </div>
               ) : svgDataUri ? (
                 <img
@@ -321,7 +332,28 @@ export const CellLab: React.FC<CellLabProps> = ({
               >
                 harvest
               </button>
+              <button
+                type="button"
+                onClick={() => play("vacuole")}
+                title={liveDisabled ? "preview only (live numbers unchanged)" : "play vacuole pulse"}
+                aria-label={`vacuole${liveDisabled ? " — preview only (live numbers unchanged)" : ""}`}
+                className="keycap min-h-[44px] text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                vacuole
+              </button>
+              <button
+                type="button"
+                onClick={() => play("attest")}
+                title="attest (tee) — preview only, changes no numbers"
+                aria-label="attest (tee) — preview only, changes no numbers"
+                className="keycap min-h-[44px] text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                attest (tee)
+              </button>
             </div>
+            <p className="text-[11px] lowercase text-[var(--ink)]">
+              vacuole / attest are preview-only: the figure plays the mechanism, no numbers change.
+            </p>
           </aside>
         </div>
       </div>

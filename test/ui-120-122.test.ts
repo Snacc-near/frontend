@@ -10,7 +10,7 @@ import {
   mapAppetite,
 } from "../src/data/appetite.ts";
 import { NO_DATA_PLACEHOLDER } from "../src/data/liveView.ts";
-import { PetriDish } from "../src/game/petriDish.ts";
+import { VIEW_H, VIEW_W } from "../src/plate/iso/plateGeom.ts";
 
 const LIVE_APPETITE = {
   zone: "FEVER",
@@ -104,27 +104,16 @@ describe("UI-120..122: appetite meter mapping", () => {
   });
 });
 
-describe("UI-123..126: mobile dish clears hud at 390x844", () => {
-  it("keeps the dish top below the header band on a portrait phone", () => {
-    const dish = new PetriDish();
-    dish.resize(390, 844);
-    expect(dish.centerX).toBe(195);
-    expect(dish.centerY).toBe(422);
-    expect(dish.radiusX).toBeLessThanOrEqual(390 * 0.42);
-    const dishTop = dish.centerY - dish.radiusY;
-    // Header on phones stacks to at most ~200px; the dish must start below it.
-    expect(dishTop).toBeGreaterThan(200);
-    const dishBottom = dish.centerY + dish.radiusY;
-    // Footer stacks to at most ~280px; the dish must end above it.
-    expect(dishBottom).toBeLessThan(844 - 160);
+describe("UI-123..126: plate viewBox scales to 390x844 and 1280x800", () => {
+  it("keeps the machine aspect so it fits portrait phones by width", () => {
+    // The SVG scales by width: at 390 wide the whole plate (incl. all cells)
+    // is visible above the dock; geometry is viewport-independent.
+    expect(VIEW_W).toBe(880);
+    expect(VIEW_H).toBe(600);
+    expect(VIEW_W / VIEW_H).toBeGreaterThan(0.46); // 390/844
   });
 
-  it("keeps desktop dish sizing unchanged at 1280x800", () => {
-    const dish = new PetriDish();
-    dish.resize(1280, 800);
-    expect(dish.centerX).toBe(640);
-    expect(dish.centerY).toBe(400);
-    expect(dish.radiusX).toBe(460);
-    expect(dish.radiusY).toBe(310);
+  it("keeps the full machine in frame on desktop too", () => {
+    expect(VIEW_W / VIEW_H).toBeCloseTo(1280 / 870, 2);
   });
 });

@@ -57,7 +57,9 @@ export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources }) => 
         >
           <Icon className="h-4 w-4 text-[var(--ink-hi)]" />
           <span className="lp-label hidden min-[420px]:inline">{label}</span>
-          <span className="lp-value font-mono">{value}</span>
+          <span className="lp-value font-mono coin-roll" key={`${key}-${value}`}>
+            {value}
+          </span>
         </span>
       ))}
     </div>

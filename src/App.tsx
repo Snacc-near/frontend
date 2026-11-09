@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MacroZone } from "./config/zones.ts";
 import { classifyZone } from "./config/zones.ts";
 import type { SkinMode } from "./config/constants.ts";
@@ -33,10 +33,13 @@ import {
   type LabAction,
   type SimulationState,
 } from "./game/simulation.ts";
-import type { GameMode } from "./game/engine.ts";
+import type { GameMode } from "./config/constants.ts";
+import { irisMode, receiptLine } from "./plate/iso/layout.ts";
+import { prefersReducedMotion } from "./motion.ts";
 import { bioSound } from "./sound.ts";
 
-const ColonyPlate = lazy(() => import("./plate/ColonyPlate.tsx").then((m) => ({ default: m.ColonyPlate })));
+import { ColonyPlate } from "./plate/ColonyPlate.tsx";
+import { IrisOverlay } from "./hud/IrisOverlay.tsx";
 
 const demoSeedLogs: BreachLogItem[] = [
   {
@@ -84,7 +87,8 @@ export const App: React.FC = () => {
   const [skin, setSkin] = useState<SkinMode>("biolab");
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [zone, setZone] = useState<MacroZone>("Goldilocks");
-  const [crucibleTempMk, setCrucibleTempMk] = useState(605);
+  const [crucibleTempMk, setCrucibleTempMk] = useState<number | null>(null);
+  const [reducedMotion] = useState<boolean>(() => prefersReducedMotion());
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
   const [userAccount, setUserAccount] = useState("");
   const [liveStrains, setLiveStrains] = useState<StrainSummary[]>([]);
@@ -101,6 +105,12 @@ export const App: React.FC = () => {
   const [sim, setSim] = useState<SimulationState>(() => createInitialSimulation());
   const [panelsOpen, setPanelsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [iris, setIris] = useState<{ phase: "closing" | "opening"; cx: number; cy: number } | null>(null);
+  const [coinBurst, setCoinBurst] = useState(0);
+  const [coinKind, setCoinKind] = useState<string>("atp");
+  const [milestones, setMilestones] = useState<Set<string>>(new Set());
+  const [milestoneToast, setMilestoneToast] = useState<string | null>(null);
   const [, setBurst] = useState<NutrientBurstState>({
     isActive: false,
     activeBurstBps: 0,
@@ -162,6 +172,23 @@ export const App: React.FC = () => {
   useEffect(() => {
     const unsub = optimisticManagerRef.current.subscribe((next) => setOptimistic(next));
     return unsub;
+  }, []);
+
+  useEffect(() => {
+    const enableSound = () => {
+      bioSound.enabled = true;
+    };
+    window.addEventListener("pointerdown", enableSound, { once: true });
+    window.addEventListener("keydown", enableSound, { once: true });
+    const onKeycap = (event: Event) => {
+      if ((event.target as HTMLElement | null)?.closest?.(".keycap")) bioSound.playClick();
+    };
+    document.addEventListener("click", onKeycap);
+    return () => {
+      window.removeEventListener("pointerdown", enableSound);
+      window.removeEventListener("keydown", enableSound);
+      document.removeEventListener("click", onKeycap);
+    };
   }, []);
 
   useEffect(() => {
@@ -281,6 +308,39 @@ export const App: React.FC = () => {
     [mode, userAccount],
   );
 
+  const handleCellSelect = useCallback(
+    (cellId: number, cx: number, cy: number) => {
+      if (irisMode(reducedMotion) === "fade") {
+        void loadStrain(cellId);
+        return;
+      }
+      setIris({ phase: "closing", cx, cy });
+      window.setTimeout(() => {
+        void loadStrain(cellId);
+        setIris({ phase: "opening", cx, cy });
+        window.setTimeout(() => setIris(null), 560);
+      }, 460);
+    },
+    [loadStrain, reducedMotion],
+  );
+
+  const handleLabClose = useCallback(() => {
+    if (irisMode(reducedMotion) === "fade") {
+      setLabOpen(false);
+      setSelectedId(null);
+      return;
+    }
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    setIris({ phase: "closing", cx, cy });
+    window.setTimeout(() => {
+      setLabOpen(false);
+      setSelectedId(null);
+      setIris({ phase: "opening", cx, cy });
+      window.setTimeout(() => setIris(null), 560);
+    }, 340);
+  }, [reducedMotion]);
+
   const handleModeChange = (nextMode: GameMode) => {
     setMode(nextMode);
     setSelectedStrain(null);
@@ -347,16 +407,32 @@ export const App: React.FC = () => {
     [mode, doSimAction],
   );
 
-  const handleCollect = useCallback((id: string) => {
-    const result = collectProduction(simRef.current, id);
-    if (!result.ok) {
-      showToast(result.error ?? "not ready");
-      return;
-    }
-    setSim(result.state);
-    bioSound.playCollect();
-    showToast(result.state.log[0] ?? "collected");
-  }, []);
+  const handleCollect = useCallback(
+    (id: string) => {
+      const item = simRef.current.queue.find((entry) => entry.id === id);
+      const result = collectProduction(simRef.current, id);
+      if (!result.ok) {
+        showToast(result.error ?? "not ready");
+        return;
+      }
+      setSim(result.state);
+      bioSound.playCollect();
+      showToast(result.state.log[0] ?? "collected");
+      if (item) {
+        setCoinKind(item.kind);
+        setCoinBurst((n) => n + 1);
+        window.setTimeout(() => setCoinBurst(0), 950);
+        const milestone =
+          item.kind === "atp" ? "First ATP" : item.kind === "spores" ? "First spore" : item.kind === "elixir" ? "First elixir" : null;
+        if (milestone && !milestones.has(milestone)) {
+          setMilestones((prev) => new Set(prev).add(milestone));
+          setMilestoneToast(milestone);
+          window.setTimeout(() => setMilestoneToast(null), 4200);
+        }
+      }
+    },
+    [milestones],
+  );
 
   const handleUpgrade = useCallback(
     (slot: "mitokondria" | "nucleus" | "lysosome") => {
@@ -396,10 +472,11 @@ export const App: React.FC = () => {
 
   const plateCells = useMemo(() => {
     if (mode === "demo") {
+      const producing = sim.queue.some((item) => item.kind === "atp" && !item.ready);
       return [
-        { id: 1, vitalityRatio: sim.vitality / 10000, status: "Active", highlighted: true, index: 0 },
-        { id: 2, vitalityRatio: 0.72, status: "Active", index: 1 },
-        { id: 3, vitalityRatio: 0.31, status: "Distressed", index: 2 },
+        { id: 1, vitalityRatio: sim.vitality / 10000, status: "Active", highlighted: true, index: 0, generation: sim.generation, producing },
+        { id: 2, vitalityRatio: 0.72, status: "Active", highlighted: false, index: 1, generation: 1, producing: false },
+        { id: 3, vitalityRatio: 0.31, status: "Distressed", highlighted: false, index: 2, generation: 1, producing: false },
       ];
     }
     return liveStrains.map((s, i) => ({
@@ -408,8 +485,10 @@ export const App: React.FC = () => {
       status: s.status ?? "Active",
       highlighted: Boolean(userAccount && s.owner_id.toLowerCase().includes(userAccount.trim().toLowerCase())),
       index: i,
+      generation: s.generation ?? 1,
+      producing: false,
     }));
-  }, [mode, sim.vitality, liveStrains, userAccount]);
+  }, [mode, sim.vitality, sim.generation, sim.queue, liveStrains, userAccount]);
 
   const resources = useMemo(
     () =>
@@ -450,42 +529,87 @@ export const App: React.FC = () => {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[var(--bg)] font-sans text-[var(--ink-hi)]">
-      <div className="absolute inset-0">
-        <Suspense
-          fallback={
-            <div className="flex h-full w-full items-center justify-center text-xs lowercase text-[var(--ink)]" role="status">
-              loading colony plate…
-            </div>
-          }
-        >
-          <ColonyPlate cells={plateCells} zone={zone} selectedId={selectedId} onCellSelect={loadStrain} />
-        </Suspense>
+      <div className="plate-bg absolute inset-0 flex items-center justify-center" aria-hidden="true">
+        <ColonyPlate
+          cells={plateCells}
+          zone={zone}
+          selectedId={selectedId}
+          onCellSelect={handleCellSelect}
+          crucibleTempMk={crucibleTempMk}
+        />
       </div>
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between gap-2 p-2.5 select-none sm:p-4">
-        <header className="flex flex-wrap items-start justify-between gap-2">
-          <div className="pointer-events-auto flex flex-col gap-1.5">
-            <span className="label-plate">
-              <span className="lp-label">fig</span>
-              <span className="font-mono text-xs font-bold tracking-wider text-[var(--ink-hi)]">
-                $SNACC <span className="font-normal text-[var(--ink)]">·</span>{" "}
-                <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">living cell crucible</span>
+        <div className="flex flex-col gap-2">
+          <header className="hidden flex-wrap items-start justify-between gap-2 sm:flex">
+            <div className="pointer-events-auto flex flex-col gap-1.5">
+              <span className="label-plate">
+                <span className="lp-label">fig</span>
+                <span className="font-mono text-xs font-bold tracking-wider text-[var(--ink-hi)]">
+                  $SNACC <span className="font-normal text-[var(--ink)]">·</span>{" "}
+                  <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">living cell crucible</span>
+                </span>
               </span>
-            </span>
-            <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
-            <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
-            <span className="label-plate">
-              vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
-              <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
-            </span>
-          </div>
-          <div className="flex flex-col items-end gap-1.5">
-            <div className="pointer-events-auto">
-              <SkinSwitch skin={skin} onChange={setSkin} />
+              <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
+              <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+              <span className="label-plate">
+                vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
+                <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
+              </span>
             </div>
-            <ResourceBar mode={mode} resources={resources} />
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="pointer-events-auto">
+                <SkinSwitch skin={skin} onChange={setSkin} />
+              </div>
+              <ResourceBar mode={mode} resources={resources} />
+            </div>
+          </header>
+
+          <header className="flex flex-col gap-2 sm:hidden" data-testid="mobile-header">
+            <div className="flex items-center justify-between gap-2">
+              <span className="label-plate shrink-0 whitespace-nowrap">
+                <span className="lp-label">fig</span>
+                <span className="font-mono text-[13px] font-bold tracking-wider text-[var(--ink-hi)]">$SNACC</span>
+              </span>
+              <div className="pointer-events-auto flex items-center gap-1.5">
+                <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen((v) => !v)}
+                  aria-expanded={moreOpen}
+                  aria-label="more options"
+                  className="keycap min-h-[40px] min-w-[40px] px-2 text-[15px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+                >
+                  ⋯
+                </button>
+              </div>
+            </div>
+            <div className="pointer-events-auto w-full min-w-0">
+              <ResourceBar mode={mode} resources={resources} />
+            </div>
+            {moreOpen ? (
+              <div className="pointer-events-auto flex flex-col gap-1.5 rounded-xl border border-[var(--edge)] bg-[var(--panel)] p-2 shadow-[0_2px_0_var(--edge)]" data-testid="mobile-more">
+                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                <SkinSwitch skin={skin} onChange={setSkin} />
+                <span className="label-plate">
+                  vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
+                  <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
+                </span>
+              </div>
+            ) : null}
+          </header>
+        </div>
+
+        {milestoneToast ? (
+          <div
+            className="milestone-plate pointer-events-auto mx-auto max-w-xs rounded-xl border border-[var(--ink-hi)] bg-white px-4 py-2 text-center shadow-[0_3px_0_var(--ink-hi)]"
+            role="status"
+            data-testid="milestone-plate"
+          >
+            <span className="block font-mono text-[9px] tracking-[0.18em] text-[var(--ink)] uppercase">engraved</span>
+            <span className="block text-sm font-bold lowercase text-[var(--ink-hi)]">{milestoneToast}</span>
           </div>
-        </header>
+        ) : null}
 
         {toast ? (
           <div
@@ -542,17 +666,42 @@ export const App: React.FC = () => {
             </div>
           ) : null}
           <ActionDock dock={dock} onDock={handleDock} />
-          {mode === "live" ? (
-            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
-              on-chain transactions need a wallet — outside this demo
+          {mode === "demo" ? (
+            <span
+              className="receipt-tape pointer-events-auto mx-auto max-w-full overflow-x-auto text-center font-mono text-[10px] lowercase whitespace-nowrap text-[var(--ink)]"
+              data-testid="receipt-tape"
+              role="status"
+            >
+              demo · simulated — {receiptLine(sim.totalIn, sim.totalOut)}
             </span>
           ) : (
             <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
-              demo · simulated — numbers come from local constants, not the chain
+              on-chain transactions need a wallet — outside this demo
             </span>
           )}
+          {mode === "demo" ? (
+            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
+              demo · simulated — numbers come from local constants, not the chain
+            </span>
+          ) : null}
         </div>
       </div>
+
+      <IrisOverlay iris={iris} reducedMotion={reducedMotion} />
+
+      {coinBurst > 0 ? (
+        <div className="coin-arc" aria-hidden="true" data-testid="coin-arc">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span
+              key={`${coinBurst}-${i}`}
+              className="coin"
+              style={{ left: `${46 + i * 2}%`, animationDelay: `${i * 70}ms`, ["--arc"]: `${-30 - i * 2}vw` } as React.CSSProperties}
+            >
+              {coinKind}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {labOpen ? (
         <CellLab
@@ -564,10 +713,7 @@ export const App: React.FC = () => {
           svgStatus={svgStatus}
           simOrganel={sim.organel}
           atpAvailable={sim.atp}
-          onClose={() => {
-            setLabOpen(false);
-            setSelectedId(null);
-          }}
+          onClose={handleLabClose}
           onAction={handleLabAction}
           onUpgrade={handleUpgrade}
         />
