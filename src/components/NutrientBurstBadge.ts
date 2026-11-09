@@ -120,3 +120,13 @@ export class NutrientBurstBadgeController {
     return vm;
   }
 }
+
+/**
+ * Exact UI-117 text formatter:
+ * "Nutrient Burst: feed fee −X% until epoch N" (X = burst_bps/100, tanda minus U+2212).
+ */
+export function formatBurstBadgeText(burstBps: number, untilEpoch: number): string {
+  const percent = burstBps / 100;
+  return `Nutrient Burst: feed fee \u2212${percent}% until epoch ${untilEpoch}`;
+}
+

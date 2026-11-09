@@ -19,6 +19,7 @@ import { OptimisticManager, type OptimisticVitalityState } from "./data/optimist
 import { TelemetryPoller } from "./data/poller.ts";
 import { GameEngine, type GameMode } from "./game/engine.ts";
 import { HudOverlay } from "./hud/HudOverlay.tsx";
+import { CellLab3DView } from "./hud/CellLab3DView.tsx";
 
 // Demo-mode seed entries for the breach log. Never rendered in live mode:
 // there the log only contains events from /api/events.
@@ -382,6 +383,10 @@ export const App: React.FC = () => {
       ...prev.slice(0, 15),
     ]);
   };
+
+  if (skin === "biolab") {
+    return <CellLab3DView onSkinSwitch={setSkin} currentSkin={skin} />;
+  }
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans">

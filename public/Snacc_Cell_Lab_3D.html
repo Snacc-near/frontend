@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snacc Cell Lab 3D: step inside a living cell and raid rivals</title>
+<style>
+:root{--ink:#161238;--pn:#2c2560;--tx:#f3ecff;--y:#ffd24a;box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#14123a;color:var(--tx);font:600 14px/1.2 ui-rounded,"Segoe UI",system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.pn{background:rgba(44,37,96,.84);backdrop-filter:blur(6px);border:3px solid var(--ink);border-radius:14px;box-shadow:0 3px 0 var(--ink)}
+.hud{position:fixed;z-index:2;left:10px;right:10px;margin:0 auto;max-width:560px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--y);outline-offset:2px}
+#res{top:calc(8px + env(safe-area-inset-top,0px));display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.rp{display:grid;justify-items:center;padding:4px 2px 3px;position:relative}
+.rp i{position:absolute;left:7px;top:7px;width:9px;height:9px;border-radius:50%;border:2px solid var(--ink)}
+.rp b{font-size:17px}.rp small{font-size:10px;opacity:.75;font-weight:400}
+#sub{top:calc(62px + env(safe-area-inset-top,0px));display:flex;gap:6px;align-items:center}
+#sub>*{padding:4px 9px;font-size:12px;white-space:nowrap}
+#zn{flex:1;box-shadow:none;overflow:hidden;text-overflow:ellipsis}
+#sub button[aria-pressed=true]{background:var(--y);color:var(--ink)}
+#tabs{top:calc(98px + env(safe-area-inset-top,0px));display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 5px}
+.tb{flex:none;display:flex;align-items:center;gap:6px;padding:4px 9px;font-size:12px;background:var(--pn);border:3px solid var(--ink);border-radius:12px}
+.tb.on{background:var(--y);color:var(--ink)}
+.tb .br{width:30px;height:7px;border:2px solid var(--ink);border-radius:5px;overflow:hidden;display:block}.tb .br span{display:block;height:100%}
+#msg{bottom:calc(164px + env(safe-area-inset-bottom,0px));padding:7px 12px;font-size:13px;font-weight:400;line-height:1.35;min-height:34px;box-sizing:border-box;max-height:22vh;overflow:auto}
+#msg b{color:var(--y)}#msg.bad{border-color:#ff5d7a}
+#up{bottom:calc(124px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:3px}
+#up button{flex:none;padding:5px 10px;font-size:12px;background:var(--pn);border:3px solid var(--ink);border-radius:11px;box-shadow:0 2px 0 var(--ink)}
+#dock{bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:5px}
+#dock button{display:grid;justify-items:center;gap:1px;padding:7px 0 5px;background:transparent;border:2px solid transparent;border-radius:10px}
+#dock small{font-size:10px;font-weight:400;opacity:.8}
+#dock button:active,#up button:active{background:var(--y);color:var(--ink)}
+.off{opacity:.45}
+.lb{position:fixed;left:0;top:0;z-index:1;pointer-events:none;font-size:11px;padding:2px 7px;background:#161238cc;border:2px solid var(--ink);border-radius:8px;white-space:nowrap}
+body.nl .lb{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+#vg{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 52%,rgba(4,2,16,.62) 100%)}
+#rv{bottom:calc(170px + env(safe-area-inset-bottom,0px));z-index:3;padding:8px;display:grid;gap:6px;max-height:42vh;overflow:auto}
+#rv[hidden]{display:none}#rv>b{font-size:13px}
+.rr{display:grid;gap:2px;text-align:left;padding:7px 10px;background:#161238;border:2px solid var(--ink);border-radius:10px}
+.rr span{font-weight:400;font-size:12px;opacity:.85}.rr:active{background:var(--y);color:var(--ink)}
+#ev{position:fixed;z-index:2;left:10px;right:10px;margin:0 auto;max-width:560px;top:calc(138px + env(safe-area-inset-top,0px));display:grid;justify-items:center;gap:6px;pointer-events:none}
+#zb,#nb{padding:6px 14px;border-radius:999px;background:rgba(22,18,56,.9);border:3px solid var(--ink);font-size:13px;max-width:100%;text-align:center;opacity:0;transform:translateY(-6px);transition:opacity .3s,transform .3s}
+#zb.on,#nb.on{opacity:1;transform:none}
+#nb{color:var(--y);border-color:var(--y)}#nb.on{animation:pop .5s}
+@keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.08)}100%{transform:none}}
+#lg{top:calc(176px + env(safe-area-inset-top,0px));z-index:3;padding:8px;display:grid;gap:4px;max-height:34vh;overflow:auto;font-weight:400;font-size:12px}
+#lg[hidden]{display:none}#lg b{font-size:13px}
+</style>
+</head>
+<body>
+<canvas id="c" role="img" aria-label="Interactive 3D cutaway of a living cell with nucleus, two mitochondria, rough ER, Golgi, lysosome and vacuole. Drag to rotate, scroll or pinch to zoom, tap an organelle to inspect it."></canvas>
+<div id="vg"></div><div id="rv" class="hud pn" hidden></div>
+<div id="res" class="hud">
+<div class="rp pn" id="p-sn"><i style="background:#ffb35c"></i><b>0</b><small>$SNACC</small></div>
+<div class="rp pn" id="p-atp"><i style="background:#ffd24a"></i><b>0</b><small>ATP</small></div>
+<div class="rp pn" id="p-sp"><i style="background:#9be86a"></i><b>0</b><small>Spores</small></div>
+<div class="rp pn" id="p-en"><i style="background:#b69cff"></i><b>0</b><small>Enzymes</small></div>
+<div class="rp pn" id="p-el"><i style="background:#ffb3c8"></i><b>0</b><small>Elixir</small></div>
+</div>
+<div id="sub" class="hud"><span id="zn" class="pn" aria-live="polite"></span><button id="bl" class="pn" aria-pressed="true">Labels</button><button id="bs" class="pn" aria-pressed="false">See-through</button><button id="bg" class="pn" aria-pressed="false">Log</button></div>
+<div id="tabs" class="hud" role="group" aria-label="Strains in the colony"></div>
+<div id="msg" class="hud pn" role="status"></div>
+<div id="ev"><div id="zb" role="status"></div><div id="nb" role="status"></div></div><div id="lg" class="hud pn" hidden></div>
+<nav id="up" class="hud" aria-label="Organelle upgrades"></nav>
+<nav id="dock" class="hud pn" aria-label="Cell actions">
+<button data-a="feed" aria-keyshortcuts="1">Feed<small>10 $SNACC</small></button>
+<button data-a="extract" aria-keyshortcuts="2">Extract<small>1 ATP</small></button>
+<button data-a="transmute" aria-keyshortcuts="3">Transmute<small>2 ATP + 2 spores</small></button>
+<button data-a="synth" aria-keyshortcuts="4">Synthesize<small>3 ATP + 2 enzymes</small></button>
+<button data-a="divide" aria-keyshortcuts="5">Divide<small>3 ATP</small></button>
+<button data-a="splice" aria-keyshortcuts="6">Splice<small>5 ATP</small></button>
+<button data-a="harvest" aria-keyshortcuts="7">Harvest<small>at 0% vitality</small></button>
+<button data-a="redeem" aria-keyshortcuts="8">Redeem<small>1 elixir</small></button>
+<button data-a="raid" aria-keyshortcuts="9">Raid<small>4 ATP</small></button>
+</nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),RM=matchMedia('(prefers-reduced-motion:reduce)').matches,V=(x,y,z)=>new THREE.Vector3(x,y,z),rnd=(a,b)=>a+Math.random()*(b-a);
+if(!window.THREE){document.body.insertAdjacentHTML('beforeend','<p style="position:fixed;inset:40% 10% auto;text-align:center">The 3D engine failed to load. Check your connection and reload.</p>');return}
+
+/* ---------- data (demo constants; numbers follow the vault: +10%/level, 5 levels) ---------- */
+const INFO={
+nuc:'Stores the genome. Transcription copies genes into mRNA that leaves through nuclear pores to the ribosomes. <b>In Snacc:</b> genome and phenotype live here; each level adds 10% to enzyme and elixir output.',
+mit:'Glycolysis products enter the matrix, the Krebs cycle feeds the electron transport chain, which pumps H+ across the inner membrane. H+ flowing back through ATP synthase makes ATP. <b>In Snacc:</b> $SNACC is the substrate, ATP is the work energy, and part of the substrate burns (ft_burn). Each level adds 10% ATP.',
+er:'Rough ER: ribosomes on its surface build proteins, and the lumen folds them. <b>In Snacc:</b> ribosomes make spores, and spores are assembled along the ER into enzymes.',
+gol:'Golgi apparatus: sorts and packs products into vesicles that leave the cell by exocytosis. <b>In Snacc:</b> packs elixir and ships it out through the membrane.',
+lys:'Lysosome: acid enzymes digest waste and recycle worn parts (autophagy). <b>In Snacc:</b> each level lowers the hunger rate (BMR) by 10%.',
+vac:'Vacuole: stores nutrients and other materials until the cell needs them. <b>In Snacc:</b> holds spores before transmutation.',
+ch:'Membrane channel: a transport protein that lets nutrients cross the lipid membrane. <b>In Snacc:</b> $SNACC enters the cell here.'};
+const ZN=[{n:'Hypothermia',c:0x0c1a3c},{n:'Normal',c:0x14123a},{n:'Calcination Fever',c:0x2a1233}],zi=mk=>mk>610?2:mk<600?0:1; /* thresholds from the vault: Fever above 610 mK, Hypothermia below 600 mK */
+const RN={1:'Extractor',2:'Fermenter',4:'Synthesizer'},R_={extract:1,transmute:2,synth:4},NM={sn:'$SNACC',atp:'ATP',sp:'spores',en:'enzymes',el:'elixir'};
+/* ATP costs: backlog 13a (EN-116). Spend: extract 1, transmute 2, synthesize 3, splice 5, divide 3, allocate 1 per level. INITIAL_ATP 50. */
+const C={raid:{atp:4},feed:{sn:10},extract:{atp:1},transmute:{atp:2,sp:2},synth:{atp:3,en:2},splice:{atp:5},divide:{atp:3},redeem:{el:1}},UN=[['mit','Mitochondrion'],['nuc','Nucleus'],['lys','Lysosome']];
+const BMR={1:100,2:120,4:150},MAXCOL=5,MAXGEN=8,EP=60; /* BMR in bps per hour by role; MAX_COLONY_SIZE 5, MAX_GENERATION 8; demo epoch = 60 s standing for 24 h */
+const KEY='snacc-cell-lab-3d-v2',mk0=(id,r,v=80)=>({id,r,v,bal:30,g:0,eff:10000,bm:1,al:-1,L:[0,0,0],s:'Active'});
+let S={sn:120,atp:50,sp:0,en:0,el:0,vol:0,sel:1,nid:4,ep:1,et:EP,dv:0,mg:0,ly:0,pantry:0,burst:0,bu:0,pool:0,con:0,claim:0,st:[mk0(1,1,80),mk0(2,2,70),mk0(3,4,60)]};
+try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&d.st&&d.st.length)Object.assign(S,d)}catch(e){}
+const RV=['Vexa','Mira-9','Oblong','Nox Lab','Pip+Co','Zyme'],mkRv=i=>({n:RV[i%6]+' #'+(100+Math.random()*900|0),b:80+Math.random()*280|0,d:Math.random()*5|0,h:Math.random()}),rc=(s,t)=>Math.max(.1,Math.min(.9,.55+.07*(s.L[0]+s.L[1])-.1*t.d+(s.v-50)/500));let RT=0;if(!S.rv)S.rv=[0,1,2,3].map(mkRv);
+const rn=r=>[1,2,4].filter(b=>r&b).map(b=>RN[b]).join('+'),live=s=>s.s==='Active',alive=()=>S.st.filter(live),bmr=s=>Math.max(...[1,2,4].filter(b=>s.r&b).map(b=>BMR[b]))*s.bm*(1-.1*s.L[2]);
+const cur=()=>S.st.find(s=>s.id===S.sel&&live(s))||alive()[0]||S.st[0];
+
+/* ---------- renderer, camera, light ---------- */
+const cv=$('#c'),R=new THREE.WebGLRenderer({canvas:cv,antialias:true});R.setPixelRatio(Math.min(2,devicePixelRatio||1));R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
+const scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(50,1,.1,300);
+scene.background=new THREE.Color(0x14123a);scene.fog=new THREE.FogExp2(0x14123a,.012);
+scene.add(new THREE.AmbientLight(0xffffff,.35),new THREE.HemisphereLight(0xb9a8ff,0x2a1233,.55));const dl=new THREE.DirectionalLight(0xffffff,.8);dl.position.set(10,20,15);scene.add(dl);
+const pl=new THREE.PointLight(0x9fe8ff,.8,60);pl.position.set(-8,6,10);scene.add(pl);
+const rl=new THREE.DirectionalLight(0x7ad7ff,1.1);rl.position.set(-10,6,-22);scene.add(rl);
+/* realism: procedural bump + soft sprites, fresnel membrane, image-based light */
+const tex=f=>{const c=document.createElement('canvas');c.width=c.height=256;f(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t},
+bump=tex(x=>{x.fillStyle='#808080';x.fillRect(0,0,256,256);for(let i=0;i<700;i++){const a=rnd(0,256),b=rnd(0,256),r=rnd(3,16),g=x.createRadialGradient(a,b,0,a,b,r),v=Math.random()<.5?255:0;g.addColorStop(0,'rgba('+v+','+v+','+v+',.3)');g.addColorStop(1,'rgba(128,128,128,0)');x.fillStyle=g;x.fillRect(a-r,b-r,r*2,r*2)}}),
+soft=tex(x=>{const g=x.createRadialGradient(128,128,0,128,128,128);g.addColorStop(0,'#fff');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,256,256)}),
+fres=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:{c:{value:new THREE.Color(0x8fd0ff)}},vertexShader:'varying vec3 n,v;void main(){vec4 p=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);v=normalize(-p.xyz);gl_Position=projectionMatrix*p;}',fragmentShader:'varying vec3 n,v;uniform vec3 c;void main(){float f=pow(1.-abs(dot(n,v)),2.6);gl_FragColor=vec4(c*f*1.3,f);}'});
+{const pg=new THREE.PMREMGenerator(R),es=new THREE.Scene();es.background=new THREE.Color(0x1d1a4a);[[0xffe2b0,20,30,10,12],[0x7ad7ff,-30,10,-20,12],[0xff9ac8,0,-30,20,9]].forEach(([c,x,y,z,q])=>{const l=new THREE.Mesh(new THREE.SphereGeometry(q,16,8),new THREE.MeshBasicMaterial({color:c}));l.position.set(x,y,z);es.add(l)});scene.environment=pg.fromScene(es,.05).texture;pg.dispose()}
+const cell=new THREE.Group();scene.add(cell);
+const SP=new THREE.SphereGeometry(1,48,32),mat=(c,o)=>new THREE.MeshPhysicalMaterial(Object.assign({color:c,roughness:.38,metalness:.05,clearcoat:.7,clearcoatRoughness:.3,bumpMap:bump,bumpScale:.4,emissive:c,emissiveIntensity:0},o));
+function dust(n,sx,sy,sz,sc,c,inside){const p=new Float32Array(n*3);for(let i=0;i<n;i++){let x,y,z;do{x=rnd(-sx,sx);y=rnd(-sy,sy);z=rnd(-sz,sz)}while(inside&&(x/14)**2+(y/11.5)**2+(z/11.5)**2>1);p.set([x,y,z],i*3)}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));return new THREE.Points(g,new THREE.PointsMaterial({color:c,size:sc,map:soft,transparent:true,opacity:.75,depthWrite:false,blending:THREE.AdditiveBlending}))}
+const med=dust(420,45,30,30,.5,0xcdbcff);scene.add(med);const cyt=dust(600,14,11.5,11.5,.3,0xbfd8ff,1);cell.add(cyt);
+
+/* ---------- membrane ---------- */
+const mem=new THREE.Mesh(new THREE.SphereGeometry(12,56,36),new THREE.MeshPhysicalMaterial({color:0x7a6cff,transparent:true,opacity:.14,side:THREE.DoubleSide,roughness:.1,clearcoat:1,clearcoatRoughness:.1,bumpMap:bump,bumpScale:.8,depthWrite:false}));
+const rim=new THREE.Mesh(new THREE.SphereGeometry(12.15,40,26),fres);
+[mem,rim].forEach(m=>{m.scale.set(1.2,1,1);m.renderOrder=10;cell.add(m)});
+
+/* ---------- organelles ---------- */
+const ORG={},PICK=[],CH=V(-14.2,2,0),EX=V(13,4.6,-2.4),OUT=[V(-19,4,3),V(-18,0,-3),V(-20,-2.5,2)];
+function org(k,name,x,y,z,d){const g=new THREE.Group();g.position.set(x,y,z);cell.add(g);return ORG[k]={k,g,name,d,glow:0,until:0,mats:[],by:y}}
+function add(o,geo,m,px=0,py=0,pz=0,sx=1,sy=1,sz=1,pick=1){const me=new THREE.Mesh(geo,m);me.position.set(px,py,pz);me.scale.set(sx,sy,sz);o.g.add(me);if(pick){me.userData.k=o.k;PICK.push(me)}if(m.emissive&&!o.mats.includes(m))o.mats.push(m);return me}
+const nu=org('nuc','Nucleus',-1,2.5,-1,10);
+add(nu,SP,mat(0xb69cff,{transparent:true,opacity:.5}),0,0,0,3.2,3.2,3.2);add(nu,SP,mat(0xffe6a8),.9,.6,.3,1,1,1);
+const chr=add(nu,new THREE.TorusKnotGeometry(1.7,.16,140,8,2,3),mat(0xfff3a8,{emissive:0xffd24a}));
+function mito(k,x,y,z,ry,rz){const o=org(k,'Mitochondrion',x,y,z,9);o.g.rotation.set(0,ry,rz);
+ add(o,SP,mat(0xff9a6b,{transparent:true,opacity:.55}),0,0,0,3.4,1.5,1.5);add(o,SP,mat(0xffd6bd,{transparent:true,opacity:.5}),0,0,0,3.1,1.2,1.2);
+ const cm=mat(0xffc24a,{emissive:0xffc24a});for(let i=0;i<6;i++)add(o,SP,cm,(i-2.5)*.9,(i%2?1:-1)*.35,0,.14,.8,.95);
+ o.syn=[0,1,2].map(i=>add(o,SP,mat(0x7cc4ff),(i-1)*1.5,-.82,0,.22,.22,.22));
+ o.hp=Array.from({length:10},(_,i)=>{const h=new THREE.Mesh(SP,new THREE.MeshBasicMaterial({color:0x9fe0ff}));h.scale.setScalar(.09);o.g.add(h);return h});return o}
+mito('mit',6,-3,2,.5,-.3);mito('m2',-6.5,-5,3,-.6,.45);ORG.m2.d=8;
+const er=org('er','Rough ER + ribosomes',-1,2.5,-1,10),erm=mat(0x5be3c1,{transparent:true,opacity:.8});er.rib=[];
+for(let i=0;i<4;i++){const pts=[];for(let j=0;j<=24;j++){const u=j/24,th=i*.9+u*3.4,ph=-.5+i*.42+Math.sin(u*10+i)*.12,r=4.5+Math.sin(u*14+i*2)*.3;pts.push(V(r*Math.cos(ph)*Math.cos(th),r*Math.sin(ph),r*Math.cos(ph)*Math.sin(th)))}
+ const cv3=new THREE.CatmullRomCurve3(pts);add(er,new THREE.TubeGeometry(cv3,40,.28,6),erm);
+ for(let j=1;j<24;j+=3){const p=pts[j].clone().multiplyScalar(1.08);add(er,SP,mat(0x2b2a7a,{emissive:0x9be86a}),p.x,p.y,p.z,.17,.17,.17,0);er.rib.push(p)}}
+const go=org('gol','Golgi apparatus',7,4.2,-3,9),gm=mat(0xffd24a,{transparent:true,opacity:.9});go.g.rotation.z=.25;
+for(let i=0;i<4;i++)add(go,SP,gm,0,(i-1.5)*.75,0,2.8-i*.28,.22,1.9-i*.2);[[3.4,-.8],[3.2,.9],[-3.3,0]].forEach(p=>add(go,SP,mat(0xffe48a),p[0],p[1],0,.38,.38,.38));
+const ly=org('lys','Lysosome',-3,-6.5,-2,7);add(ly,SP,mat(0xff7aa8),0,0,0,1.1,1.1,1.1);[[.3,.2,.5],[-.4,-.3,.3],[.1,.5,-.4]].forEach(p=>add(ly,SP,mat(0x7a2748,{emissive:0x000000}),p[0],p[1],p[2],.22,.22,.22,0));
+const va=org('vac','Vacuole',2,-7.5,-3,8);add(va,SP,mat(0x7cc4ff,{transparent:true,opacity:.6}),0,0,0,2,2,2);
+const ch=org('ch','Membrane channel',CH.x,CH.y,CH.z,9);ch.g.rotation.y=Math.PI/2;add(ch,new THREE.TorusGeometry(1,.3,10,24),mat(0xc9b8ff),0,0,0,1.1,1.1,1.1);add(ch,SP,mat(0xffb35c,{transparent:true,opacity:.35}),0,0,0,.8,.8,.2,0);
+const ex=org('ex','Exocytosis site',EX.x,EX.y,EX.z,12);
+const rv=org('rv','Rival cell',-38,5,-10,16),rvm=mat(0xff6b8a,{transparent:true,opacity:.28,side:THREE.DoubleSide,depthWrite:false});rv.g.visible=false;
+add(rv,new THREE.SphereGeometry(7,40,28),rvm,0,0,0,1,1,1,0);add(rv,SP,mat(0x3a1a40),1,1,0,2.4,2.4,2.4,0);[[2,-3,1],[-3,2,2],[-2,-3,-2]].forEach(p=>add(rv,SP,mat(0xff9a6b),p[0],p[1],p[2],1.5,.7,.7,0));
+const nuc2=nu.g.clone();nuc2.visible=false;cell.add(nuc2);const pinch=new THREE.Mesh(new THREE.TorusGeometry(10,.35,8,48),new THREE.MeshBasicMaterial({color:0xffd24a}));pinch.rotation.y=Math.PI/2;pinch.visible=false;cell.add(pinch);let dvT=0;
+const nut=OUT.map(p=>{const m=new THREE.Mesh(SP,new THREE.MeshBasicMaterial({color:0xffb35c}));m.scale.setScalar(.45);m.position.copy(p);scene.add(m);return m});
+const LB=['nuc','mit','m2','er','gol','lys','vac','ch'].map(k=>{const e=document.createElement('div');e.className='lb';e.textContent=k==='m2'?'Mitochondrion':ORG[k].name;document.body.appendChild(e);return[k,e]});
+
+/* ---------- effects: orbs travel along curves; queue runs timed steps ---------- */
+const FX=[],Q=[],PM={},pm=c=>PM[c]||(PM[c]=new THREE.MeshBasicMaterial({color:c}));let T=0;
+const W=k=>ORG[k].g.getWorldPosition(V(0,0,0)),at=(ms,f)=>Q.push({t:T+ms,f}),lit=(k,ms)=>{ORG[k].until=T+ms},G=f=>pre?0:f();
+function hudPt(id){const r=$('#'+id).getBoundingClientRect();return V((r.left+r.width/2)/innerWidth*2-1,-((r.top+r.height/2)/innerHeight)*2+1,.5).unproject(cam).sub(cam.position).normalize().multiplyScalar(6).add(cam.position)}
+function orb(c,r,pts,dur,delay,done,o={}){const m=new THREE.Mesh(SP,pm(c));m.visible=false;scene.add(m);
+ const h=new THREE.Mesh(SP,new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.28,blending:THREE.AdditiveBlending,depthWrite:false}));h.scale.setScalar(2.3);m.add(h);
+ FX.push(Object.assign({m,h,r,cv:pts.length>1?new THREE.CatmullRomCurve3(pts):null,a:pts[0],t0:T+delay,d:dur,done},o))}
+const part=(n,k)=>{const a=Array(k).fill(0);for(let i=0;i<n;i++)a[i%k]++;return a};
+
+/* ---------- state, UI ---------- */
+let pre=0,busy=0,sel=null,lastI=0,mT=0,dm='';const msgEl=$('#msg');
+const msg=(t,bad)=>{mT=T;msgEl.innerHTML=t;msgEl.className='hud pn'+(bad?' bad':'')},DEF='Drag to rotate, pinch or scroll to zoom. Tap an organelle to inspect it, or press an action to watch its mechanism.';
+const stInfo=s=>'<b>#'+s.id+' '+rn(s.r)+'</b> · Gen '+s.g+' · '+(s.v<=0?'starving 0%':s.v<=20?'Chapter 11 Distressed':'Active')+' · efficiency '+s.eff+' bps · BMR '+Math.round(bmr(s))+' bps/h · treasury '+s.bal.toFixed(1)+' $SNACC';
+function why(a,st){
+ if(a==='claim')return S.claim>0?'':'Nothing to claim yet. Redeem elixir, then let the epoch close.';
+ if(!live(st))return 'No living strain. Hatch a new one.';
+ if(a==='harvest')return st.v>.05?'Harvest needs a starving strain (vitality 0%).':'';
+ if(R_[a]&&!(st.r&R_[a]))return 'This strain is a '+rn(st.r)+'. Switch to a strain with the '+({extract:'Extractor',transmute:'Fermenter',synth:'Synthesizer'})[a]+' role.';
+ if(a==='divide'){if(S.dv+1>S.mg+S.ly)return 'Gate EN-124: divides cannot exceed mergers + lyses. Splice or harvest first.';if(alive().length>=MAXCOL)return 'Colony is full ('+MAXCOL+' cells).';if(st.g>=MAXGEN)return 'Generation limit reached (Gen '+MAXGEN+').'}
+ if(a==='splice'&&alive().length<2)return 'Splice needs a second living strain.';
+ if(a==='raid'){if(st.v<10)return 'Too weak to raid (vitality under 10%).';if(st.rd===S.ep)return 'This strain already raided this epoch.'}
+ if(a[0]==='u'){const l=st.L[+a[1]];if(l>=5)return 'Slot is at max level 5.';if(st.al===S.ep)return 'Already allocated this epoch. Advance the epoch.';if(S.atp<l+1)return 'Not enough ATP.'}
+ for(const k in C[a])if(S[k]<C[a][k])return 'Not enough '+NM[k]+'.';return ''}
+const tick=f=>S.st.forEach(s=>{if(live(s))s.v=Math.max(0,s.v-f*24*bmr(s)/100)}); /* bps per hour x 24 h, as percent */
+function advance(){tick(Math.max(0,S.et)/EP);S.ep++;S.et=EP;let t='<b>Epoch '+S.ep+' begins.</b> Hunger for the skipped time was applied.';
+ if(S.con>0){S.claim+=S.pool;t+=' The last epoch closed with a fixed dividend rate: '+S.claim.toFixed(1)+' $SNACC claimable.';S.pool=0;S.con=0}
+ if(S.burst&&S.ep>=S.bu){S.burst=0;t+=' The nutrient burst expired.'}
+ const al=alive();if(al.length&&Math.random()<.3){const v=al[Math.random()*al.length|0];if(Math.random()*5<v.L[2])t+=' A rival raid on #'+v.id+' was repelled by its lysosome (L'+v.L[2]+').';else{const x=v.bal*.06;v.bal-=x;t+=' A rival raided #'+v.id+' and took '+x.toFixed(1)+' $SNACC. Upgrade the lysosome to defend.'}}S.rv.forEach(q=>q.b*=1.04);msg(t);ui()}
+function hatch(){if(alive().length>=MAXCOL)return msg('Colony is full ('+MAXCOL+' cells).',1);if(S.sn<30)return msg('Hatching needs 30 $SNACC.',1);
+ S.sn-=30;S.pantry+=6;const c=mk0(S.nid++,[1,2,4][S.nid%3],50);c.bal=24;S.st.push(c);S.atp+=50;S.sel=c.id;msg('<b>Hatch.</b> A genesis strain is born (Gen 0, one role). 20% of the deposit goes to the Pantry, 80% becomes its cytoplasm, and it brings 50 starting ATP.');ui()}
+let tk='',uk='',rk='';const togR=v=>{const p=$('#rv');p.hidden=v===undefined?!p.hidden:!v;rk='';ui()};
+function ui(){const st=cur(),mk=Math.round(300+S.vol*20),z=zi(mk);
+ [['sn','p-sn'],['atp','p-atp'],['sp','p-sp'],['en','p-en'],['el','p-el']].forEach(([k,id])=>$('#'+id+' b').textContent=Math.floor(S[k]));
+ $('#zn').textContent='Epoch '+S.ep+' · '+Math.ceil(S.et)+'s · '+ZN[z].n+' '+mk+' mK'+(S.burst&&S.ep<S.bu?' · burst −'+S.burst/100+'%':'')+' · demo';
+ const tkey=S.st.map(s=>s.id+s.r+s.s+s.g).join()+'|'+S.sel;
+ if(tkey!==tk){tk=tkey;$('#tabs').innerHTML=S.st.map(s=>'<button class="tb'+(s.id===S.sel?' on':'')+(live(s)?'':' off')+'" data-s="'+s.id+'">#'+s.id+' '+rn(s.r)+' G'+s.g+(live(s)?'':' '+s.s)+'<em class="br"><span data-v="'+s.id+'"></span></em></button>').join('')}
+ S.st.forEach(s=>{const e=$('[data-v="'+s.id+'"]');if(e){e.style.width=Math.round(s.v)+'%';e.style.background=s.v>20?'#5be3c1':s.v>0?'#ffc15a':'#ff5d7a'}});
+ const uh=UN.map((u,i)=>{const l=st.L[i];return '<button data-u="'+i+'" class="'+(why('u'+i,st)?'off':'')+'">'+u[1]+' L'+l+(l<5?' · '+(l+1)+' ATP':' · max')+'</button>'}).join('')+'<button data-h="1">Hatch · 30 $SNACC</button><button data-e="1">Advance epoch</button>'+(S.claim>0?'<button data-a="claim">Claim dividend +'+S.claim.toFixed(1)+'</button>':'')+'<button data-f="1">Demo faucet +50</button>';
+ if(uh!==uk){uk=uh;$('#up').innerHTML=uh}
+ if(!$('#rv').hidden){const h='<b>Choose a rival colony to raid · 4 ATP</b>'+S.rv.map((q,i)=>'<button class="rr" data-r="'+i+'"><b>'+q.n+'</b><span>treasury '+(q.b|0)+' · defense L'+q.d+' · win chance '+Math.round(rc(st,q)*100)+'%</span></button>').join('')+'<button class="rr" data-r="x">Close</button>';if(h!==rk){rk=h;$('#rv').innerHTML=h}}
+ document.querySelectorAll('#dock button').forEach(b=>b.classList.toggle('off',!!why(b.dataset.a,st)));
+ if(!busy&&!sel&&T-mT>4000){const h=stInfo(st)+'<br>Tap an organelle to inspect it.';if(h!==dm){dm=h;msgEl.innerHTML=h;msgEl.className='hud pn'}}nbd()}
+const post=m=>{try{if(parent!==window)parent.postMessage(m,location.origin)}catch(e){}};
+function fin(a){busy=0;home();post({type:'snacc:done',action:a});ui()}
+
+/* ---------- camera ---------- */
+let yaw=.55,pit=.25,dist=46,tgt=V(0,0,0),ft=V(0,0,0),fd=0;const baseD=()=>innerWidth<700?46:34;fd=baseD();dist=fd+10;
+const foc=(k,d)=>{ft.copy(k&&ORG[k]?W(k):V(0,0,0));fd=d||baseD()},home=()=>sel?foc(sel,ORG[sel].d):foc(null);
+function select(k){sel=k;if(k){foc(k,ORG[k].d);msg('<b>'+ORG[k].name+'.</b> '+INFO[k==='m2'?'mit':k])}else{foc(null);msg(DEF)}}
+
+/* ---------- mechanisms (each follows the vault map: feed -> ATP, extract, transmute, synthesize, upgrades) ---------- */
+function play(a,preview){if(busy)return msg('A mechanism is still running. Watch it finish first.');pre=preview?1:0;const st=cur(),L=st.L;
+ if(!pre){const w=why(a,st);if(w)return msg(w,1);for(const k in C[a])S[k]-=C[a][k];if(a[0]==='u'){S.atp-=L[+a[1]]+1;st.al=S.ep}la='strain #'+st.id+' '+(a[0]==='u'?'upgrade':a)}
+ busy=1;if(!pre)post({type:'snacc:action',action:a});ui();const mp=W('mit'),m2=W('m2'),vp=W('vac'),gp=W('gol'),np=W('nuc'),dur=n=>RM?n*.6:n;
+ if(a==='feed'){const bs=S.ep<S.bu?S.burst:0,fee=10*(10000-bs)/10000,fz=zi(Math.round(300+S.vol*20)),burn=fz===2?fee*.035:0;
+  G(()=>{S.sn+=10-fee+(fz===0?fee*.02:0);S.pool+=.5*(fee-burn)});
+  msg('<b>Feed.</b> $SNACC crosses the membrane channel and the mitochondria oxidize it into ATP. Fee '+fee.toFixed(2)+(bs?' (nutrient burst −'+bs/100+'%)':'')+(fz===2?', Fever burns 3.5%':'')+(fz===0?', Hypothermia rebates 2%':'')+'. Half of (fee − burn) feeds the dividend pool.');
+  foc('ch',13);lit('ch',2200);OUT.forEach((p,i)=>orb(0xffb35c,.45,[p,CH,V(-9,1.5,0),V(-4,-1,1.5),i?m2:mp],2600,i*350,null));
+  at(1500,()=>foc('mit',10));at(3300,()=>{lit('mit',2800);lit('m2',2800)});
+  at(3500,()=>{const g=Math.round(6*st.eff/10000*(1+.1*L[0])),pt=part(g,5);pt.forEach((n,i)=>orb(0xffd24a,.32,[i%2?m2:mp],1300,i*140,()=>G(()=>{S.atp+=n;ui()}),{hud:'p-atp'}));orb(0xff7a4a,.5,[mp,mp.clone().add(V(0,3,0))],1500,0,null)});
+  at(5300,()=>{G(()=>{S.vol+=10;st.v=Math.min(100,st.v+8)});fin(a)})}
+ else if(a==='extract'){msg('<b>Extract.</b> Ribosomes on the rough ER build spore granules and pass them to the vacuole for storage.');
+  foc('er',12);lit('er',3200);const n=Math.round(2*(1+.1*L[1]));for(let i=0;i<n;i++)orb(0x9be86a,.3,[W('er').add(er.rib[(i*7+3)%er.rib.length]),V(1,-1,-2),vp],1800,600+i*450,()=>G(()=>{S.sp++;ui()}));at(3200,()=>fin(a))}
+ else if(a==='transmute'){msg('<b>Transmute.</b> mRNA leaves the nucleus; spores are assembled along the ER into enzymes.');
+  foc('er',12);lit('nuc',2400);lit('er',3400);for(let i=0;i<3;i++)orb(0xd7c6ff,.22,[np,W('er').add(er.rib[i*6]),W('er').add(er.rib[i*6+2])],1400,i*250,null);
+  [0,1].forEach(i=>orb(0x9be86a,.3,[vp,V(0,-2,-1),W('er').add(er.rib[10+i*5])],2000,400+i*300,()=>{if(!i)G(()=>{S.en+=Math.max(1,Math.round(1*(1+.1*L[1])));ui()})},{c2:0xb69cff}));at(3400,()=>fin(a))}
+ else if(a==='synth'){msg('<b>Synthesize.</b> Enzymes move to the Golgi, which packs elixir into a vesicle; the vesicle fuses with the membrane (exocytosis).');
+  foc('gol',11);lit('gol',4200);[0,1].forEach(i=>orb(0xb69cff,.3,[W('er').add(er.rib[4+i*5]),V(3,4,-2),gp],1500,i*350,null));
+  at(1800,()=>{foc('ex',12);orb(0xffb3c8,.6,[gp,V(10,4.4,-2.6),EX],1800,0,()=>{G(()=>{S.el+=Math.max(1,Math.round(1*(1+.1*L[1])));ui()});for(let i=0;i<8;i++){const d=V(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize();orb(0xffb3c8,.2,[EX,EX.clone().add(d.multiplyScalar(3.5))],900,0,null)}})});at(4300,()=>fin(a))}
+ else if(a==='divide'){const fis=!(st.r&(st.r-1));msg('<b>'+(fis?'Binary fission':'Mitosis')+'.</b> The nucleus duplicates and the cell pinches in two. Vitality, treasury and organelle levels are halved. The child is Gen '+(st.g+1)+' and inherits the genome.');
+  foc(null,baseD()+4);lit('nuc',3600);dvT=T;at(2100,()=>G(()=>{const c=mk0(S.nid++,st.r);c.g=st.g+1;c.eff=st.eff;c.bm=st.bm;st.v/=2;st.bal/=2;st.L=st.L.map(x=>x>>1);c.v=st.v;c.bal=st.bal;c.L=st.L.slice();S.st.push(c);S.dv++;ui()}));at(4400,()=>fin(a))}
+ else if(a==='splice'){const ab=alive().find(x=>x.id!==st.id)||{bal:0,r:0,g:0,L:[0,0,0]},tax=ab.bal*.025;
+  msg('<b>Splice (endosymbiosis).</b> Strain #'+ab.id+' is engulfed by #'+st.id+': roles merge by OR, efficiency +800 bps, Gen+1, BMR −15%, 2.5% merger tax to the treasury. Mitochondria began exactly like this.');
+  foc('ch',14);orb(0xff9a6b,1.1,[OUT[1],CH,V(-9,0,1),m2],3200,0,null);at(1200,()=>foc('m2',10));at(3300,()=>{lit('m2',2400);lit('mit',2400)});
+  at(3400,()=>G(()=>{st.r|=ab.r;S.pantry+=tax;st.bal+=ab.bal-tax;st.eff+=800;st.g=Math.max(st.g,ab.g)+1;st.bm*=.85;st.L=st.L.map((x,i)=>Math.max(x,ab.L[i]));st.al=-1;ab.s='SplicedBurned';ab.v=0;S.mg++;ui()}));at(5400,()=>fin(a))}
+ else if(a==='harvest'){const bo=st.bal*.1,rec=st.bal-bo,lp=W('lys');
+  msg('<b>Cell lysis.</b> The membrane ruptures. The liquidator takes a 10% bounty ('+bo.toFixed(1)+'), 90% ('+rec.toFixed(1)+') returns to the Pantry, and the spilled nutrients give every cell a feed discount for one epoch (nutrient burst).');
+  foc(null,baseD()+6);at(600,()=>{mem.material.opacity=.5;lit('lys',2500)});
+  for(let i=0;i<30;i++){const d=V(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize();orb(i%3?0xffb35c:0xff7a8a,.3,[lp,lp.clone().add(d.clone().multiplyScalar(8)),d.clone().multiplyScalar(22)],2600,700+i*25,null)}
+  at(3700,()=>{mem.material.opacity=$('#bs').getAttribute('aria-pressed')==='true'?.03:.14;G(()=>{S.sn+=bo;S.pantry+=rec;S.burst=Math.min(2000,500+Math.round(rec*20));S.bu=S.ep+1;st.s='Liquidated';st.bal=0;S.ly++;S.sel=(alive()[0]||st).id});fin(a)})}
+ else if(a==='redeem'){msg('<b>Redeem aether (phase 1).</b> One elixir is burned at the Golgi and your contribution is recorded for this epoch. Payment comes only after the epoch closes, pro-rata, so nobody can drain the pool first.');
+  foc('gol',10);lit('gol',2200);for(let i=0;i<6;i++)orb(0xffb3c8,.25,[gp.clone().add(V(rnd(-3,3),rnd(-2,2),rnd(-2,2))),gp],1200,i*180,null);at(2400,()=>{G(()=>{S.con++});fin(a)})}
+ else if(a==='raid'){const t=S.rv[RT],win=Math.random()<rc(st,t),rp=W('rv'),lp=Math.max(5,t.b*.15),tax=lp*.1,net=lp-tax;G(()=>{st.rd=S.ep});
+  rvm.color.setHSL(t.h,.65,.5);ORG.rv.g.visible=true;
+  msg('<b>Raid on '+t.n+'.</b> Spore darts leave the Golgi and strike the rival membrane. Their defense is L'+t.d+', your win chance is '+Math.round(rc(st,t)*100)+'%.');
+  ft.set(-20,4,-4);fd=48;for(let i=0;i<8;i++)orb(0x9be86a,.3,[gp,V(-14,3,-4),rp],1700,i*200,null);
+  at(2300,()=>{lit('rv',2000);if(win){for(let i=0;i<6;i++)orb(0xffb35c,.4,[rp,V(-14,2,0),gp],1500,i*140,()=>G(()=>{S.sn+=net/6;ui()}),{hud:'p-sn'});
+   G(()=>{t.b-=lp;S.pantry+=tax;st.v=Math.max(0,st.v-4)});msg('<b>Raid succeeded.</b> You looted '+net.toFixed(1)+' $SNACC from '+t.n+' (10% tax to the Pantry). The raid cost 4% vitality.')}
+   else{orb(0xff5d7a,.6,[rp,V(-14,2,0),np],1500,0,null);G(()=>{st.v=Math.max(0,st.v-15)});msg('<b>Raid repelled.</b> '+t.n+' held its membrane. Your strain lost 15% vitality.',1)}});
+  at(5000,()=>{ORG.rv.g.visible=false;fin(a)})}
+ else if(a==='claim'){const v=S.claim;msg('<b>Claim dividend (phase 2).</b> Payment is your recorded contribution times the closed-epoch rate, once per epoch.');
+  foc('gol',10);lit('gol',1800);for(let i=0;i<6;i++)orb(0xffd24a,.3,[gp],1300,i*160,()=>G(()=>{S.sn+=v/6;ui()}),{hud:'p-sn'});at(2600,()=>{G(()=>{S.claim=0});fin(a)})}
+ else{const i=+a.slice(1),k=UN[i][0],o=W(k),ms={mit:'Mitochondrion upgraded: more ATP per feed.',nuc:'Nucleus upgraded: more enzyme and elixir output.',lys:'Lysosome upgraded: hunger rate drops.'}[k];
+  msg('<b>'+UN[i][1]+' upgrade.</b> ATP is allocated to this organelle slot.');foc(k,9);lit(k,2200);
+  if(k==='nuc')for(let j=0;j<4;j++)orb(0xd7c6ff,.22,[np,W('er').add(er.rib[j*5+1])],1200,j*250,null);
+  for(let j=0;j<7;j++)orb(0xffd24a,.2,[o,o.clone().add(V(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize().multiplyScalar(3))],1100,300+j*60,null);
+  at(2300,()=>{G(()=>{L[i]++});msg(ms);fin(a)})}}
+
+/* ---------- input ---------- */
+const ptrs=new Map(),ray=new THREE.Raycaster();let mv=0,pd=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);mv=0;lastI=T;if(ptrs.size===2){const[a,b]=[...ptrs.values()];pd=Math.hypot(a[0]-b[0],a[1]-b[1])}});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;lastI=T;
+ if(ptrs.size===2){ptrs.set(e.pointerId,[e.clientX,e.clientY]);const[a,b]=[...ptrs.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);fd=Math.max(6,Math.min(60,fd*pd/d));pd=d;mv=99;return}
+ const dx=e.clientX-p[0],dy=e.clientY-p[1];mv+=Math.abs(dx)+Math.abs(dy);yaw-=dx*.006;pit=Math.max(-1.3,Math.min(1.3,pit+dy*.006));p[0]=e.clientX;p[1]=e.clientY});
+cv.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);if(mv<6){ray.setFromCamera(V(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1,0),cam);const h=ray.intersectObjects(PICK,false)[0];select(h?h.object.userData.k:null)}});
+cv.addEventListener('pointercancel',e=>ptrs.delete(e.pointerId));
+cv.addEventListener('wheel',e=>{e.preventDefault();lastI=T;fd=Math.max(6,Math.min(60,fd*Math.exp(e.deltaY*.001)))},{passive:false});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.a==='raid')togR();else if(b.dataset.r!==undefined){if(b.dataset.r==='x')togR(0);else{RT=+b.dataset.r;togR(0);play('raid')}}
+ else if(b.dataset.a)play(b.dataset.a);else if(b.dataset.u!==undefined)play('u'+b.dataset.u);
+ else if(b.dataset.s){const t=S.st.find(x=>x.id===+b.dataset.s);if(t&&live(t)){S.sel=t.id;ui()}}
+ else if(b.dataset.h)hatch();else if(b.dataset.e){if(!busy)advance()}else if(b.dataset.f){S.sn+=50;ui()}
+ else if(b.id==='bl'){const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);document.body.classList.toggle('nl',!on)}
+ else if(b.id==='bg'){const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);LG.hidden=!on;glog()}
+ else if(b.id==='bs'){const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);mem.material.opacity=on?.03:.14}});
+addEventListener('keydown',e=>{const a={1:'feed',2:'extract',3:'transmute',4:'synth',5:'divide',6:'splice',7:'harvest',8:'redeem',9:'raid'}[e.key];if(a==='raid')togR();else if(a)play(a)});
+
+/* ---------- Arya: zone banner (UI-118), threshold log (UI-119), nutrient burst badge (UI-117) ---------- */
+const ZB=$('#zb'),NB=$('#nb'),LG=$('#lg'),ZR=['Stimulus rebate 2%','Neutral band','Velocity auto-burn 3.5%'],ZC=['#6fa8ff','#5be3c1','#ff7a3c'];let zp=zi(Math.round(300+S.vol*20)),zt=0,la='',nbs='';
+if(!S.zl)S.zl=[];
+function zc(z,mk){if(z===zp)return;S.zl.unshift({ep:S.ep,f:zp,t:z,mk,by:la});S.zl.length=Math.min(S.zl.length,8);zp=z;
+ ZB.textContent=ZN[z].n+' at '+mk+' mK. '+ZR[z]+'.';ZB.style.borderColor=ZB.style.color=ZC[z];ZB.classList.add('on');clearTimeout(zt);zt=setTimeout(()=>ZB.classList.remove('on'),3800);glog()}
+function glog(){if(LG.hidden)return;LG.innerHTML='<b>Threshold log (demo replay, not on-chain)</b>'+(S.zl.length?S.zl.map(e=>'<span>Epoch '+e.ep+': '+ZN[e.f].n+' to '+ZN[e.t].n+' at '+e.mk+' mK'+(e.by?', last action: '+e.by:'')+'</span>').join(''):'<span>No threshold crossed yet. Feed to heat the crucible above 610 mK.</span>')}
+function nbd(){const on=S.burst&&S.ep<S.bu,t=on?'Nutrient Burst: feed fee \u2212'+S.burst/100+'% until epoch '+S.bu:'';if(t!==nbs){nbs=t;NB.textContent=t;NB.classList.toggle('on',!!on)}}
+
+/* ---------- postMessage bridge (contract from the GDD; origin validated) ---------- */
+addEventListener('message',e=>{if(e.origin!==location.origin||!e.data)return;const d=e.data;
+ if(d.type==='snacc:state'&&d.strain){const st=cur(),s=d.strain,o=s.organel||{};if(typeof s.effective_vitality==='number')st.v=Math.max(0,Math.min(100,s.effective_vitality));if(typeof s.atp_balance==='number')S.atp=s.atp_balance;
+  st.L=[o.mitokondria|0,o.nukleus|0,o.lisosom|0].map(n=>Math.min(5,n));if(s.role_mask)st.r=s.role_mask;ui()}
+ else if(d.type==='snacc:play'){const m={feed:'feed',atp:'feed',extract:'extract',transmute:'transmute',synthesize:'synth',nucleus:'u1',lysosome:'u2',divide:'divide',splice:'splice',lysis:'harvest',dividend:'claim',raid:'raid'}[d.action];if(m)play(m,1)}});
+
+/* ---------- main loop ---------- */
+function size(){R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',size);size();
+const tc=new THREE.Color(),RED=new THREE.Color(0xff5d7a);let last=performance.now(),uit=0,svt=0;
+function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;T=now;
+ Q.sort((a,b)=>a.t-b.t);while(Q.length&&Q[0].t<=T)Q.shift().f();
+ /* biology: hunger (BMR) lowered by lysosome level, and a decaying volume that drives the temperature zone */
+ tick(dt/EP);S.et-=dt;if(S.et<=0)advance();S.vol*=Math.exp(-dt*.03);const st=cur(),mk=Math.round(300+S.vol*20),z=zi(mk);
+ zc(z,mk);tc.setHex(ZN[z].c);scene.background.lerp(tc,Math.min(1,dt*2));scene.fog.color.copy(scene.background);
+ tc.setHex(0x7a6cff).lerp(RED,Math.max(0,1-st.v/30));mem.material.color.lerp(tc,Math.min(1,dt*2));fres.uniforms.c.value.copy(mem.material.color).multiplyScalar(1.7);
+ const beat=RM?1:1+.012*Math.sin(T/450),dvv=dvT?Math.sin(Math.min(1,(T-dvT)/4200)*Math.PI):0;if(dvT&&T-dvT>=4200)dvT=0;
+ cell.scale.set(beat*(1+.4*dvv),beat*(1-.15*dvv),beat*(1-.15*dvv));nu.g.position.x=-1-dvv*5;nuc2.visible=pinch.visible=dvv>.02;nuc2.position.set(-1+dvv*5,2.5,-1);pinch.scale.setScalar(Math.max(.15,1-dvv*.85));
+ for(const k in ORG){const o=ORG[k];o.glow+=((T<o.until?1:0)-o.glow)*Math.min(1,dt*5);o.mats.forEach(m=>m.emissiveIntensity=o.glow*1.1);if(!RM&&k!=='ex'&&k!=='ch'&&k!=='nuc'&&k!=='er')o.g.position.y=o.by+Math.sin(T/1300+o.by)*.25}
+ [ORG.mit,ORG.m2].forEach(o=>{const g=o.glow;o.hp.forEach((h,i)=>{h.visible=g>.05;const u=(T/(RM?2400:1100)+i*.1)%1;h.position.set((i%5-2)*.9,-.9+Math.sin(u*Math.PI)*1.5,(i<5?.25:-.25))});o.syn.forEach((s,i)=>{const a=T/200+i*2;s.position.x=(i-1)*1.5+(g>.05?Math.cos(a)*.12:0);s.position.z=g>.05?Math.sin(a)*.12:0})});
+ chr.rotation.y=RM?0:T/1800;cyt.rotation.y+=RM?0:dt*.02;med.rotation.y+=RM?0:dt*.01;
+ nut.forEach((m,i)=>m.position.y=OUT[i].y+(RM?0:Math.sin(T/700+i*2)*.5));
+ for(let i=FX.length-1;i>=0;i--){const f=FX[i],u=(T-f.t0)/f.d;if(u<0)continue;f.m.visible=true;
+  if(u>=1){scene.remove(f.m);f.h.material.dispose();FX.splice(i,1);if(f.done)f.done();continue}
+  const e=u*u*(3-2*u);if(f.hud){f.m.position.copy(f.a).lerp(hudPt(f.hud),e);f.m.position.y+=Math.sin(e*Math.PI)*1.5}else if(f.cv)f.m.position.copy(f.cv.getPoint(e));else f.m.position.copy(f.a).addScaledVector(V(0,1,0),e*3);
+  if(f.c2&&u>.5&&!f.sw){f.sw=1;f.m.material=pm(f.c2);f.h.material.color.setHex(f.c2)}f.m.scale.setScalar(f.r*Math.min(1,(1-u)*6,u*8+.25))}
+ const k=RM?1:1-Math.exp(-dt*3);tgt.lerp(ft,k);dist+=(fd-dist)*k;if(!RM&&!sel&&!busy&&T-lastI>4000)yaw+=dt*.05;
+ cam.position.set(tgt.x+dist*Math.cos(pit)*Math.sin(yaw),tgt.y+dist*Math.sin(pit),tgt.z+dist*Math.cos(pit)*Math.cos(yaw));cam.lookAt(tgt);
+ if(!document.body.classList.contains('nl'))LB.forEach(([kk,el])=>{const v=W(kk).project(cam);el.style.display=v.z>1?'none':'';el.style.transform='translate('+((v.x*.5+.5)*innerWidth)+'px,'+((-v.y*.5+.5)*innerHeight)+'px) translate(-50%,-150%)'});
+ if(T-uit>500){uit=T;ui()}if(T-svt>3000){svt=T;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+ R.render(scene,cam)}
+ui();msg(DEF);requestAnimationFrame(loop);post({type:'snacc:ready'});
+})();
+</script>
+</body>
+</html>

@@ -169,3 +169,41 @@ export class ZoneBannerController {
     return vm;
   }
 }
+
+export const ZONE_NAMES = ["Hypothermia", "Normal", "Calcination Fever"] as const;
+export const ZONE_RULES = [
+  "Stimulus rebate 2%",
+  "Neutral band",
+  "Velocity auto-burn 3.5%",
+] as const;
+export const ZONE_COLORS = ["#6fa8ff", "#5be3c1", "#ff7a3c"] as const;
+
+export function classifyBiolabZone(crucibleTempMk: number): "Hypothermia" | "Normal" | "Calcination Fever" {
+  if (crucibleTempMk > 610) return "Calcination Fever";
+  if (crucibleTempMk < 600) return "Hypothermia";
+  return "Normal";
+}
+
+export function formatZoneBannerText(zoneIndex: number, mk: number): string {
+  const name = ZONE_NAMES[zoneIndex] ?? "Normal";
+  const rule = ZONE_RULES[zoneIndex] ?? "Neutral band";
+  return `${name} at ${mk} mK. ${rule}.`;
+}
+
+export function formatZnLabel(
+  epoch: number,
+  countdownSec: number,
+  zoneIndex: number,
+  mk: number,
+  burstBps = 0,
+  isLive = false
+): string {
+  const name = ZONE_NAMES[zoneIndex] ?? "Normal";
+  let label = `Epoch ${epoch} · ${countdownSec}s · ${name} ${mk} mK`;
+  if (burstBps > 0) {
+    label += ` · burst \u2212${burstBps / 100}%`;
+  }
+  label += isLive ? " · live" : " · demo";
+  return label;
+}
+
