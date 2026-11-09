@@ -45,6 +45,12 @@ export const emit = (key, svg, name = "") => layers.push({ key, svg, name });
 export const R = A.recorder(P, { order: [], spring: {} });
 export const rec = (shape) => R.solid(shape);
 export const put = (piece, shapes, at3, bias = 0) => R.put({ piece, at: at3, bias, svg: "", shapes: shapes.map(rec) });
+// every helper that draws a solid also notes its true shape; flushItem() puts the noted shapes into a recorder as one drawn item
+// (rig + stage items go to R; the cut-open mitochondrion's items go to HR, because they sort among themselves inside one layer)
+export const HR = A.recorder(P, { order: [], spring: {} });
+const noted = [];
+export const noteShape = (s) => { noted.push(s); return s; };
+export const flushItem = (rec, key, piece, ride = piece) => { const shapes = noted.splice(0).map((s) => rec.solid(s)); if (shapes.length) rec.put({ piece, ride, key, at: [0, 0, 0], bias: 0, svg: "", shapes }); };
 export const slabS = (plan, z, h, name, extra = {}) => A.slab(plan, z, h, { name, ...extra }, 8);
 export const cylS = (cx, cy, r, z, h, name, extra = {}) => A.cylinder(cx, cy, r, z, h, { name, ...extra });
 

@@ -244,5 +244,70 @@ const SCENES = {
       return s;
     },
   },
+  feed: {
+    title: "Feed · $SNACC in via transporter", note: "feed_strain · macro signal CrucibleTemp acts as the hormone",
+    steps: [[0, "① the hopper chute drops $SNACC pellets toward the membrane"], [0.22, "② the signal binds the receptor Y"], [0.34, "③ the transporter door flips open"], [0.52, "④ pellets pass the door and spread in the cytoplasm"]],
+    draw(t) {
+      let s = plinth(-92, -2, 184, 66);
+      const flip = sstep(0.3, 0.5, t), open = flip > 0.5;
+      // membrane: bilayer of head circles (two rows), gap where the transporter sits
+      const my = 14;
+      s += rr(-90, my - 9, 180, 18, 2, WARM, 0.6);
+      for (let i = 0; i < 21; i++) { const x = -84 + i * 8.4; if (Math.abs(x - 18) < 15) continue; s += ci(x, my - 6, 2.7, CREAM, 0.7) + ci(x, my + 6, 2.7, CREAM, 0.7) + ln([[x, my - 3.3], [x, my - 0.5]], 0.5, TAND) + ln([[x, my + 0.5], [x, my + 3.3]], 0.5, TAND); }
+      // transporter: two barrels and a flipping marigold door
+      s += rr(2, my - 10, 12, 20, 3, TAN, 1.1) + rr(22, my - 10, 12, 20, 3, TAN, 1.1);
+      s += rr(14, my - 7, 8, 14, 0, open ? "#fffdf6" : TAND, 0.4);
+      s += `<g transform="translate(18 ${my}) rotate(${f1(flip * 90)})">${rr(-9, -2.6, 18, 5.2, 2.4, MARI, 1.2)}</g>`;
+      if (open) s += `<circle cx="18" cy="${my}" r="17" fill="none" style="stroke:${MARI};stroke-width:1.8px;opacity:${f1(0.5 + 0.4 * Math.sin(t * 30))}"/>`;
+      // receptor Y on the outside and the signal dot landing on it
+      s += ln([[-34, my - 10], [-34, -6], [-40, -14]], 2, INK) + ln([[-34, -6], [-28, -14]], 2, INK);
+      const sg = win(t, 0.06, 0.24); if (sg > 0) s += ci(lerp(-80, -34, sstep(0, 1, sg)), lerp(-12, -12, sstep(0, 1, sg)), 3.2, MARIH, 0.8);
+      // hopper + chute: pellets slide down and through the door
+      s += pa("M-84 -50L-56 -50L-62 -36L-78 -36Z", CREAM, 1.1) + rr(-72, -36, 4, 8, 1, TAN, 0.8);
+      const chute = [[-70, -30], [-70, -24], [18, -24], [18, my - 8]];
+      s += ln(chute, 8, INK) + ln(chute, 5.6, "#e7f3f1");
+      const pellet = (p, r) => ci(p[0], p[1], r, MARI, 1) + tx(p[0], p[1] + r * 0.36, "$", r * 1.1, "middle", INK, 700);
+      const seg = (q) => { let d = q * 124; if (d < 6) return [-70, -30 + d]; d -= 6; if (d < 88) return [-70 + d, -24]; d -= 88; return [18, -24 + d]; };
+      for (let i = 0; i < 5; i++) { const g = (t - 0.04 - i * 0.07) / 0.45; if (g > 0 && g < 1) s += pellet(seg(g), 5.6); }
+      // after the door: pellets in the cytoplasm
+      for (let i = 0; i < 5; i++) { const g = (t - 0.04 - i * 0.07 - 0.45) / 0.3; if (g > 0) { const q = Math.min(1, g); s += pellet([lerp(18, 18 + Math.cos(i * 1.3) * 56, sstep(0, 1, q)), lerp(my + 12, 44 + Math.sin(i * 2.1) * 6, sstep(0, 1, q))], 5.2 - 1.2 * q); } }
+      s += tx(-52, -43, "hopper chute", 6, "start", "#5e5340") + tx(36, my - 20, "transporter door", 6, "start", INK, 700) + tx(0, 60, "cytoplasm · pellets = fuel", 6, "middle", "#5e5340") + tx(-58, -2, "receptor", 5.6, "middle", "#5e5340");
+      return s;
+    },
+  },
+  lysis: {
+    title: "Lysis · harvest a starving strain", note: "harvest_starving_strain · bounty 10% · the rest returns to the treasury",
+    steps: [[0, "① ATP empty: ion pumps stop, the cell swells and the pressure needle climbs"], [0.4, "② the needle is in the red: the membrane tears along its seam"], [0.5, "③ fragments and contents float out; a pipette drone takes the 10% bounty"]],
+    draw(t) {
+      let s = plinth(-92, -2, 184, 66);
+      const sw = sstep(0.04, 0.4, t), tear = sstep(0.4, 0.55, t);
+      const cx = -38, cy = 32, rx = 36 * (1 + 0.13 * sw), ry = 29 * (1 + 0.13 * sw);
+      // cell wall + contents
+      s += `<ellipse cx="${cx + 4}" cy="${cy + 5}" rx="${f1(rx)}" ry="${f1(ry)}" fill="${BROWN}" opacity=".5"/>` + el(cx, cy, rx, ry, WARM, 1.3) + el(cx, cy, rx - 5, ry - 5, "#fffdf6", 0.6);
+      s += ci(cx - 6, cy + 2, 9, MARIH, 0.9) + ci(cx + 14, cy + 8, 5, "#c8e36a", 0.8) + ci(cx - 18, cy + 12, 4.4, "#a9d4ec", 0.8);
+      s += tx(cx, cy + 4, "ATP = 0", 6.2, "middle", "#7a2b20", 700);
+      // seam on the upper right: red when torn, with a dark gap
+      const a0 = -1.0, a1 = -0.1, np = 7;
+      const sp = Array.from({ length: np }, (_, i) => { const a = a0 + (a1 - a0) * (i / (np - 1)); const r1 = 1 + (i % 2 ? 0.05 : -0.04) * tear; return [cx + Math.cos(a) * rx * r1, cy + Math.sin(a) * ry * r1]; });
+      const torn = sp.slice(0, 2 + Math.round(tear * 5));
+      if (tear > 0) s += ln(torn, 6.4, INK) + ln(torn, 3.8, "#d94135") + ln(torn, 1.2, "#fff3c8");
+      else s += ln(sp, 1, "#d94135", "stroke-dasharray:2 3");
+      // fragments + contents flying out
+      const o = sp[3], fr = win(t, 0.46, 1);
+      for (let i = 0; i < 7 && fr > 0; i++) { const q = clamp(fr * 1.3 - i * 0.04), a = -0.5 - i * 0.37, d = 26 + i * 6; if (q > 0 && q < 1) { const p = [o[0] + Math.cos(a) * d * q + 8 * q, o[1] + Math.sin(a) * d * q * 0.8 - 10 * q]; s += `<path d="M${f1(p[0] - 4)} ${f1(p[1])}L${f1(p[0] - 1)} ${f1(p[1] - 4.4)}L${f1(p[0] + 4.4)} ${f1(p[1] - 1)}L${f1(p[0] + 2)} ${f1(p[1] + 3.6)}Z" fill="${TAN}" class="ink" style="stroke-width:.9px" transform="rotate(${f1(q * 260 + i * 40)} ${f1(p[0])} ${f1(p[1])})"/>`; } }
+      for (let i = 0; i < 8 && fr > 0; i++) { const q = (fr * 1.1 + i * 0.09) % 1; s += beadG(o[0] + Math.sin(i * 2.1 + q * 4) * 9 + q * 26, o[1] - q * 44, 2.6 + (i % 3) * 0.5); }
+      // pressure gauge with a red zone
+      const gx = 66, gy = 22;
+      s += dialG(gx, gy, 24, 0.1 + 0.88 * sw, "kPa", null) + redZone(gx, gy, 24) + tx(gx, gy + 36, sw > 0.7 ? "RED: tear!" : "turgor pressure", 6.2, "middle", sw > 0.7 ? "#a8281f" : "#5e5340", 700);
+      s += lampG(gx - 8, gy - 36, sw > 0.7, "#d94135");
+      // liquidator pipette drone
+      const dp = win(t, 0.42, 0.98), dxx = lerp(120, o[0] + 4, sstep(0, 0.35, dp)) - sstep(0.78, 1, dp) * 140, dyy = o[1] - 38 + Math.sin(t * 8) * 2 - sstep(0.78, 1, dp) * 30;
+      if (dp > 0 && dp < 1) { s += droneG(dxx, dyy, 1.15, t); for (let i = 0; i < 4; i++) { const q = clamp(win(dp, 0.35, 0.8) * 1.2 - i * 0.14); if (q > 0 && q < 1) s += beadG(lerp(o[0] + 2, dxx, q), lerp(o[1] - 4, dyy + 20, q), 2.4); } }
+      return s;
+    },
+  },
 };
+const droneG = (x, y, sc, t) => `<g transform="translate(${f1(x)} ${f1(y)}) scale(${sc})"><ellipse cx="0" cy="0" rx="14" ry="6" class="ink" style="fill:#fef8ed;stroke-width:1px"/><ellipse cx="0" cy="1.8" rx="13" ry="2.4" fill="#d8c399" stroke="none"/><path d="M-13 -3L-20 -8M13 -3L20 -8" class="ink" style="stroke-width:1.1px"/><ellipse cx="-20" cy="-9" rx="9" ry="1.7" fill="#161412" opacity="${f1(0.4 + 0.3 * Math.sin(t * 120))}"/><ellipse cx="20" cy="-9" rx="9" ry="1.7" fill="#161412" opacity="${f1(0.4 + 0.3 * Math.cos(t * 120))}"/><path d="M-1.6 6L-1.6 21L0 24.5L1.6 21L1.6 6Z" class="ink" style="fill:#e7f3f1;stroke-width:.9px"/><circle cx="0" cy="0" r="2.4" fill="#f8aa06" class="ink" style="stroke-width:.7px"/><rect x="-8" y="-17" width="16" height="8" rx="2" class="ink" style="fill:#fffdf6;stroke-width:.8px"/><text x="0" y="-11" text-anchor="middle" style="font:700 6px ui-monospace,monospace;fill:#161412">10%</text></g>`;
+const redZone = (x, y, r) => { const q = (f) => (-135 + f * 270) * Math.PI / 180, R = r * 0.8; return `<path d="M${f1(x + Math.sin(q(0.72)) * R)} ${f1(y - Math.cos(q(0.72)) * R)}A${f1(R)} ${f1(R)} 0 0 1 ${f1(x + Math.sin(q(0.98)) * R)} ${f1(y - Math.cos(q(0.98)) * R)}" fill="none" style="stroke:#d94135;stroke-width:3.4px;stroke-linecap:round"/>`; };
+const plinthMini = (x, y, w, h) => rr(x + 4, y + 6, w, h, 9, BROWN, 0.8) + rr(x, y, w, h, 9, CREAM, 1);
 const sceneOrder = Object.keys(SCENES);

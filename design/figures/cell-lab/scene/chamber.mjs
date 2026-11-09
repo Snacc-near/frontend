@@ -1,5 +1,5 @@
 // Chamber: stage collar with clamps, glass bell jar (back/front split), and the cell shell cutaway.
-import { k, G, O, P, S, Ln, Dm, at, f1, emit, put, cylS, CELLC, STAGE_Z, GLASS_R, CELL_R, CELL_Z, dep, floorM } from "../ctx.mjs";
+import { k, G, A, O, P, S, Ln, Dm, at, f1, emit, R, noteShape, flushItem, CELLC, STAGE_Z, GLASS_R, CELL_R, CELL_Z, dep, floorM } from "../ctx.mjs";
 
 export const JAR = { base: 12, cyl: 84, cap: 58 };
 export const JAR_TOP = JAR.base + JAR.cyl + JAR.cap;
@@ -8,6 +8,7 @@ export function chamber() {
   const [CX, CY] = CELLC;
   // ---- stage: collar discs ----
   const st = [];
+  const collar = [[74, 0, 5], [69, 5, 4], [66, 9, 3], [58, 12, 1.2]].map(([r, z, h]) => noteShape(A.cylinder(CX, CY, r, z, h, { name: "chamber.collar" })));
   st.push(S(k.cylinder(CX, CY, 74, 0, 5, P, 72, 0.8), { tone: "hi", className: "bone" }));
   st.push(Ln(k.sideArc(CX, CY, 74, 2.5, P, 48), { tone: "faint" }));
   st.push(S(k.cylinder(CX, CY, 69, 5, 4, P, 72, 0.8), { tone: "hi", className: "tan" }));
@@ -27,23 +28,31 @@ export function chamber() {
   // cytoplasm bath floor disc inside the glass
   st.push(S(k.cylinder(CX, CY, 58, 12, 1.2, P, 64, 0.2), { tone: "hi", className: "cyto", crease: "none" }));
   emit(dep(CX, CY, 0) - 2, st.join(""), "stage");
-  put("chamber.collar", [cylS(CX, CY, 74, 0, 5, "chamber.collar")], [CX, CY, 4], -1);
+  flushItem(R, dep(CX, CY, 0) - 2, "stage");
 
   // ---- clamps around the collar (4 thumb screws) ----
-  const clamps = [];
   const cl = [];
-  for (const a of [20, 70, 120, 160, 200, 250, 290, 340]) {
+  for (const a of [20, 70, 98, 160, 200, 250, 290, 340]) {  // 98, not 120: the feed port sits at 122 deg
     const rad = (a * Math.PI) / 180;
     const gx = CX + 70 * Math.cos(rad), gy = CY + 70 * Math.sin(rad);
     cl.push({ gx, gy, d: dep(gx, gy, 6) });
   }
   cl.sort((a, b) => a.d - b.d);
-  for (const { gx, gy } of cl) {
-    clamps.push(S(k.slabOf({ x: gx - 4.5, y: gy - 4.5, w: 9, d: 9, r: 2 }, 5, 6, P, 3, 0.5), { tone: "hi", className: "steel" }));
-    clamps.push(S(k.cylinder(gx, gy, 2.4, 11, 2.6, P, 14), { tone: "hi", className: "tan" }));
-    clamps.push(Dm([at([gx, gy, 13.6])], { size: 0.5 }));
+  // the back clamps stand behind the raised steps of the stage, the front ones in front: two items, so the order never interlocks
+  const mid = dep(CX, CY, 0);
+  for (const [name, set, key] of [["clamps.back", cl.filter((c) => c.d < mid), mid - 3], ["clamps", cl.filter((c) => c.d >= mid), mid - 1.5]]) {
+    const clamps = [];
+    for (const { gx, gy } of set) {
+      // the clamp straddles the collar's steps: it is a pad cut by its host (seated), not a block sunk into it
+      noteShape(A.slab({ x: gx - 4.5, y: gy - 4.5, w: 9, d: 9, r: 2 }, 5, 6, { name: "chamber.clamp", seated: true, cut: collar.slice(0, 3) }, 3));
+      noteShape(A.cylinder(gx, gy, 2.4, 11, 2.6, { name: "chamber.clamp.screw" }));
+      clamps.push(S(k.slabOf({ x: gx - 4.5, y: gy - 4.5, w: 9, d: 9, r: 2 }, 5, 6, P, 3, 0.5), { tone: "hi", className: "steel" }));
+      clamps.push(S(k.cylinder(gx, gy, 2.4, 11, 2.6, P, 14), { tone: "hi", className: "tan" }));
+      clamps.push(Dm([at([gx, gy, 13.6])], { size: 0.5 }));
+    }
+    emit(key, clamps.join(""), name);
+    flushItem(R, key, name, "stage");
   }
-  emit(dep(CX, CY, 0) - 1.5, clamps.join(""), "clamps");
 }
 
 /** Glass bell jar: returns { back, front } layer markup (draw back before the cell, front after). */

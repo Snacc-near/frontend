@@ -1,5 +1,5 @@
 // Base plate: flat dark-brown offset shadow, tan edge, cream deck, screws, groove, ruler, plates, vents, cable runs.
-import { k, P, S, Ln, Dm, at, f1, emit, put, slabS, PLATE, PLATE_H, floorM, faceM, wallXM, wallYM, dep, A, rec } from "../ctx.mjs";
+import { k, P, S, Ln, Dm, at, f1, emit, R, slabS, PLATE, PLATE_H, floorM, faceM, wallXM, wallYM, dep, A } from "../ctx.mjs";
 
 export function base() {
   const p = [];
@@ -45,5 +45,6 @@ export function base() {
   p.push(Ln(k.planOutline(k.insetPlan(id, 1.5), 1.0, P, 4), { tone: "faint" }));
   p.push(`<g transform="${floorM(id.x + 4, id.y + 6, 1.05)}"><text class="txt" x="0" y="0" style="font-size:3.4px;font-weight:700">STRAIN</text><text class="txt-l" x="0" y="4.6" style="font-size:2.1px">yeast-type · eukaryote</text></g>`);
   emit(-1e5, p.join(""), "base");
-  put("base.plate", [slabS(PLATE, -PLATE_H, PLATE_H, "base.plate", { ground: true })], [0, 0, 0], -5);
+  R.put({ piece: "base.plate", key: -1e5, at: [0, 0, 0], svg: "", shapes: [R.solid(slabS(PLATE, -PLATE_H, PLATE_H, "base.plate", { ground: true }))] });
+  // the ruler strip, label plate, vents and id plate are printed decals on the deck: they are not solids and are not recorded
 }

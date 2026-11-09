@@ -1,6 +1,6 @@
 // Local frame of the hero mitochondrion (u along its length = screen right, v toward the viewer) + wall helpers.
 // Used by both the build and (serialised constants) the live page.
-import { k, G, P, S, at, f1, O } from "../ctx.mjs";
+import { k, G, A, P, S, at, f1, O, noteShape } from "../ctx.mjs";
 
 export const MC = [70, 10];        // hero centre on the plate
 export const FLOOR = 7;             // matrix floor height
@@ -30,10 +30,12 @@ export function circLocal(u, v, r, n = 20) {
 
 /** Extruded local box as a solid string. */
 export function boxL(u0, v0, w, d, z, h, { r = 0.8, bevel = 0.35, tone = "hi", className = "", crease = "faint", inner = "" } = {}) {
+  noteShape(A.extruded(rrLocal(u0, v0, w, d, r), z, h, { name: "hero.box" }));
   return S(k.extrude(rrLocal(u0, v0, w, d, r), z, h, P, { bevel }), { tone, className, crease, inner });
 }
 export const cylW = (u, v, rad, z, h, { steps = 28, bevel = 0.3, tone = "hi", className = "", crease = "faint" } = {}) => {
   const [x, y] = Wxy(u, v);
+  noteShape(A.cylinder(x, y, rad, z, h, { name: "hero.cyl" }));
   return S(k.cylinder(x, y, rad, z, h, P, steps, bevel), { tone, className, crease });
 };
 

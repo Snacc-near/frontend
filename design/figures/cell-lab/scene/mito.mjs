@@ -1,6 +1,6 @@
 // Hero mitochondrion: a bean-shaped cut-open power plant (outer + inner membrane, cristae ridge with complexes I/III/IV,
 // Krebs Ferris wheel, glycolysis splitter, membrane transporter gate, reservoir tank, ATP synthase turbine, O2 bottle + beaker).
-import { k, G, O, P, S, Ln, Dm, at, f1, planeM } from "../ctx.mjs";
+import { k, G, A, O, P, S, Ln, Dm, at, f1, planeM, HR, noteShape, flushItem } from "../ctx.mjs";
 import * as F from "./frame.mjs";
 import { makeMech } from "../mech.mjs";
 
@@ -29,16 +29,18 @@ const MID = F.beanLocal(75, 32, 96);
 
 export function hero() {
   const items = []; // { key, svg }
-  const add = (key, svg) => items.push({ key, svg });
+  const add = (key, svg) => { const name = "hero." + items.length; items.push({ key, svg, name }); flushItem(HR, key, name); };
   const { wall } = GEO;
 
   // ---- plinth + matrix floor ----
   const plinthRing = F.toWorldRing(F.beanLocal(86, 43, 96));
   const pl = [];
   pl.push(`<path class="shadow-flat" transform="translate(-14 12)" d="${O.pathOf(plinthRing.map(([x, y]) => at([x, y, 0])), true)}"/>`);
+  noteShape(A.extruded(plinthRing, 0, 5, { name: "hero.plinth", ground: true }));
   pl.push(S(k.extrude(plinthRing, 0, 5, P, { convex: false, bevel: 0.8 }), { tone: "hi", className: "tan", crease: "lo" }));
   // floor (matrix) slab
   const floorRing = F.toWorldRing(INN);
+  noteShape(A.extruded(floorRing, 5, 2, { name: "hero.floor" }));
   pl.push(S(k.extrude(floorRing, 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
   // floor grid dots + seam lines (matrix granules)
   const grid = [];
@@ -69,6 +71,7 @@ export function hero() {
   };
   const oRun = contiguous(OUT), iRun = contiguous(INN);
   const topPoly = [...F.ringPts(oRun, wall.top), ...F.ringPts(iRun, wall.top).reverse()];
+  noteShape(A.extruded([...F.toWorldRing(oRun), ...F.toWorldRing(iRun).reverse()], wall.z0, wall.top - wall.z0, { name: "hero.wall.back" }));
   bw.push(`<path d="${O.pathOf(topPoly, true)}" fill="var(--anatomy-top)" class="ink" style="stroke-width:.9px"/>`);
   bw.push(`<path d="${O.pathOf(F.ringPts(iRun, wall.top - 1.2))}" class="ink3" style="stroke-width:.4px;opacity:.8"/>`);
   // inner base line of the back wall + the ink top edges of inner faces
@@ -101,10 +104,8 @@ export function hero() {
   const r = GEO.ridge;
   const rg = [];
   rg.push(F.boxL(r.u0, r.v0, r.u1 - r.u0, r.v1 - r.v0, r.z0, r.h, { r: 1.2, bevel: 0.5, className: "tan" }));
-  for (let i = 0; i < 9; i++) {
-    const u = r.u0 + 3 + i * 5.2;
-    rg.push(F.boxL(u, r.v1, 2.6, 7, r.z0, r.h - 1, { r: 1, bevel: 0.25, className: "tan", crease: "lo" }));
-  }
+  // cristae folds are drawn live (drawFolds): 4 + level folds stand, `level` of them are lit marigold
+  rg.push(`<g data-dyn="folds"></g>`);
   add(F.depthKey(-8, 0), rg.join(""));
 
   // ---- complexes I, III, IV on the ridge ----
@@ -138,6 +139,7 @@ export function hero() {
     prof.push([len - t.r * 0.9, t.r]);
     for (let i = 6; i >= 0; i--) { const q = i / 6; prof.push([len - t.r * (1 - Math.cos((q * Math.PI) / 2)) * 0.9, t.r * Math.sin((q * Math.PI) / 2), 1]); }
     prof.push([len, 0.01]);
+    noteShape(A.lathe(Fr, prof, { name: "hero.tank" }));
     const body = G.lathe(prof, Fr, P, { steps: 28, fill: "hull" });
     tk.push(S(body, { tone: "hi", className: "water", crease: "none" }));
     // water level (marigold float line) drawn live via data-part, plus graduation ticks on the tank
@@ -158,6 +160,8 @@ export function hero() {
   const tb = GEO.turb;
   const tbl = [];
   const tc = F.Wxy(tb.u, tb.v);
+  noteShape(A.cylinder(tc[0], tc[1], 13.8, 7, 2.2, { name: "hero.turbine.base" }));
+  noteShape(A.cylinder(tc[0], tc[1], 12.0, 9.2, 1.0, { name: "hero.turbine.ring" }));
   tbl.push(S(k.cylinder(tc[0], tc[1], 13.8, 7, 2.2, P, 44, 0.4), { tone: "hi", className: "tan" }));
   tbl.push(S(k.cylinder(tc[0], tc[1], 12.0, 9.2, 1.0, P, 44, 0.2), { tone: "hi", className: "steel" }));
   tbl.push(Ln(k.ring(tc[0], tc[1], 13.0, 9.2, P, 44), { tone: "faint" }));
@@ -274,6 +278,7 @@ export function hero() {
   const bs = [];
   {
     const p = F.Wxy(bk.u, bk.v);
+    noteShape(A.cylinder(p[0], p[1], 4.2, 7, 0.6, { name: "hero.beaker.base" }));
     bs.push(S(k.cylinder(p[0], p[1], 4.2, 7, 0.6, P, 20, 0.1), { tone: "hi", className: "tan" }));
     const gl = G.frameAlong([p[0], p[1], 7.6], [0, 0, 1]);
     bs.push(`<path d="${O.pathOf([at([p[0] - 3.4, p[1] + 3.4, 8]), at([p[0] - 3.4, p[1] + 3.4, 17])].concat([]))}" class="ink3" style="stroke-width:.5px;opacity:0"/>`);
@@ -285,6 +290,7 @@ export function hero() {
   const frontQ = F.wallQuads(OUT, wall.z0, wall.rim, { mode: "outer", pred: (u, v) => v >= vc });
   const fr = [];
   fr.push(F.quadSvg(frontQ));
+  noteShape(A.extruded([...F.toWorldRing(OUT.filter(([, v]) => v >= vc)), ...F.toWorldRing(INN.filter(([, v]) => v >= vc)).reverse()], wall.z0, wall.rim - wall.z0, { name: "hero.wall.front" }));
   const fRunO = OUT.filter(([, v]) => v >= vc), fRunI = INN.filter(([, v]) => v >= vc);
   const sortU = (a, b) => a[0] - b[0];
   // order front runs along the ring consistently by angle (left end to right end)
@@ -295,7 +301,8 @@ export function hero() {
   fr.push(`<path d="${O.pathOf(F.ringPts(fO, wall.z0))}" class="ink" style="stroke-width:.9px"/>`);
   // rim rivets
   fr.push(Dm(fO.filter((_, i) => i % 3 === 1).map(([u, v]) => { const m = Math.hypot(u / 78, v / 35); return at(F.W3(u * (1 - 2.6 / 78 / m * 0 + -0.03), v * 0.96, wall.rim)); }), { size: 0.5, tone: "hi" }));
-  // front-rim engraved label on the apron
+  // five level lamps inlaid in the front rim (lit count = organel.mitokondria), drawn live
+  fr.push(`<g data-dyn="lamps"></g>`);
   add(9999, fr.join(""));
 
   items.sort((a, b) => a.key - b.key);
