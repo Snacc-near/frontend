@@ -1,7 +1,8 @@
 /**
- * Modal Detail Strain (NFT Strain On-Chain Inspector).
+ * The Strain Detail Modal (the on-chain NFT strain inspector).
  * Shows the clicked strain's genetics, organelles, vitality, BMR, and ATP balance.
- * Keyboard accessible (Escape to close) and honors a >= 4.5:1 contrast ratio.
+ * Keyboard accessible (Escape to close, a focus trap, and an initial focus on the close button)
+ * and honors a >= 4.5:1 contrast ratio.
  */
 
 import React, { useEffect, useRef } from "react";
@@ -30,16 +31,39 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   const modalRef = useRef<HTMLDivElement | null>(null);
   const labels = SKIN_LABELS[skin];
 
-  // Close with the Escape key
+  // Close with the Escape key, trap Tab inside the dialog, and give it the initial focus
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
+        return;
+      }
+      if (e.key === "Tab" && modalRef.current) {
+        const focusables = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  // Move the initial focus into the dialog when it opens
+  useEffect(() => {
+    if ((strain || isLoading) && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [strain, isLoading]);
 
   if (!strain && !isLoading) return null;
 
@@ -57,9 +81,10 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
     >
       <div
         ref={modalRef}
-        className="w-full max-w-md p-6 rounded-3xl bg-slate-950/90 border border-slate-700/60 shadow-2xl shadow-cyan-950/30 text-slate-100 flex flex-col gap-4"
+        className="w-full max-w-md p-6 rounded-3xl bg-slate-950/90 border border-slate-700/60 shadow-2xl shadow-cyan-950/30 text-slate-100 flex flex-col gap-4 focus:outline-none"
+        tabIndex={-1}
       >
-        {/* Header Modal */}
+        {/* The modal header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-800/80 pb-3">
           <div className="flex flex-col">
             <span className="text-[11px] text-emerald-400 font-mono lowercase tracking-wider">

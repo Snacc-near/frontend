@@ -398,7 +398,7 @@ function init(ctx) {
         if (at === ST.transmuting) {
           at = ST.homeostasis;
           updateVisuals();
-          ctx.say('Condensation finished. Yield collected; crucible stabilized.');
+          ctx.say('Condensation finished. Output collected; crucible stabilized.');
         }
       }, 2500);
     }
