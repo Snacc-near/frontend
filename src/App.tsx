@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from "react";
 import type { MacroZone } from "./config/zones.ts";
 import { classifyZone } from "./config/zones.ts";
 import type { SkinMode } from "./config/constants.ts";
-import { INITIAL_ATP, BURST_BASE_BPS } from "./config/constants.ts";
+import { INITIAL_ATP } from "./config/constants.ts";
 import type {
   BreachLogItem,
   NutrientBurstState,
@@ -32,11 +32,11 @@ export const App: React.FC = () => {
   const [isLoadingStrain, setIsLoadingStrain] = useState(false);
 
   const [burst, setBurst] = useState<NutrientBurstState>({
-    isActive: true,
-    activeBurstBps: BURST_BASE_BPS,
-    untilEpoch: 2,
-    releasedVita: "7200",
-    triggeringStrainId: 3,
+    isActive: false,
+    activeBurstBps: 0,
+    untilEpoch: 0,
+    releasedVita: "0",
+    triggeringStrainId: null,
   });
 
   const [optimistic, setOptimistic] = useState<OptimisticVitalityState>(

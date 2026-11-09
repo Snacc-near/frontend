@@ -9,8 +9,8 @@ export const KAMUS_ANGKA = {
   FEVER_BURN_BPS: 350, // I-01: 3.50% fee burn saat Fever (>610 mK)
   HYPO_REBATE_BPS: 200, // I-04: 2.00% rebate subsidi saat Hypothermia (<600 mK)
   MAX_EPOCH_TREASURY_DRAIN_BPS: 500, // I-04: Plafon 5.00% treasury per epoch
-  BURST_BASE_BPS: 2000, // EN-102: 20.00% diskon makan dasar saat lisis
-  BURST_CAP_BPS: 3000, // EN-102: 30.00% plafon diskon Nutrient Burst
+  BASE_BURST_BPS: 200, // EN-102: base burst 2.00% (contract BASE_BURST_BPS)
+  MAX_BURST_BPS: 2000, // EN-102: burst cap 20.00% (contract MAX_BURST_BPS)
   VOLUME_SCALE: 5, // §13a: Skala volume termostat
   MAX_COLONY_SIZE: 5, // EN-124: Pagar populasi koloni
   MAX_GENERATION: 8, // EN-124: Pagar generasi
@@ -42,7 +42,7 @@ export interface StrainTelemetry {
   generation: number;
   atpBalance: number;
   snaccBalanceFormatted: string;
-  status: "Active" | "Distressed" | "Starving" | "Liquidated";
+  status: "Active" | "Distressed" | "Liquidated" | "SplicedBurned";
   organel: OrganelleAllocation;
 }
 
@@ -59,8 +59,8 @@ export interface MacroTelemetryState {
   crucibleTemp: number; // miliKelvin (mK)
   zone: MacroZone;
   currentEpoch: number;
-  totalVitaSupply: string;
-  totalVitaBurned: string;
+  totalSnaccSupply: string;
+  totalSnaccBurned: string;
   ruleBoundTreasury: string;
   epochVolume: string;
   feastTargetVolume: string;
@@ -104,8 +104,8 @@ export function classifyZone(crucibleTemp: number): MacroZone {
 
 /**
  * Hitung diskon Nutrient Burst aktif (bps) sesuai EN-102:
- * Jika currentEpoch < untilEpoch, diskon aktif sebesar clamp(burstBps, 0, BURST_CAP_BPS).
- * Saat currentEpoch >= untilEpoch, burst otomatis kedaluwarsa (0 bps).
+ * If currentEpoch < untilEpoch, the discount is active at clamp(burstBps, 0, MAX_BURST_BPS).
+ * When currentEpoch >= untilEpoch, the burst expires automatically (0 bps).
  */
 export function computeActiveBurstBps(
   burstBps: number,
@@ -113,7 +113,7 @@ export function computeActiveBurstBps(
   currentEpoch: number,
 ): number {
   if (burstBps <= 0 || currentEpoch >= untilEpoch) return 0;
-  return Math.min(Math.max(burstBps, KAMUS_ANGKA.BURST_BASE_BPS), KAMUS_ANGKA.BURST_CAP_BPS);
+  return Math.min(burstBps, KAMUS_ANGKA.MAX_BURST_BPS);
 }
 
 /**

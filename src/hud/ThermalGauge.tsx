@@ -18,9 +18,10 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
   const theme = ZONE_THEMES[zone];
   const labels = SKIN_LABELS[skin];
 
-  // Hitung rasio gauge antara rentang 550 mK s.d. 660 mK
-  const minTemp = 550;
-  const maxTemp = 660;
+  // Dynamic scale: 0 .. 2x the Fever threshold so live values (e.g. ~1040 mK) stay readable
+  // while the 600/610 thresholds keep their proportional positions (official constants below).
+  const minTemp = 0;
+  const maxTemp = FEVER_THRESHOLD_MK * 2;
   const ratio = Math.max(0, Math.min(1, (crucibleTempMk - minTemp) / (maxTemp - minTemp)));
 
   const hypoPct = ((HYPOTHERMIA_THRESHOLD_MK - minTemp) / (maxTemp - minTemp)) * 100;

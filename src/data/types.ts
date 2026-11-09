@@ -32,7 +32,6 @@ export type EventKind =
   | "zone_changed"
   | "nutrient_burst_released"
   | "npc_spores_bought"
-  | "npc_spores_sold"
   | "dividend_claimed";
 
 export interface FedEventData {
@@ -77,8 +76,8 @@ export interface CrucibleEvent {
 export interface MacroTelemetry {
   crucibleTemp: number;
   zone: MacroZone;
-  totalVitaSupply: string;
-  totalVitaBurned: string;
+  totalSnaccSupply: string;
+  totalSnaccBurned: string;
   ruleBoundTreasury: string;
   epochVolume: string;
   contractId: string;
@@ -130,5 +129,5 @@ export interface NutrientBurstState {
   activeBurstBps: number;
   untilEpoch: number;
   releasedVita: string;
-  triggeringStrainId?: number;
+  triggeringStrainId?: number | null;
 }

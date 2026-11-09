@@ -10,8 +10,8 @@ export const EVENT_POLL_INTERVAL_MS = 1000;
 export const MACRO_POLL_INTERVAL_MS = 1000;
 export const SLA_LATENCY_MAX_MS = 2000;
 
-export const BURST_BASE_BPS = 2000; // 20,00%
-export const BURST_CAP_BPS = 3000;  // 30,00%
+export const BASE_BURST_BPS = 200; // EN-102: base burst 2.00% (contract BASE_BURST_BPS)
+export const MAX_BURST_BPS = 2000; // EN-102: burst cap 20.00% (contract MAX_BURST_BPS)
 
 export const VITALITY_MAX = 10000;
 export const INITIAL_ATP = 50;

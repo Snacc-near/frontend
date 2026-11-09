@@ -44,8 +44,8 @@ describe("UI-117: Global Nutrient Burst Badge (EN-102)", () => {
     assert.equal(vm.vitaReleasedLabel, "+7,200 VITA Released");
   });
 
-  it("memotong diskon pada plafon BURST_CAP_BPS (3000 bps = 30.00%) dan mati saat currentEpoch >= untilEpoch", () => {
-    assert.equal(computeActiveBurstBps(4500, 5, 2), KAMUS_ANGKA.BURST_CAP_BPS);
+  it("clamps the discount at MAX_BURST_BPS (2000 bps = 20.00%) and expires when currentEpoch >= untilEpoch", () => {
+    assert.equal(computeActiveBurstBps(4500, 5, 2), KAMUS_ANGKA.MAX_BURST_BPS);
     assert.equal(computeActiveBurstBps(2000, 2, 2), 0);
     assert.equal(computeBurstEpochsRemaining(2, 5), 0);
 

@@ -3,7 +3,7 @@
  * Polling ≤ 1000 ms, deduplikasi event, korelasi receipt_id, dan audit SLA < 2 dtk.
  */
 
-import { EVENT_POLL_INTERVAL_MS, SLA_LATENCY_MAX_MS, BURST_BASE_BPS, BURST_CAP_BPS } from "../config/constants.ts";
+import { EVENT_POLL_INTERVAL_MS, SLA_LATENCY_MAX_MS, MAX_BURST_BPS } from "../config/constants.ts";
 import { fetchEvents, fetchMacro, fetchStrains } from "./api.ts";
 import type { CrucibleEvent, BreachLogItem, NutrientBurstState, MacroTelemetry, StrainSummary } from "./types.ts";
 
@@ -93,7 +93,7 @@ export function formatEventSummary(event: CrucibleEvent, actor: string): string 
     }
     case "nutrient_burst_released": {
       const released = String(raw.released_vita ?? "0");
-      const bps = Number(raw.burst_bps ?? BURST_BASE_BPS);
+      const bps = Number(raw.burst_bps ?? 0);
       const untilEpoch = raw.until_epoch ?? 0;
       return `lisis sel melepas ${released} nutrisi · diskon -${(bps / 100).toFixed(2)}% sampai epoch ${untilEpoch}`;
     }
@@ -208,7 +208,7 @@ export class TelemetryPoller {
                 const raw = ev.raw ?? {};
                 this.callbacks.onBurstStateChange({
                   isActive: true,
-                  activeBurstBps: Math.min(BURST_CAP_BPS, Number(raw.burst_bps ?? BURST_BASE_BPS)),
+                  activeBurstBps: Math.min(MAX_BURST_BPS, Number(raw.burst_bps ?? 0)),
                   untilEpoch: Number(raw.until_epoch ?? 1),
                   releasedVita: String(raw.released_vita ?? "0"),
                   triggeringStrainId: typeof raw.strain_id === "number" ? raw.strain_id : undefined,

@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   MAX_DPR,
   TARGET_FPS,
-  BURST_BASE_BPS,
-  BURST_CAP_BPS,
+  BASE_BURST_BPS,
+  MAX_BURST_BPS,
   SKIN_LABELS,
 } from "../src/config/constants.ts";
 
@@ -17,8 +17,8 @@ describe("Konstanta Permainan & Dual-Skin ADR-31", () => {
   });
 
   it("memiliki batasan diskon Nutrient Burst 20% s.d. 30%", () => {
-    expect(BURST_BASE_BPS).toBe(2000);
-    expect(BURST_CAP_BPS).toBe(3000);
+    expect(BASE_BURST_BPS).toBe(200);
+    expect(MAX_BURST_BPS).toBe(2000);
   });
 
   it("memiliki padanan istilah 1:1 antara Bio-Lab dan FinTech tanpa kata pemasaran", () => {
