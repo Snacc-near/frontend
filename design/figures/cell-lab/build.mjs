@@ -83,6 +83,35 @@ const svg = k.figureSvg({
   body: [DEFS, ...layers.map((l) => slim(l.svg)), slim(lens.svg)],
 });
 
+/* ---------- size: dedupe repeated path data via defs + use (iso-line paths excluded: the lines audit selects them by class) ---------- */
+function dedupePaths(src) {
+  const tagRe = /<path\b[^>]*\/>/g;
+  const seen = new Map(); const defs = [];
+  const out = src.replace(tagRe, (tag) => {
+    const m = tag.match(/ d="([^"]*)"/); if (!m) return tag;
+    if (/class="[^"]*iso-line/.test(tag)) return tag;
+    const d = m[1]; if (d.length < 10) return tag;
+    const entry = seen.get(d) || { n: 0, id: null };
+    entry.n++;
+    if (entry.n === 2 && entry.id === null) { /* second sighting: start a def */ }
+    seen.set(d, entry);
+    return tag; // first pass: count only
+  });
+  // second pass decides which d strings pay for a def
+  const ids = new Map(); let k2 = 0;
+  for (const [d, e] of seen) if (e.n > 1 && (e.n - 1) * (d.length - 8) > d.length + 24) { ids.set(d, "dp" + k2++); defs.push(`<path id="${ids.get(d)}" d="${d}"/>`); }
+  if (!ids.size) return src;
+  const tagRe2 = /<path\b[^>]*\/>/g;
+  const replaced = out.replace(tagRe2, (tag) => {
+    const m = tag.match(/ d="([^"]*)"/); if (!m) return tag;
+    if (/class="[^"]*iso-line/.test(tag)) return tag;
+    const id = ids.get(m[1]); if (!id) return tag;
+    return tag.replace(/ d="[^"]*"/, ` href="#${id}"`).replace(/^<path/, "<use");
+  });
+  return replaced.replace(/<svg[^>]*>/, (m) => m + `<defs>${defs.join("")}</defs>`);
+}
+const svgSlim = dedupePaths(svg);
+
 /** Shorten SVG path data: drop spaces after commands and before minus signs, strip leading zeros, merge repeated commands. */
 function rdp(pts, tol) {
   const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
@@ -193,6 +222,7 @@ html.embed,html.embed body{height:100%;margin:0;background:#efefec;overflow:hidd
 .status-grey{filter:grayscale(1);opacity:.7}
 .frost{opacity:0}
 .tk-txt{font:700 2px ui-monospace,Menlo,monospace;fill:#161412}
+.iso-svg use{vector-effect:non-scaling-stroke}
 @media (prefers-reduced-motion: reduce){.is-lit{filter:drop-shadow(0 0 3px #f8aa06)}}
 `;
 
@@ -210,14 +240,17 @@ const bodyHtml = k.plateHtml({
     { mark: "flat", label: "Rig: gauges, hopper, enclave, printer, shelf" },
   ],
   caption: "A yeast-like cell in a glass jar, plus its mitochondrion enlarged as a power plant. Textbook figures: 3 ATP per rotor turn, about 30–32 ATP per glucose, lysosome pH about 4.5–5, 4 spores per ascus. Game numbers come from the app state.",
-  body: `<div class="iso-stage stage-shell" tabindex="0" role="group" aria-label="Cell Lab actions"><div class="svgbox">${svg}<div class="labels" data-labels hidden></div><div class="chip-h" data-chip hidden role="status"><b></b><span></span><i></i></div><div class="tools" role="group" aria-label="View"><button type="button" data-tool="see" aria-pressed="false" title="See through the glass jar">See-through</button><button type="button" data-tool="labels" aria-pressed="false" title="Name the organelles">Labels</button><button type="button" data-tool="zoom" title="Zoom: cell, power plant, full view">Zoom</button></div></div><div class="counters"><span data-counter-atp>ATP 0</span><span data-counter-vit>Vitality 70</span></div><div class="dock" role="group" aria-label="Cell Lab action buttons">${dockButtons}</div><span class="credit">Drawn with the Anatomy kit (MIT) by April Zhu — plain marigold</span></div>`,
+  body: `<div class="iso-stage stage-shell" tabindex="0" role="group" aria-label="Cell Lab actions"><div class="svgbox">${svgSlim}<div class="labels" data-labels hidden></div><div class="chip-h" data-chip hidden role="status"><b></b><span></span><i></i></div><div class="tools" role="group" aria-label="View"><button type="button" data-tool="see" aria-pressed="false" title="See through the glass jar">See-through</button><button type="button" data-tool="labels" aria-pressed="false" title="Name the organelles">Labels</button><button type="button" data-tool="zoom" title="Zoom: cell, power plant, full view">Zoom</button></div></div><div class="counters"><span data-counter-atp>ATP 0</span><span data-counter-vit>Vitality 70</span></div><div class="dock" role="group" aria-label="Cell Lab action buttons">${dockButtons}</div><span class="credit">Drawn with the Anatomy kit (MIT) by April Zhu — plain marigold</span></div>`,
 });
 
 const live = `${kitScript}\n${mechScript}\nconst GEOM=${geoJson};\nconst ACTIONS=${JSON.stringify(ACTIONS)};\n${liveSrc}
 ${live2Src}
 ${scenesSrc}
 boot();`;
-const html = k.pageHtml({ title: "Cell Lab", theme: "light", width: 1100, body: `<style>${PLAIN_CSS}${PAGE_CSS}</style>${bodyHtml}`, script: live });
+const html0 = k.pageHtml({ title: "Cell Lab", theme: "light", width: 1100, body: `<style>${PLAIN_CSS}${PAGE_CSS}</style>${bodyHtml}`, script: live });
+/* ---------- size: shorten long repeated class names (build-time map; applied to markup, CSS and runtime kit alike) ---------- */
+const CLASS_MAP = { "iso-shade": "a", "iso-fill": "b", "iso-top": "c", "iso-solid": "h", "iso-dots": "i" };
+const html = html0.replace(/\b(iso-shade|iso-fill|iso-top|iso-solid|iso-dots)\b/g, (m) => CLASS_MAP[m]);
 const outPath = join(HERE, "..", "..", "..", "public", "figures", "cell-lab.html");
 writeFileSync(outPath, html);
 console.log("wrote", outPath, (html.length / 1024).toFixed(1) + " KB", "layers", layers.length);
