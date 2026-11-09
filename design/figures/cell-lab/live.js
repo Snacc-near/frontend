@@ -11,8 +11,10 @@ const { W3, A: Aw } = M;
 const f1 = M.f1;
 const EMBED = /[?&]embed=1/.test(location.search);
 if (EMBED) document.documentElement.classList.add("embed");
-const FREEZE = (location.search.match(/[?&]freeze=([a-z]+)@([0-9.]+)/) || null);
-const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* reduced motion: the OS setting or the ?reduced=1 test switch -> still frames with highlights + numbers, no loops */
+const mq = matchMedia("(prefers-reduced-motion: reduce)");
+const calm = mq.matches || /[?&]reduced=1/.test(location.search);
+if (calm) document.documentElement.classList.add("calm");
 const ORIGIN = location.origin;
 const TAU = Math.PI * 2;
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
@@ -102,7 +104,7 @@ function drawHero(p) {
 /* ---------------- ATP animation ---------------- */
 const ATP_DUR = 8200;
 function rotAngleAt(t, lvl) { // integral of rotor angular speed
-  const om = TAU * (0.42 + 0.09 * lvl);
+  const om = TAU * (0.3 + 0.16 * lvl);
   let a = 0; const n = 160; const T = ATP_DUR / 1000;
   for (let i = 0; i < n; i++) { const tt = (i + 0.5) / n * t; a += om * sstep(0.40, 0.56, tt) * (1 - 0.8 * sstep(0.93, 1.0, tt)) * (t / n) * T; }
   return a;
@@ -195,16 +197,20 @@ function atpPose(t) {
 /* ---------------- idle pose ---------------- */
 function idlePose(now) {
   const T = now / 1000, lvl = clamp(S.org.mitokondria | 0, 0, 5);
-  return { t: T, wheel: 0.3 + T * 0.12, rotor: T * (0.5 + 0.1 * lvl), rotorSpeed: 0.12, f1: (T * (0.5 + 0.1 * lvl) / TAU) * 3, carU: GCar.u0 + 8 + 20 * (0.5 + 0.5 * Math.sin(T * 0.25)), tank: 0.35 + 0.05 * Math.sin(T * 0.4), rack: 2, gate: 0, cleaver: 0, beaker: 0.2, puffs: S.zone === "Fever" ? [0, 1, 2].map((i) => { const ps = (T * 0.25 + i / 3) % 1; return { dx: Math.sin(i + ps * 3) * 1.2, dz: ps * 14, r: 1.3 + ps * 1.9, a: 0.8 * (1 - ps) }; }) : [], tokens: "", carrying: [], spark: false, glowG: -1 };
+  const om = 0.35 + 0.5 * lvl; // turbine speed (rad/s) follows organel.mitokondria
+  return { t: T, wheel: 0.3 + T * (0.05 + 0.07 * lvl), rotor: T * om, rotorSpeed: 0.05 + 0.1 * lvl, f1: (T * om / TAU) * 3, carU: GCar.u0 + 8 + 20 * (0.5 + 0.5 * Math.sin(T * 0.25)), tank: 0.35 + 0.05 * Math.sin(T * 0.4), rack: 2, gate: 0, cleaver: 0, beaker: 0.2, puffs: S.zone === "Fever" ? [0, 1, 2].map((i) => { const ps = (T * 0.25 + i / 3) % 1; return { dx: Math.sin(i + ps * 3) * 1.2, dz: ps * 14, r: 1.3 + ps * 1.9, a: 0.8 * (1 - ps) }; }) : [], tokens: "", carrying: [], spark: false, glowG: -1 };
 }
 
 /* ---------------- chip (caption) ---------------- */
-function chip(title, step, note) {
-  const g = dyn.chip || (dyn.chip = (() => { const e = document.createElementNS("http://www.w3.org/2000/svg", "g"); e.setAttribute("class", "chip"); e.setAttribute("data-dyn", "chip"); svg.appendChild(e); return e; })());
-  if (!title) { g.setAttribute("opacity", "0"); return; }
-  const w = Math.max(330, Math.min(500, step.length * 5.2 + 44)), h = 48, x = 14, y = VH - 60;
-  g.setAttribute("opacity", "1");
-  g.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><rect x="${x}" y="${y}" width="6" height="${h}" rx="3" style="fill:#f8aa06;stroke:#161412"/><text class="t" x="${x + 16}" y="${y + 16}">${title}</text><text class="s" x="${x + 16}" y="${y + 30}">${step}</text><text class="n" x="${x + 16}" y="${y + 41}">${note || ""}</text>`;
+const chipEl = document.querySelector("[data-chip]");
+let chipKey = "";
+function chip(title, step, note) { // HTML caption chip: fixed px size, stays inside the frame at any figure scale
+  if (!chipEl) return;
+  if (!title) { if (chipKey) { chipEl.hidden = true; chipKey = ""; } return; }
+  const key = title + "|" + step + "|" + (note || "");
+  if (key === chipKey) return;
+  chipKey = key; chipEl.hidden = false;
+  const c = chipEl.children; c[0].textContent = title; c[1].textContent = step; c[2].textContent = note || "";
 }
 const ATP_STEPS = [
   [0.0, "① $SNACC enters through the flipping membrane transporter"],
@@ -238,7 +244,38 @@ function cellIdle(now) {
 }
 
 /* ---------------- status + zone ---------------- */
+/* organelle levels 0-5: mitochondria = hero cristae folds + lit lamps + turbine speed + count in the cell (1 + level);
+   nucleus = film-reel lamp; lysosome = count in the cell (1 + level). Capped by the slots that fit in the cell. */
+const lvl = (n) => clamp(S.org[n] | 0, 0, 5);
+let lastLv = "";
+function drawFolds() {
+  const el = dyn.folds; if (!el) return;
+  const L = lvl("mitokondria"), shown = Math.min(9, 4 + L);
+  let s = "";
+  for (let i = 0; i < shown; i++) s += M.box(GR.u0 + 3 + i * 5.2, GR.v1, 2.6, 7, GR.z0, GR.h - 1, { cls: i < L ? "mari" : "tan", r: 1, bevel: 0.25, crease: "lo" });
+  el.innerHTML = s;
+  let ls = "";
+  for (let i = 0; i < 5; i++) {
+    const u = -26 + i * 13, p = Aw(W3(u, 32.2 * Math.sqrt(1 - (u / 75) ** 2), 13.1)), on = i < L;
+    ls += (on ? `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="5.2" fill="#f8aa06" opacity=".35"/>` : "") + `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="2.6" class="ink" style="fill:${on ? "#f8aa06" : "#6a5e48"};stroke-width:.9px"/>`;
+  }
+  if (dyn.lamps) dyn.lamps.innerHTML = ls;
+}
+function applyLevels() {
+  const m = lvl("mitokondria"), ly = lvl("lisosom"), nu = lvl("nukleus"), key = m + "," + ly + "," + nu;
+  if (key === lastLv) return; lastLv = key;
+  $$('[data-org^="mito"]').forEach((e) => { e.style.display = +e.dataset.org.slice(4) <= Math.min(5, 1 + m) ? "" : "none"; });
+  $$('[data-org^="lyso"]').forEach((e) => { e.style.display = +e.dataset.org.slice(4) <= Math.min(5, 1 + ly) ? "" : "none"; });
+  const lamp = $('[data-part="nuc-lamp"]');
+  if (lamp) {
+    const b = lamp.querySelector(".lamp-bulb"), h = lamp.querySelector(".lamp-halo"), q = nu / 5;
+    b.setAttribute("fill", q > 0.7 ? "#f8aa06" : q > 0.3 ? "#d6a23a" : "#8a7a58");
+    h.setAttribute("opacity", f1(q * 0.75)); h.setAttribute("r", f1(2.2 + q * 2.8));
+  }
+  drawFolds();
+}
 function applyState() {
+  applyLevels();
   svg.classList.toggle("status-dim", S.status === "Distressed");
   svg.classList.toggle("status-grey", S.status === "SplicedBurned");
   const lamp = $('[data-lamp="attest"]');
@@ -250,5 +287,6 @@ function applyState() {
     dyn["cell-fx"].innerHTML = s;
   }
   drawCounter();
+  if (calm && !run) { drawHero(idlePose(0)); drawDial(0); }
 }
 

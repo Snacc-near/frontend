@@ -17,13 +17,13 @@ const NEEDLES = { pH: [10, 17, 8], TURGOR: [29, 17, 8], BMR: [48, 17, 8], TEMP: 
 const gauge = (n, turn, col) => needleSet(n, ...NEEDLES[n], turn, col);
 
 /* lens control */
-function lensOn(name, t, target, a0 = 0.05, a1 = 0.94) {
+function lensOn(name, t, target, a0 = 0.05, a1 = 0.94, toPt = null) {
   const sc = SCENES[name]; if (!sc) return;
   const op = sstep(0, a0, t) * (1 - sstep(a1, 1, t));
   dyn.lens.setAttribute("opacity", f1(op));
   dyn["lens-scene"].innerHTML = `<g transform="translate(${LENS.cx} ${LENS.cy - 4}) scale(1.1)">${sc.draw(t)}</g>`;
   const L = dyn["lens-leader"]; L.setAttribute("opacity", f1(op));
-  const to = target ? orgS(target) : cpx(0, 0);
+  const to = toPt || (target ? orgS(target) : cpx(0, 0));
   const from = [LENS.cx - LENS.r * 0.92, LENS.cy + LENS.r * 0.38];
   L.innerHTML = gline([from, [lerp(from[0], to[0], 0.5), lerp(from[1], to[1], 0.5) - 14], to], 1.1, "#161412", "stroke-dasharray:2.6 2.6") + `<circle cx="${f1(to[0])}" cy="${f1(to[1])}" r="${f1(5 + Math.sin(t * 20))}" fill="none" style="stroke:#f8aa06;stroke-width:1.8px"/>`;
   let st = sc.steps[0][1]; for (const [a, txt] of sc.steps) if (t >= a) st = txt;
@@ -71,37 +71,39 @@ const ANIMS = {
       chip("Mitochondrion · power plant", st, "textbook: 3 ATP per rotor turn · ≈30–32 ATP per glucose");
       glow(dyn.wheel, t > 0.28 && t < 0.78); glow(dyn.rotor, t > 0.5); glow(dyn.f1, t > 0.5); glow(dyn.car, t > 0.35 && t < 0.78); glow(dyn.gate, t < 0.18); glow(dyn.split, t > 0.17 && t < 0.3); glow(dyn["tank-level"], t > 0.4 && t < 0.9);
       lift("mito1", sstep(0, 0.1, t) * (1 - sstep(0.9, 1, t)));
+      orgEl("mito1").classList.toggle("on", t > 0.04 && t < 0.96);
       const to = orgS("mito1"), lead = dyn["lens-leader"]; const a = sstep(0, 0.08, t) * (1 - sstep(0.92, 1, t));
       lead.setAttribute("opacity", f1(a)); lead.innerHTML = gline([to, [lerp(to[0], Aw(W3(-78, 0, 18))[0], 0.5), to[1] + 70], Aw(W3(-78, 0, 18))], 1.1, "#f8aa06", "stroke-dasharray:2.6 2.6") + `<circle cx="${f1(to[0])}" cy="${f1(to[1])}" r="${f1(6 + Math.sin(t * 20))}" fill="none" style="stroke:#f8aa06;stroke-width:1.8px"/>`;
       receipt(sstep(0.9, 1, t));
     },
-    end() { ["wheel", "rotor", "f1", "car", "gate", "split", "tank-level"].forEach((n) => glow(dyn[n], false)); lift("mito1", 0); dyn["lens-leader"].setAttribute("opacity", "0"); },
+    end() { ["wheel", "rotor", "f1", "car", "gate", "split", "tank-level"].forEach((n) => glow(dyn[n], false)); lift("mito1", 0); orgEl("mito1").classList.remove("on"); dyn["lens-leader"].setAttribute("opacity", "0"); },
   },
   feed: {
     dur: 6200,
     update(t) {
-      const hopper = Aw([-150, 55, 24]), portS = Aw([FEED_PORT[0], FEED_PORT[1], 14]);
-      const wall = cpx(-45, -26, 0), inside = cpx(-24, -12, 3);
-      let s = "";
-      const pel = (p) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="8" fill="#f8aa06" fill-opacity=".28" stroke="none"/><circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="5" class="ink" style="fill:#f8aa06;stroke-width:1.1px"/><circle cx="${f1(p[0] - 1.6)}" cy="${f1(p[1] - 1.6)}" r="1.5" fill="#fff" stroke="none"/><text x="${f1(p[0])}" y="${f1(p[1] + 1.6)}" text-anchor="middle" style="font:700 4.4px ui-monospace,monospace;fill:#161412">S</text>`;
-      const a = win(t, 0.05, 0.42);
+      const portS = Aw([FEED_PORT[0], FEED_PORT[1], 14]);
+      const wall = cpx(-47, -23, 0), inside = cpx(-24, -12, 3);
+      // one pellet path: hopper chute (0..0.55) -> arc to the transporter door (..0.8) -> through the door into the cytoplasm
+      const pelAt = (g) => g < 0.55 ? Aw(along(FEED_R, g / 0.55)) : g < 0.8 ? arcS(portS, wall, 24, (g - 0.55) / 0.25) : arcS(wall, inside, 4, Math.min(1, (g - 0.8) / 0.15));
+      const pel = (p, r = 7.5) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="${f1(r + 4)}" fill="#f8aa06" fill-opacity=".3" stroke="none"/><circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="${r}" class="ink" style="fill:#f8aa06;stroke-width:1.3px"/><circle cx="${f1(p[0] - r * 0.32)}" cy="${f1(p[1] - r * 0.32)}" r="${f1(r * 0.24)}" fill="#fff" stroke="none"/><text x="${f1(p[0])}" y="${f1(p[1] + r * 0.36)}" text-anchor="middle" style="font:700 ${f1(r * 1.05)}px ui-monospace,monospace;fill:#161412">$</text>`;
       let tk = "";
-      for (let i = 0; i < 3; i++) { const q = win(t, 0.05 + i * 0.07, 0.42 + i * 0.05); if (q > 0 && q < 1) { const pp = along(FEED_R, q); tk += pel(Aw(pp)); } }
-      // arc from the port into the cell, receptor + transporter vesicle at the wall
-      const q2 = win(t, 0.42, 0.62); if (q2 > 0 && q2 < 1) tk += pel(arcS(portS, wall, 22, q2));
-      const q3 = win(t, 0.62, 0.8), flip = sstep(0.55, 0.78, t);
-      if (q3 > 0 && q3 < 1) tk += pel(arcS(wall, inside, 4, q3));
-      if (q3 >= 1) for (let i = 0; i < 3; i++) { const w2 = win(t, 0.8, 1); tk += pel([inside[0] + Math.cos(i * 2.2) * 12 * w2, inside[1] + Math.sin(i * 2.2) * 9 * w2]); }
-      // signal receptor (Y) + vesicle fusing + flipping gate door at the membrane
-      s += `<g transform="translate(${f1(wall[0])} ${f1(wall[1])}) scale(1.7)"><path d="M-5 -9L0 -3L5 -9M0 -3L0 3" class="ink" style="stroke:#161412;stroke-width:1.3px"/>` +
-        `<rect x="-6" y="-2" width="12" height="4" rx="1" class="ink" style="fill:#fef8ed;stroke-width:.9px"/><g transform="rotate(${f1(flip * 180)})"><rect x="-1" y="-6.5" width="2" height="13" rx="1" class="ink" style="fill:#f8aa06;stroke-width:.9px"/></g></g>`;
-      const ve = win(t, 0.3, 0.6); if (ve > 0 && ve < 1) s += dot(arcS(cpx(-30, -34, 6), wall, 8, ve), 3.2, "#fff8e6");
+      for (let i = 0; i < 7; i++) { const g = (t - 0.03 - i * 0.065) / 0.5; if (g > 0 && g < 0.97) tk += pel(pelAt(g)); }
+      // pellets that arrived stay inside as a small cluster that spreads
+      const arrived = Math.max(0, Math.min(7, Math.floor((t - 0.03 - 0.5 * 0.97) / 0.065) + 1));
+      for (let i = 0; i < arrived; i++) { const w2 = win(t, 0.6 + i * 0.05, 1); tk += pel([inside[0] + Math.cos(i * 2.2) * 15 * w2 + 3, inside[1] + Math.sin(i * 2.2) * 11 * w2], 4.2 + 1.2 * (1 - w2)); }
+      // receptor (Y) + signal dot + transporter door that flips open (bigger so it reads at 1x)
+      const flip = sstep(0.28, 0.5, t), open = flip > 0.5;
+      let s = `<g transform="translate(${f1(wall[0])} ${f1(wall[1])}) scale(2.2)">` +
+        (open ? `<circle r="12" fill="#f8aa06" fill-opacity=".28" stroke="none"/>` : "") +
+        `<path d="M-13 -4L-10 -10L-7 -4M-10 -10L-10 -16M-12 -16L-8 -16" class="ink" style="stroke:#161412;stroke-width:1px"/>` +
+        `<rect x="-14" y="-5" width="9" height="10" rx="1.4" class="ink" style="fill:#d8c399;stroke-width:.9px"/><rect x="5" y="-5" width="9" height="10" rx="1.4" class="ink" style="fill:#d8c399;stroke-width:.9px"/>` +
+        `<rect x="-5" y="-1.2" width="10" height="2.4" fill="${open ? "#fffdf6" : "#d8c399"}" stroke="none"/>` +
+        `<g transform="rotate(${f1(flip * 90)})"><rect x="-6" y="-1.5" width="12" height="3" rx="1.1" class="ink" style="fill:#f8aa06;stroke-width:.9px"/></g></g>`;
+      const ve = win(t, 0.12, 0.34); if (ve > 0 && ve < 1) s += dot(arcS(cpx(-33, -30, 6), [wall[0] - 22, wall[1] - 34], 10, ve), 3.4, "#fff8e6");
       fx(s + tk);
-      glow($('[data-org="lyso3"]'), false);
-      lensOff(); chip("Feed · receptor + transporter", t < 0.42 ? "① hopper chute delivers $SNACC pellets to the jar port" : t < 0.62 ? "② signal binds the receptor, a transporter vesicle fuses with the membrane" : "③ the channel flips — the pellet enters and spreads", "feed_strain · macro signal CrucibleTemp acts as the hormone");
-      glow($(".iso-svg [data-dyn=glass-fx]"), false);
+      lensOn("feed", t, null, 0.05, 0.94, wall);
     },
-    end() { fx(""); chip(null); },
+    end() { fx(""); lensOff(); },
   },
   nucleus: {
     dur: 7600, target: "nucleus",
@@ -237,29 +239,39 @@ const ANIMS = {
   lysis: {
     dur: 7600,
     update(t) {
-      const sw = sstep(0.05, 0.5, t), tear = sstep(0.5, 0.62, t);
+      // timeline: swell 0.04-0.4 (needle climbs into the red) -> seam tears 0.4-0.55 -> fragments + contents out -> drone sips 10% (0.5-0.85)
+      const sw = sstep(0.04, 0.4, t), tear = sstep(0.4, 0.55, t);
       const root = dyn.cellroot; const cs = CS;
-      if (root) root.style.transform = `translate(${f1(Math.sin(t * 90) * (1 - tear) * sw * 0.9)}px,0) scale(${f1(1 + 0.045 * sw * (1 - 0.6 * tear))})`, root.style.transformOrigin = `${cs[0]}px ${cs[1]}px`;
+      if (root) root.style.transform = `translate(${f1(Math.sin(t * 90) * (1 - tear) * sw * 1.1)}px,0) scale(${f1(1 + 0.07 * sw * (1 - 0.5 * tear))})`, root.style.transformOrigin = `${cs[0]}px ${cs[1]}px`;
       let s = "";
-      // pressure needle: TURGOR gauge into the red zone
-      gauge("TURGOR", 0.35 + 0.6 * sw, t > 0.4 ? "#d94135" : "#f8aa06");
-      const seam = [cpx(24, 51), cpx(28, 48), cpx(31, 45), cpx(35, 42), cpx(38, 40), cpx(44, 33)];
-      if (tear > 0) s += gline(seam.slice(0, 2 + Math.floor(tear * 4)), 2.2, "#d94135") + gline(seam, 1, "#161412");
-      // contents float out of the tear
-      if (t > 0.58) for (let i = 0; i < 10; i++) { const q = (win(t, 0.58, 1) * 1.1 + i * 0.07) % 1; const p = [seam[2][0] + Math.sin(i * 2.1 + q * 4) * 14 + q * 28, seam[2][1] - q * 70 - (i % 3) * 4]; s += dot(p, 2 + (i % 3) * 0.7, ["#f8aa06", "#fef8ed", "#c8e36a"][i % 3], 0.6); }
-      // liquidator pipette drone takes 10%
-      const dp = win(t, 0.68, 0.98), dx = lerp(CS[0] + 190, seam[3][0] + 6, sstep(0, 0.45, dp)) - sstep(0.7, 1, dp) * 220, dy = seam[3][1] - 44 + Math.sin(t * 8) * 2 - sstep(0.7, 1, dp) * 30;
-      if (dp > 0 && dp < 1) { s += `<g transform="translate(${f1(dx)} ${f1(dy)})"><ellipse cx="0" cy="0" rx="14" ry="6" class="ink" style="fill:#fef8ed;stroke-width:1px"/><ellipse cx="0" cy="1.5" rx="14" ry="2.5" fill="#d8c399" stroke="none"/><ellipse cx="-11" cy="-7" rx="9" ry="1.6" fill="#161412" opacity="${f1(0.35 + 0.3 * Math.sin(t * 120))}"/><ellipse cx="11" cy="-7" rx="9" ry="1.6" fill="#161412" opacity="${f1(0.35 + 0.3 * Math.cos(t * 120))}"/><path d="M-1 6L-1 22L1 22L1 6" class="ink" style="fill:#e7f3f1;stroke-width:.9px"/><circle cx="0" cy="0" r="2" fill="#f8aa06" class="ink" style="stroke-width:.7px"/><text x="0" y="-11" text-anchor="middle" style="font:700 5px ui-monospace,monospace;fill:#161412">10%</text></g>`; for (let i = 0; i < 4; i++) { const q = clamp(win(dp, 0.35, 0.8) * 1.2 - i * 0.14); if (q > 0 && q < 1) s += dot([lerp(seam[3][0] + 4, dx, q), lerp(seam[3][1] - 10, dy + 20, q)], 2, "#f8aa06", 0.6); } }
-      fx(s); lensOff();
-      chip("Lysis · harvest a starving strain", t < 0.5 ? "① ATP empty: ion pumps stop, the cell swells, pressure needle climbs" : t < 0.68 ? "② the membrane tears along its seam, contents float out" : "③ a liquidator pipette drone takes the 10% bounty", "harvest_starving_strain · bounty 10% · the rest returns to the treasury");
+      gauge("TURGOR", 0.35 + 0.6 * sw, sw > 0.7 ? "#d94135" : "#f8aa06");
+      const seam = [cpx(22, 52), cpx(27, 49), cpx(30, 45), cpx(35, 42), cpx(38, 39), cpx(44, 33)];
+      const zig = (p, i) => [p[0] + (i % 2 ? 2.4 : -2.4), p[1] + (i % 2 ? -1.6 : 1.6)];
+      if (tear > 0) { const sm = seam.slice(0, 2 + Math.round(tear * 4)).map(zig); s += gline(sm, 5.6, "#161412") + gline(sm, 3.4, "#d94135") + gline(sm, 1, "#fff3c8"); }
+      // wall fragments and contents burst out of the tear
+      const fr = win(t, 0.46, 1);
+      if (fr > 0) {
+        const o = seam[2];
+        for (let i = 0; i < 7; i++) { const q = clamp(fr * 1.25 - i * 0.03), a = -0.2 - i * 0.42, d = 22 + i * 6.5; const p = [o[0] + Math.cos(a) * d * q + 10 * q, o[1] + Math.sin(a) * d * q * 0.8 + 40 * q * q * 0.3 - 12 * q]; if (q > 0 && q < 1) s += `<path d="M${f1(p[0] - 4)} ${f1(p[1])}L${f1(p[0] - 1)} ${f1(p[1] - 4.4)}L${f1(p[0] + 4.4)} ${f1(p[1] - 1)}L${f1(p[0] + 2)} ${f1(p[1] + 3.6)}Z" fill="#d8c399" class="ink" style="stroke-width:.9px" transform="translate(${f1(p[0])} ${f1(p[1])}) rotate(${f1(q * 260 + i * 40)}) scale(1.8) translate(${f1(-p[0])} ${f1(-p[1])})"/>`; }
+        for (let i = 0; i < 12; i++) { const q = (fr * 1.1 + i * 0.07) % 1; const p = [o[0] + Math.sin(i * 2.1 + q * 4) * 14 + q * 30, o[1] - q * 66 - (i % 3) * 4]; s += dot(p, 2.2 + (i % 3) * 0.8, ["#f8aa06", "#fef8ed", "#c8e36a"][i % 3], 0.6); }
+      }
+      // liquidator pipette drone (big): flies in, sips the 10% bounty at the tear, leaves
+      const dp = win(t, 0.42, 0.98), sc = 1.7, dx = lerp(CS[0] + 200, seam[3][0] + 8, sstep(0, 0.35, dp)) - sstep(0.78, 1, dp) * 230;
+      const dy = seam[3][1] - 22 * sc - 10 + Math.sin(t * 8) * 2 - sstep(0.78, 1, dp) * 40;
+      if (dp > 0 && dp < 1) { s += droneG(dx, dy, sc, t); for (let i = 0; i < 4; i++) { const q = clamp(win(dp, 0.35, 0.8) * 1.2 - i * 0.14); if (q > 0 && q < 1) s += dot([lerp(seam[3][0] + 6, dx, q), lerp(seam[3][1] - 8, dy + 20 * sc, q)], 2.4, "#f8aa06", 0.6); } }
+      fx(s);
+      // big pressure gauge badge next to the jar: the needle climbs into the red zone
+      const over = dyn.over; if (over) { const gp = [CS[0] - 168, CS[1] - 112]; over.innerHTML = `<g opacity="${f1(sstep(0, 0.08, t) * (1 - sstep(0.95, 1, t)))}">${plinthMini(gp[0] - 38, gp[1] - 36, 76, 84)}${dialG(gp[0], gp[1], 26, 0.1 + 0.88 * sw, "kPa", null)}${redZone(gp[0], gp[1], 26)}${tx(gp[0], gp[1] + 40, sw > 0.7 ? "PRESSURE: RED" : "PRESSURE", 6.4, "middle", sw > 0.7 ? "#a8281f" : "#161412", 700)}</g>`; }
+      lensOn("lysis", t, null, 0.05, 0.94, seam[2]);
     },
-    end() { const root = dyn.cellroot; if (root) { root.style.transform = ""; } gauge("TURGOR", 0.5); fx(""); chip(null); },
+    end() { const root = dyn.cellroot; if (root) { root.style.transform = ""; } gauge("TURGOR", 0.5); fx(""); lensOff(); if (dyn.over) dyn.over.innerHTML = ""; },
   },
 };
 const TOUR = [["Mitochondrion", "power plant: Krebs wheel · cable car · water turbine", () => { glow(dyn.wheel, true); glow(dyn.rotor, true); }, () => { glow(dyn.wheel, false); glow(dyn.rotor, false); }], ["Nucleus", "genome film archive", () => lift("nucleus", 1), () => lift("nucleus", 0)], ["Vacuole", "water tower and warehouse", () => lift("vacuole", 1), () => lift("vacuole", 0)], ["Golgi", "post office: NEP-245 stamps", () => lift("golgi", 1), () => lift("golgi", 0)], ["Lysosome", "recycling plant: acid vat pH ≈ 4.5–5", () => lift("lyso1", 1), () => lift("lyso1", 0)]];
 const EMB = () => EMBED;
 
 /* ---------------- runner ---------------- */
+const STILL = { feed: 0.5, atp: 0.55, lysis: 0.55, nucleus: 0.6, extract: 0.6, transmute: 0.78, synthesize: 0.55, lysosome: 0.6, divide: 0.7, splice: 0.75, vacuole: 0.7, attest: 0.8 };
 let run = null, lastNow = 0, freezeT = null, tourIdx = -1, tourAt = 0;
 const t0 = performance.now();
 function startAction(action) {
@@ -268,7 +280,7 @@ function startAction(action) {
   window.parent.postMessage({ type: "snacc:action", action }, ORIGIN);
   setReadout(LABEL[action] + "…");
   tourOff();
-  if (calm) { an.update(0.55); run = { action, an, calm: true }; setTimeout(() => finish(action), 900); return; }
+  if (calm) { an.update(STILL[action] ?? 0.55); run = { action, an, calm: true }; setTimeout(() => finish(action), 2800); return; } // one still frame with highlights + numbers, no motion
   run = { action, an, t0: performance.now(), dur: an.dur };
 }
 function finish(action) {
@@ -294,9 +306,38 @@ function frame(now) {
     run.an.update(t);
     if (t >= 1) finish(run.action);
   } else if (!run) { drawHero(idlePose(now - t0)); drawDial(0); tourTick(now); }
-  cellIdle(now); zoneFx(now);
+  cellIdle(now); zoneFx(now); viewTick(now);
   if (!calm) requestAnimationFrame(frame);
 }
+/* ---------------- view: embed fit, zoom, labels, see-through ---------------- */
+const box = svg.parentElement, labelsEl = document.querySelector("[data-labels]");
+const VB0 = EMBED ? GEOM.EVB : [0, 0, VW, VH];
+let vb = VB0.slice(), vbAnim = null, viewIdx = 0, labelsOn = false;
+svg.setAttribute("viewBox", vb.join(" "));
+const VIEWS = [null, { c: CS, w: 330, name: "Cell" }, { c: GEOM.PLANT, w: 340, name: "Plant" }];
+const LABELS = [["Nucleus", orgS("nucleus")], ["Vacuole", orgS("vacuole")], ["Golgi", orgS("golgi")], ["Rough ER", orgS("er")], ["Mitochondrion", orgS("mito1")], ["Lysosome", orgS("lyso1")], ["Power plant", Aw(W3(-12, -8, 52))], ["ATP dial", Aw([DIAL.x, DIAL.y, 26])], ["Feed hopper", Aw([-150, 55, 32])]];
+function placeLabels() {
+  if (!labelsOn) return;
+  const m = svg.getScreenCTM(), b = box.getBoundingClientRect(); if (!m) return;
+  if (!labelsEl.children.length) labelsEl.innerHTML = LABELS.map(([n]) => `<span>${n}</span>`).join("");
+  LABELS.forEach(([, p], i) => { const e = labelsEl.children[i], x = m.a * p[0] + m.e - b.left, y = m.d * p[1] + m.f - b.top; e.style.left = f1(x) + "px"; e.style.top = f1(y) + "px"; e.style.display = x > 4 && y > 4 && x < b.width - 30 && y < b.height - 4 ? "" : "none"; });
+}
+function setVB(v) { vb = v; svg.setAttribute("viewBox", v.map(f1).join(" ")); placeLabels(); }
+function viewTarget(i) {
+  if (!VIEWS[i]) return VB0.slice();
+  const r = svg.getBoundingClientRect(), ar = r.width / Math.max(1, r.height), w = VIEWS[i].w, h = w / ar;
+  return [VIEWS[i].c[0] - w / 2, VIEWS[i].c[1] - h / 2, w, h];
+}
+function goView(i) { viewIdx = i; const to = viewTarget(i); if (calm) { setVB(to); return; } vbAnim = { from: vb.slice(), to, t0: performance.now() }; }
+function viewTick(now) { if (!vbAnim) return; const q = sstep(0, 1, (now - vbAnim.t0) / 450); setVB(vbAnim.from.map((a, i) => lerp(a, vbAnim.to[i], q))); if (q >= 1) vbAnim = null; }
+window.addEventListener("resize", () => { if (viewIdx) setVB(viewTarget(viewIdx)); else placeLabels(); });
+document.querySelectorAll("[data-tool]").forEach((b) => b.addEventListener("click", () => {
+  const w = b.dataset.tool;
+  if (w === "see") b.setAttribute("aria-pressed", String(box.classList.toggle("seethru")));
+  else if (w === "labels") { labelsOn = !labelsOn; labelsEl.hidden = !labelsOn; b.setAttribute("aria-pressed", String(labelsOn)); placeLabels(); }
+  else { goView((viewIdx + 1) % VIEWS.length); b.textContent = viewIdx ? "Zoom: " + VIEWS[viewIdx].name : "Zoom"; b.setAttribute("aria-pressed", String(!!viewIdx)); }
+}));
+
 const KNOWN = new Set(["snacc:state", "snacc:play"]);
 window.addEventListener("message", (e) => {
   if (e.origin !== ORIGIN) return;

@@ -1,6 +1,6 @@
 // The rig around the cell: ATP dial gauge, glass ATP tube, instrument panel (gauges), thermometer, receipt printer,
 // feed hopper, enclave safe (frosted window), output shelf, cable runs with connectors.
-import { k, G, O, P, S, Ln, Dm, at, f1, planeM, dep, wallYM, floorM, PLATE, CELLC } from "../ctx.mjs";
+import { k, G, A, O, P, S, Ln, Dm, at, f1, planeM, dep, wallYM, floorM, PLATE, CELLC, R, noteShape, flushItem } from "../ctx.mjs";
 import { tubePieces, tubeSvg } from "../kit/tube.mjs";
 import * as F from "./frame.mjs";
 import { GEO } from "./mito.mjs";
@@ -9,8 +9,8 @@ export const DIAL = { x: 150, y: -73 };
 export const DIAL_R = 17, DIAL_Z = 10, DIAL_H = 10, DIAL_TOP = DIAL_Z + DIAL_H;
 const headTop = F.W3(GEO.turb.u, GEO.turb.v, GEO.turb.zf1 + 11);
 export const ATP_ROUTE = G.fillet([[headTop[0], headTop[1], headTop[2]], [headTop[0], headTop[1], 66], [DIAL.x - 4, DIAL.y + 4 + 0, 66], [DIAL.x - 4, DIAL.y + 4, DIAL_TOP + 2]], 6, 8, { P, tube: 2.4 });
-const box = (x, y, w, d, z, h, o = {}) => S(k.slabOf({ x, y, w, d, r: o.r ?? 1 }, z, h, P, o.steps ?? 4, o.bevel ?? 0.4), { tone: o.tone || "hi", className: o.cls || "", crease: o.crease || "faint" });
-const cyl = (x, y, r, z, h, o = {}) => S(k.cylinder(x, y, r, z, h, P, o.steps ?? 24, o.bevel ?? 0.3), { tone: o.tone || "hi", className: o.cls || "", crease: o.crease || "faint" });
+const box = (x, y, w, d, z, h, o = {}) => (noteShape(A.slab({ x, y, w, d, r: o.r ?? 1 }, z, h, { name: `box@${Math.round(x)},${Math.round(y)},${z}` }, o.steps ?? 4)), S(k.slabOf({ x, y, w, d, r: o.r ?? 1 }, z, h, P, o.steps ?? 4, o.bevel ?? 0.4), { tone: o.tone || "hi", className: o.cls || "", crease: o.crease || "faint" }));
+const cyl = (x, y, r, z, h, o = {}) => (noteShape(A.cylinder(x, y, r, z, h, { name: `cyl@${Math.round(x)},${Math.round(y)},${z}` })), S(k.cylinder(x, y, r, z, h, P, o.steps ?? 24, o.bevel ?? 0.3), { tone: o.tone || "hi", className: o.cls || "", crease: o.crease || "faint" }));
 const text = (M, str, x, y, size = 2.2, cls = "txt", anchor = "start") => `<g transform="${M}"><text class="${cls}" x="${x}" y="${y}" text-anchor="${anchor}" style="font-size:${size}px">${str}</text></g>`;
 
 /** Dial face art on the top plane (u right = +x, v = +y). Returns { svg, needleAt(turn) } */
@@ -38,7 +38,7 @@ function dialFace(cx, cy, z, R) {
 
 export function rig() {
   const out = [];
-  const add = (key, svg, name) => out.push({ key, svg, name });
+  const add = (key, svg, name) => { out.push({ key, svg, name }); flushItem(R, key, name); };
 
   // ================= ATP dial gauge on a pedestal =================
   {
@@ -48,6 +48,7 @@ export function rig() {
     d.push(box(DIAL.x - 16, DIAL.y - 16, 32, 32, 5, 5, { r: 3, bevel: 0.5 }));
     d.push(Dm(k.corners({ x: DIAL.x - 19, y: DIAL.y - 19, w: 38, d: 38 }, 3).map(([x, y]) => at([x, y, 5])), { size: 0.55, tone: "hi" }));
     // puck, bezel, knurl
+    noteShape(A.cylinder(DIAL.x, DIAL.y, DIAL_R, DIAL_Z, DIAL_H, { name: "dial.puck" }));
     d.push(S(k.cylinder(DIAL.x, DIAL.y, DIAL_R, DIAL_Z, DIAL_H, P, 64, 0.8), { tone: "hi", className: "bone", crease: "lo" }));
     d.push(Ln(k.knurl(DIAL.x, DIAL.y, DIAL_R, DIAL_TOP - 3.4, DIAL_TOP, 72, P, 0.1), { tone: "lo" }));
     d.push(Ln(k.sideArc(DIAL.x, DIAL.y, DIAL_R, DIAL_TOP - 3.4, P, 40), { tone: "faint" }));
@@ -61,7 +62,7 @@ export function rig() {
     // input port housing at the rear (tube lands here)
     d.push(cyl(DIAL.x - 4, DIAL.y + 4, 3.2, DIAL_TOP, 2.2, { cls: "steel", steps: 20 }));
     // crown knobs on the right
-    d.push(box(DIAL.x + DIAL_R - 1, DIAL.y - 2.4, 5, 4.8, DIAL_Z + 2, 5, { r: 1.2, bevel: 0.3 }));
+    d.push(box(DIAL.x + DIAL_R, DIAL.y - 2.4, 5, 4.8, DIAL_Z + 2, 5, { r: 1.2, bevel: 0.3 }));
     add(dep(DIAL.x, DIAL.y, 10), d.join(""), "dial");
   }
 
@@ -109,6 +110,7 @@ export function rig() {
     // glass tube with mercury (marigold) level: tube is a lathe capsule
     const Fr = G.frameAlong([tx, ty, 7], [0, 0, 1]);
     const prof = [[0, 0.01], [0.6, 2.2, 1], [1.6, 2.6, 1], [34, 2.6], [35.4, 2.0, 1], [36, 0.01]];
+    noteShape(A.lathe(Fr, prof, { name: "thermometer.glass" }));
     t.push(S(G.lathe(prof, Fr, P, { steps: 20, fill: "hull" }), { tone: "hi", className: "bone", crease: "none" }));
     t.push(`<g data-dyn="mercury"></g>`);
     // ticks + 600 / 610 plates
@@ -125,17 +127,18 @@ export function rig() {
     const h = [];
     h.push(`<path class="shadow-flat" transform="translate(-8 8)" d="${k.slabOf({ x: hx - 12, y: hy - 12, w: 24, d: 24, r: 2 }, 0, 8, P, 3, 0).fill}"/>`);
     h.push(box(hx - 13, hy - 13, 26, 26, 0, 5, { r: 2, bevel: 0.4, cls: "tan" }));
-    for (const [dx, dy] of [[-8, -8], [8, -8], [-8, 8], [8, 8]]) h.push(box(hx + dx - 1.4, hy + dy - 1.4, 2.8, 2.8, 5, 18, { r: 0.5, bevel: 0.2, cls: "steel" }));
+    for (const [dx, dy] of [[-8, -8], [8, -8], [-8, 8], [8, 8]]) h.push(box(hx + dx - 1.4, hy + dy - 1.4, 2.8, 2.8, 5, 24.2, { r: 0.5, bevel: 0.2, cls: "steel" }));
     const Fr = G.frameAlong([hx, hy, 23], [0, 0, 1]);
     const prof = [[0, 3.2], [0, 3.2], [0.01, 3.2, 0], [6, 10, 1], [16, 12.5, 1]];
+    noteShape(A.lathe(Fr, [[0, 3.2], [8, 11, 1], [16, 12.6, 1], [16, 0.01]], { name: "hopper.bowl" }));
     h.push(S(G.lathe([[0, 3.2], [8, 11, 1], [16, 12.6, 1], [16, 0.01]], Fr, P, { steps: 36, fill: "hull" }), { tone: "hi", className: "bone", crease: "faint" }));
     h.push(Ln(k.sideArc(hx, hy, 12.6, 38, P, 30), { tone: "faint" }));
     h.push(S(k.cylinder(hx, hy, 11.6, 38.4, 0.8, P, 36, 0.1), { tone: "hi", className: "cyto", crease: "none" }));
     // pellets (marigold) in the hopper
     for (const [dx, dy] of [[-4, -2], [2, 3], [4, -4], [-2, 4], [0, -1]]) h.push(`<g class="mari">${S(G.sphereOf([hx + dx, hy + dy, 39.6], 1.5, P), { tone: "hi" })}</g>`);
     // label plate
-    h.push(box(hx - 7, hy + 10, 14, 5, 0, 0.9, { r: 1, bevel: 0.1, cls: "warm" }));
-    h.push(`<g transform="${floorM(hx - 5.6, hy + 13.4, 1)}"><text class="txt" x="0" y="0" style="font-size:2.4px;font-weight:700">FEED</text></g>`);
+    h.push(box(hx - 7, hy + 13.2, 14, 5, 0, 0.9, { r: 1, bevel: 0.1, cls: "warm" }));
+    h.push(`<g transform="${floorM(hx - 5.6, hy + 16.8, 1)}"><text class="txt" x="0" y="0" style="font-size:2.4px;font-weight:700">FEED</text></g>`);
     add(dep(hx, hy, 20), h.join(""), "hopper");
   }
 
@@ -143,7 +146,7 @@ export function rig() {
   {
     const p = FEED_ROUTE;
     const t = tubePieces(p, 1.9, P, { maxLength: 24 }).map((q) => tubeSvg(q, { tone: "hi" })).join("");
-    const flange = cyl(FEED_PORT[0], FEED_PORT[1], 4.4, 9, 5.5, { cls: "steel", steps: 20 });
+    const flange = cyl(FEED_PORT[0], FEED_PORT[1], 4.4, 5, 9.5, { cls: "steel", steps: 20 });   // stands on the collar flange (z 5)
     add(dep(FEED_PORT[0], FEED_PORT[1], 10) + 0.5, `<g class="bone">${t}</g>` + flange + Dm([at([FEED_PORT[0], FEED_PORT[1], 14.6])], { size: 0.5 }), "feed-chute");
   }
 
@@ -165,7 +168,7 @@ export function rig() {
 
   // ================= enclave safe with frosted window =================
   {
-    const ex = -172, ey = -2, ew = 24, ed = 26, eh = 24;
+    const ex = -176, ey = 14, ew = 22, ed = 26, eh = 24;   // clear of the stage collar (r 74 about the jar)
     const e = [];
     e.push(`<path class="shadow-flat" transform="translate(-8 8)" d="${k.slabOf({ x: ex, y: ey, w: ew, d: ed, r: 2 }, 0, 6, P, 3, 0).fill}"/>`);
     e.push(box(ex, ey, ew, ed, 0, 4, { r: 2, bevel: 0.4, cls: "tan" }));
@@ -235,6 +238,6 @@ export function rig() {
   return out;
 }
 
-export const ATTEST_ROUTE = G.fillet([[-166, 4, 30], [-166, 4, 66], [-153.2 - 1.2, -3.2 + 0.7, 66]], 6, 7, { P, tube: 1.7 });
+export const ATTEST_ROUTE = G.fillet([[-170, 20, 30], [-170, 20, 66], [-153.2 - 1.2, -3.2 + 0.7, 66]], 6, 7, { P, tube: 1.7 });
 export const FEED_PORT =[CELLC[0] + 74 * Math.cos((122 * Math.PI) / 180), CELLC[1] + 74 * Math.sin((122 * Math.PI) / 180)];
 export const FEED_ROUTE = G.fillet([[-150, 55, 24], [-150, 55, 14], [-150, FEED_PORT[1] + 1, 14], [FEED_PORT[0] - 4.6, FEED_PORT[1] + 1, 14]], 5, 7, { P, tube: 1.9 });

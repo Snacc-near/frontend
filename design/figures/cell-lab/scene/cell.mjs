@@ -85,6 +85,8 @@ function nucleus() {
   // reading head (RNA polymerase) on the film: a small marigold box with lens
   a.push(`<g data-part="rnapol"><rect x="-2" y="-9.8" width="4.6" height="3.8" rx=".8" class="f-mari"/><circle cx=".3" cy="-7.9" r="1.1" fill="#fff8e6" class="ink" style="stroke-width:.4px"/></g>`);
   // frame highlighted (the attest frame): one film frame that changes colour
+  // reel lamp: brightens with organel.nukleus (0 = dim, 5 = full marigold with halo); drawn by the runtime
+  a.push(`<g data-part="nuc-lamp"><circle class="lamp-halo" cx="0" cy="-1.4" r="3.4" fill="#f8aa06" opacity="0" stroke="none"/><circle class="lamp-bulb" cx="0" cy="-1.4" r="1.45" fill="#8a7a58" stroke="#161412" stroke-width=".5"/><circle cx="-.45" cy="-1.9" r=".38" fill="#fff" stroke="none" opacity=".8"/></g>`);
   a.push(`<rect data-part="film-frame" x="4.4" y="-8.1" width="2.4" height="1.6" rx=".3" fill="#fff8e6" class="ink" style="stroke-width:.35px"/>`);
   a.push(`</g></g>`);
   o.push(a.join(""));
@@ -272,7 +274,7 @@ export function beanArt(L, W, level = 2, accent = false) {
     const yEdge = (top ? -1 : 1) * W * 0.8 * Math.sqrt(Math.max(0.05, 1 - (x / (L * 0.8)) ** 2)) * (top ? 1 : 0.84);
     const s = top ? 1 : -1;
     const depth = W * (0.62 + (level / 8) * 0.12);
-    a.push(`<path d="M${f1(x - 1.1)} ${f1(yEdge)}C${f1(x - 1.6)} ${f1(yEdge + s * depth * 0.4)} ${f1(x + 1.4)} ${f1(yEdge + s * depth * 0.6)} ${f1(x + 0.5)} ${f1(yEdge + s * depth * 0.98)}C${f1(x + 1.9)} ${f1(yEdge + s * depth * 0.6)} ${f1(x - 0.6)} ${f1(yEdge + s * depth * 0.4)} ${f1(x + 1.1)} ${f1(yEdge)}" fill="${accent ? "#f8aa06" : "#d98a14"}" class="ink" style="stroke-width:.6px"/>`);
+    a.push(`<path d="M${f1(x - 1.1)} ${f1(yEdge)}C${f1(x - 1.6)} ${f1(yEdge + s * depth * 0.4)} ${f1(x + 1.4)} ${f1(yEdge + s * depth * 0.6)} ${f1(x + 0.5)} ${f1(yEdge + s * depth * 0.98)}C${f1(x + 1.9)} ${f1(yEdge + s * depth * 0.6)} ${f1(x - 0.6)} ${f1(yEdge + s * depth * 0.4)} ${f1(x + 1.1)} ${f1(yEdge)}" fill="${accent ? "#f8aa06" : "#d98a14"}" class="ink cr" style="stroke-width:.6px"/>`);
   }
   return a.join("");
 }
@@ -317,12 +319,18 @@ export function cellInside() {
   push(1, vacuole());
   push(2, nucleus());
   push(3, ribosomes());
-  push(4, bean2d("mito1", -4, -34, 10, 13, 7.2, -6));
+  // mitochondria: slot 1 is the hero linked to the power plant; slots 2..5 appear with organel.mitokondria (count = 1 + level, capped by space)
+  push(4, bean2d("mito1", -6, -35, 10, 19, 10, -6));
   push(5, bean2d("mito2", 38, 17, 4, 10, 5.6, 28));
+  push(5.1, bean2d("mito3", -35, 36, 3, 9, 5, -24));
+  push(5.2, bean2d("mito4", 27, -39, 6, 8.5, 4.6, 6));
+  push(5.3, bean2d("mito5", -11, 46, 3, 8, 4.2, -4));
   push(6, golgi());
   push(7, lyso("lyso1", -9, -14, 10, 5.6));
   push(8, lyso("lyso2", 26, 33, 6, 4.4));
   push(9, lyso("lyso3", -45, 20, 14, 4.2));
+  push(9.1, lyso("lyso4", -22, 27, 8, 4.2));
+  push(9.2, lyso("lyso5", 46, 3, 6, 3.8));
   items.sort((a, b) => a.key - b.key);
   return items.map((i) => i.svg).join("");
 }
