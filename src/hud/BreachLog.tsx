@@ -14,29 +14,30 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
 
   return (
     <aside
-      className="flex flex-col gap-1.5 max-w-sm w-full select-none"
+      className="plate-panel flex w-full max-w-sm flex-col gap-1.5 p-2 select-none"
       role="region"
       aria-label="the reactor threshold feed"
     >
-      <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-mono lowercase">
+      <div className="flex items-center justify-between px-1 font-mono text-[10px] lowercase text-[var(--ink)]">
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="hover:text-slate-200 transition-colors cursor-pointer min-h-[44px] flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none rounded-lg px-1"
+          className="flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-lg px-1 transition-colors hover:text-[var(--ink-hi)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
           aria-expanded={isExpanded}
           aria-controls="breach-log-list"
         >
+          <span className="inline-block h-2 w-2 rounded-full border border-[var(--ink-hi)] bg-[var(--accent)]" aria-hidden="true" />
           <span>threshold log & events</span>
-          <span className="text-slate-500 text-[10px]">
+          <span className="text-[var(--ink-mute)] text-[10px]">
             [{isExpanded ? "close" : "open"}]
           </span>
         </button>
-        <span className="text-slate-500 font-mono">sla &lt; 2000 ms</span>
+        <span className="text-[var(--ink-mute)] font-mono">sla &lt; 2000 ms</span>
       </div>
 
       {indexerIncomplete && (
         <div
-          className="px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-800/60 text-[10px] text-amber-300 lowercase font-mono"
+          className="rounded-lg border border-[var(--accent-dk)] bg-[var(--accent-dim)] px-3 py-1.5 font-mono text-[10px] lowercase text-[var(--accent-dk)]"
           role="status"
         >
           indexer catching up — the event list may be incomplete
@@ -46,30 +47,30 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
       {isExpanded && (
         <div
           id="breach-log-list"
-          className="flex flex-col gap-1 max-h-24 sm:max-h-36 overflow-y-auto pr-1"
+          className="flex max-h-24 flex-col gap-1 overflow-y-auto pr-1 sm:max-h-36"
           role="log"
           aria-live="polite"
           aria-atomic="false"
         >
           {logs.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-slate-400 rounded-xl bg-slate-950/80 border border-slate-800/80 lowercase">
+            <div className="rounded-xl border border-[var(--edge)] bg-white px-3 py-2 text-xs lowercase text-[var(--ink)]">
               no threshold events recorded yet
             </div>
           ) : (
             logs.slice(0, 4).map((item) => (
               <div
                 key={item.id}
-                className="flex flex-col gap-0.5 px-3 py-2 rounded-xl bg-slate-950/85 border border-slate-800/80 backdrop-blur-md text-xs text-slate-200 transition-all shadow-md"
+                className="flex flex-col gap-0.5 rounded-xl border border-[var(--edge)] bg-white px-3 py-2 text-xs text-[var(--ink-hi)] shadow-[0_1px_0_var(--edge)]"
               >
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="font-semibold text-emerald-400 lowercase truncate max-w-[190px]">
+                  <span className="max-w-[190px] truncate font-semibold lowercase text-[var(--ink-hi)]">
                     {item.actor}
                   </span>
-                  <span className="font-mono text-slate-400 text-[9px]">
+                  <span className="font-mono text-[9px] text-[var(--ink)]">
                     {item.latencyMs} ms {item.meetsSla ? "sla pass" : "sla miss"}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-300 lowercase leading-snug">
+                <p className="text-[11px] lowercase leading-snug text-[var(--ink)]">
                   {item.summary}
                 </p>
               </div>

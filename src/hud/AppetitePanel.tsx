@@ -19,22 +19,22 @@ export const AppetitePanel: React.FC<AppetitePanelProps> = ({
   if (mode === "demo") {
     return (
       <section
-        className="flex flex-col gap-1 px-3.5 py-2.5 rounded-2xl bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg min-w-[210px] select-none"
+        className="plate-panel flex min-w-[210px] flex-col gap-1 px-3.5 py-2.5 select-none"
         aria-label="appetite meter"
       >
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-300 lowercase">appetite meter</span>
-          <span className="text-[10px] text-amber-300 font-mono lowercase">
+          <span className="lowercase text-[var(--ink)]">appetite meter</span>
+          <span className="font-mono text-[10px] lowercase text-[var(--accent-dk)]">
             demo, simulated
           </span>
         </div>
-        <div className="flex justify-between text-[11px] text-slate-400">
+        <div className="flex justify-between text-[11px] text-[var(--ink)]">
           <span className="lowercase">zone</span>
-          <span className="font-mono text-slate-200">goldilocks (demo)</span>
+          <span className="font-mono text-[var(--ink-hi)]">goldilocks (demo)</span>
         </div>
-        <div className="flex justify-between text-[11px] text-slate-400">
+        <div className="flex justify-between text-[11px] text-[var(--ink)]">
           <span className="lowercase">risk heat</span>
-          <span className="font-mono text-slate-200">—</span>
+          <span className="font-mono text-[var(--ink-hi)]">—</span>
         </div>
       </section>
     );
@@ -42,60 +42,60 @@ export const AppetitePanel: React.FC<AppetitePanelProps> = ({
 
   return (
     <section
-      className="flex flex-col gap-1 px-3.5 py-2.5 rounded-2xl bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg min-w-[210px] max-w-[280px] select-none"
+      className="plate-panel flex min-w-[210px] max-w-[280px] flex-col gap-1 px-3.5 py-2.5 select-none"
       aria-label="appetite meter"
     >
       <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-300 lowercase">appetite meter</span>
+        <span className="lowercase text-[var(--ink)]">appetite meter</span>
         {isLoading && !appetite ? (
-          <span className="text-[10px] text-slate-400 font-mono lowercase animate-pulse">
+          <span className="font-mono text-[10px] lowercase text-[var(--ink)] animate-pulse">
             loading…
           </span>
         ) : error && !appetite ? (
-          <span className="text-[10px] text-red-300 font-mono lowercase">
+          <span className="font-mono text-[10px] lowercase text-[var(--warm)]">
             unavailable
           </span>
         ) : (
-          <span className="text-[10px] text-emerald-300 font-mono lowercase">
+          <span className="font-mono text-[10px] lowercase text-[var(--ok)]">
             live · /api/appetite
           </span>
         )}
       </div>
 
       {!appetite ? (
-        <div className="flex justify-between text-[11px] text-slate-400">
+        <div className="flex justify-between text-[11px] text-[var(--ink)]">
           <span className="lowercase">no appetite data</span>
-          <span className="font-mono text-slate-200">{NO_DATA_PLACEHOLDER}</span>
+          <span className="font-mono text-[var(--ink-hi)]">{NO_DATA_PLACEHOLDER}</span>
         </div>
       ) : (
         <>
-          <div className="flex justify-between text-[11px] text-slate-400">
+          <div className="flex justify-between text-[11px] text-[var(--ink)]">
             <span className="lowercase">zone</span>
-            <span className="font-mono text-slate-100">{appetite.zone}</span>
+            <span className="font-mono text-[var(--ink-hi)]">{appetite.zone}</span>
           </div>
-          <div className="flex justify-between text-[11px] text-slate-400">
+          <div className="flex justify-between text-[11px] text-[var(--ink)]">
             <span className="lowercase">crucible_temp</span>
-            <span className="font-mono text-slate-200">
+            <span className="font-mono text-[var(--ink-hi)]">
               {appetite.crucibleTempMk === null
                 ? NO_DATA_PLACEHOLDER
                 : `${formatAppetiteNumber(appetite.crucibleTempMk)} mk`}
             </span>
           </div>
-          <div className="hidden sm:flex justify-between text-[11px] text-slate-400">
+          <div className="hidden justify-between text-[11px] text-[var(--ink)] sm:flex">
             <span className="lowercase">current_epoch</span>
-            <span className="font-mono text-slate-200">
+            <span className="font-mono text-[var(--ink-hi)]">
               {formatAppetiteNumber(appetite.currentEpoch)}
             </span>
           </div>
-          <div className="hidden sm:flex justify-between text-[11px] text-slate-400">
+          <div className="hidden justify-between text-[11px] text-[var(--ink)] sm:flex">
             <span className="lowercase">burst_bps</span>
-            <span className="font-mono text-slate-200">
+            <span className="font-mono text-[var(--ink-hi)]">
               {formatAppetiteNumber(appetite.burstBps)}
             </span>
           </div>
-          <div className="hidden sm:flex justify-between text-[11px] text-slate-400">
+          <div className="hidden justify-between text-[11px] text-[var(--ink)] sm:flex">
             <span className="lowercase">dormant</span>
-            <span className="font-mono text-slate-200">
+            <span className="font-mono text-[var(--ink-hi)]">
               {appetite.dormant === null
                 ? NO_DATA_PLACEHOLDER
                 : appetite.dormant
@@ -104,14 +104,14 @@ export const AppetitePanel: React.FC<AppetitePanelProps> = ({
             </span>
           </div>
           <div className="flex flex-col gap-0.5 pt-1">
-            <div className="flex justify-between text-[11px] text-slate-400">
+            <div className="flex justify-between text-[11px] text-[var(--ink)]">
               <span className="lowercase">risk_heat</span>
-              <span className="font-mono text-amber-300">
+              <span className="font-mono text-[var(--accent-dk)]">
                 {formatAppetiteNumber(appetite.riskHeat)}
               </span>
             </div>
             <div
-              className="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden"
+              className="h-2 w-full overflow-hidden rounded-full border border-[var(--line)] bg-[var(--body)]"
               role="progressbar"
               aria-valuenow={appetite.riskHeat ?? 0}
               aria-valuemin={0}
@@ -119,22 +119,22 @@ export const AppetitePanel: React.FC<AppetitePanelProps> = ({
               aria-label="risk heat"
             >
               <div
-                className="h-full bg-amber-400 rounded-full transition-all duration-300"
+                className="h-full rounded-full bg-[var(--accent)] transition-all duration-300"
                 style={{ width: `${appetite.riskHeatPct ?? 0}%` }}
               />
             </div>
           </div>
           <div className="flex flex-col gap-0.5 pt-0.5">
-            <div className="flex justify-between text-[11px] text-slate-400">
+            <div className="flex justify-between text-[11px] text-[var(--ink)]">
               <span className="lowercase">feast progress</span>
-              <span className="font-mono text-slate-200">
+              <span className="font-mono text-[var(--ink-hi)]">
                 {appetite.feastProgressPct === null
                   ? NO_DATA_PLACEHOLDER
                   : `${appetite.feastProgressPct.toFixed(1)}%`}
               </span>
             </div>
             <div
-              className="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden"
+              className="h-2 w-full overflow-hidden rounded-full border border-[var(--line)] bg-[var(--body)]"
               role="progressbar"
               aria-valuenow={appetite.feastProgressPct ?? 0}
               aria-valuemin={0}
@@ -142,27 +142,27 @@ export const AppetitePanel: React.FC<AppetitePanelProps> = ({
               aria-label="feast progress"
             >
               <div
-                className="h-full bg-cyan-400 rounded-full transition-all duration-300"
+                className="h-full rounded-full bg-[var(--frost)] transition-all duration-300"
                 style={{ width: `${appetite.feastProgressPct ?? 0}%` }}
               />
             </div>
-            <div className="hidden sm:grid grid-cols-2 gap-2 text-[10px] text-slate-500 font-mono">
+            <div className="hidden grid-cols-2 gap-2 font-mono text-[10px] text-[var(--ink)] sm:grid">
               <span className="break-all">vol {formatAppetiteBigInt(appetite.feastVolume)}</span>
               <span className="break-all text-right">tgt {formatAppetiteBigInt(appetite.feastTarget)}</span>
             </div>
           </div>
           {appetite.topFeeders.length > 0 && (
-            <div className="hidden sm:flex flex-col gap-0.5 pt-1 border-t border-slate-800/80">
-              <span className="text-[10px] text-slate-500 lowercase">top_feeders</span>
+            <div className="flex flex-col gap-0.5 border-t border-[var(--edge)] pt-1 sm:flex">
+              <span className="text-[10px] lowercase text-[var(--ink)]">top_feeders</span>
               {appetite.topFeeders.map((f) => (
                 <div
                   key={f.account_id}
-                  className="flex justify-between text-[11px] text-slate-400 gap-2"
+                  className="flex justify-between gap-2 text-[11px] text-[var(--ink)]"
                 >
-                  <span className="font-mono text-cyan-300 truncate">
+                  <span className="truncate font-mono text-[var(--frost)]">
                     {f.account_id}
                   </span>
-                  <span className="font-mono text-slate-300 shrink-0">
+                  <span className="shrink-0 font-mono text-[var(--ink-hi)]">
                     {formatAppetiteBigInt(f.amount)}
                   </span>
                 </div>

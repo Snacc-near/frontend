@@ -13,12 +13,12 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
 }) => {
   return (
     <div
-      className="flex flex-col gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-2xl bg-slate-950/80 border border-slate-700/50 backdrop-blur-md shadow-lg"
+      className="plate-panel flex flex-col gap-1 px-2.5 py-1.5 sm:px-3.5"
       role="search"
       aria-label="near account highlighter"
     >
       <div className="flex items-center gap-2">
-        <label htmlFor="near-account-input" className="text-[11px] text-slate-300 lowercase whitespace-nowrap">
+        <label htmlFor="near-account-input" className="whitespace-nowrap text-[11px] lowercase text-[var(--ink)]">
           highlight account:
         </label>
         <input
@@ -27,7 +27,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
           value={account}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g.: alice.testnet"
-          className="bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-mono focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[40px] sm:min-h-[44px] w-36 sm:w-48 min-w-0 transition-all"
+          className="min-h-[40px] w-36 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 font-mono text-xs text-[var(--ink-hi)] placeholder:text-[var(--ink-mute)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none sm:min-h-[44px] sm:w-48"
           spellCheck={false}
           autoComplete="off"
         />
@@ -36,7 +36,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
             type="button"
             onClick={() => onChange("")}
             aria-label="clear the account filter"
-            className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center rounded-xl bg-slate-900 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-mono cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none"
+            className="keycap flex h-9 w-9 shrink-0 items-center justify-center font-mono text-xs sm:h-11 sm:w-11 focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
           >
             ✕
           </button>
@@ -44,13 +44,13 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
       </div>
 
       {account.trim().length > 0 && (
-        <span className="text-[10px] lowercase font-mono">
+        <span className="font-mono text-[10px] lowercase">
           {matchedCount > 0 ? (
-            <span className="text-cyan-300 font-semibold">
+            <span className="font-semibold text-[var(--ok)]">
               highlighting {matchedCount} strains in the dish
             </span>
           ) : (
-            <span className="text-slate-400">
+            <span className="text-[var(--ink)]">
               no strain owned by this account in the dish
             </span>
           )}

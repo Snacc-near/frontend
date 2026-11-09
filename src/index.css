@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+/* Plain-marigold (anatomy) design tokens. Bundled fonts only; no CDN. */
+
 @font-face {
   font-family: "DM Sans";
   src: url("/fonts/dm-sans-latin.woff2") format("woff2");
@@ -16,6 +18,51 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Young Serif";
+  src: url("/fonts/young-serif-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #efefec;
+  --panel: #fbfbf9;
+  --panel-2: #f6f6f5;
+  --edge: #e1e1dd;
+  --line: #b6b8b5;
+  --detail: #c3c6c8;
+  --body: #ececeb;
+  --deck: #f3f3f2;
+  --recess: #e2e4e4;
+  --ink: #5d6165;
+  --ink-hi: #16181a;
+  --ink-mute: #8d9194;
+  --accent: #f8aa06;
+  --accent-dk: #b87800;
+  --accent-dim: rgba(248, 170, 6, 0.14);
+  --accent-ink: #16181a;
+  --frost: #2b7a8c;
+  --frost-bg: #e3f0f3;
+  --warm: #b3402e;
+  --warm-bg: #f7e6df;
+  --ok: #3f7d4e;
+  --ok-bg: #e8f1e6;
+  --pl-top: #ffffff;
+  --pl-side: #e9dab0;
+  --pl-base: #fbf6e3;
+  --pl-shadow: #2a2218;
+  --pl-dish: #fffdf5;
+  --pl-medium: #f3ead3;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --serif: "Young Serif", Georgia, serif;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-pop: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
 html,
 body {
   margin: 0;
@@ -23,9 +70,9 @@ body {
   width: 100%;
   height: 100dvh;
   overflow: hidden;
-  background-color: #030712;
-  color: #f1f5f9;
-  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg);
+  color: var(--ink-hi);
+  font-family: var(--sans);
   user-select: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -35,7 +82,7 @@ canvas {
 }
 
 :focus-visible {
-  outline: 2px solid #38bdf8;
+  outline: 2px solid var(--accent-dk);
   outline-offset: 2px;
 }
 
@@ -48,4 +95,155 @@ canvas {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ---- shared anatomy-style components ---- */
+
+.plate-panel {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  box-shadow: 0 2px 0 var(--edge);
+}
+
+.label-plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 2px 0 var(--edge);
+  padding: 5px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-hi);
+}
+
+.label-plate .lp-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.label-plate .lp-value {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.keycap {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 3px 0 var(--line);
+  color: var(--ink-hi);
+  font-family: var(--sans);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 150ms var(--ease-out),
+    box-shadow 150ms var(--ease-out),
+    background-color 150ms var(--ease-out);
+}
+
+.keycap:hover:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 var(--line);
+}
+
+.keycap:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 var(--line);
+}
+
+.keycap:disabled {
+  background: var(--body);
+  border-color: var(--detail);
+  box-shadow: 0 3px 0 var(--detail);
+  color: var(--ink-mute);
+  cursor: not-allowed;
+}
+
+.keycap--primary {
+  background: var(--accent);
+  border-color: var(--ink-hi);
+  box-shadow: 0 3px 0 var(--ink-hi);
+  color: var(--accent-ink);
+}
+
+.keycap--primary:hover:not(:disabled) {
+  box-shadow: 0 2px 0 var(--ink-hi);
+}
+
+.keycap--primary:active:not(:disabled) {
+  box-shadow: 0 0 0 var(--ink-hi);
+}
+
+.keycap--primary:disabled {
+  background: var(--body);
+  border-color: var(--detail);
+  box-shadow: 0 3px 0 var(--detail);
+  color: var(--ink-mute);
+}
+
+/* anatomy card frame: Fig nn top-left, title top-right, hint bottom-left, readout bottom-right */
+.fig-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--panel);
+}
+
+.fig-frame__head,
+.fig-frame__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+}
+
+.fig-frame__head {
+  border-bottom: 1px solid var(--edge);
+}
+
+.fig-frame__foot {
+  border-top: 1px solid var(--edge);
+}
+
+.fig-frame__fig {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-dk);
+}
+
+.fig-frame__title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.fig-frame__hint {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.fig-frame__readout {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-hi);
+}
+
+.fig-frame__body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: var(--panel-2);
 }

@@ -7,7 +7,7 @@
 
 import type { LabAction } from "./simulation.ts";
 
-export const CELL_LAB_SRC = "/figures/cell-lab.html";
+export const CELL_LAB_SRC = "/figures/cell-lab.html?embed=1";
 
 export const LAB_ACTIONS: readonly LabAction[] = [
   "feed",

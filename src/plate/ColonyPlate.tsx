@@ -36,6 +36,12 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
   const engineRef = useRef<{ setCells: (c: PlateCellInput[]) => void; setZone: (z: MacroZone) => void; setSelected: (id: number | null) => void; start: () => void; dispose: () => void } | null>(null);
   const callbacksRef = useRef(onCellSelect);
   callbacksRef.current = onCellSelect;
+  const cellsRef = useRef(cells);
+  cellsRef.current = cells;
+  const zoneRef = useRef(zone);
+  zoneRef.current = zone;
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
   const [webglOk, setWebglOk] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -60,6 +66,12 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
           return;
         }
         engineRef.current = engine;
+        // Apply the latest props immediately: the per-prop effects may have
+        // already fired while the chunk was still loading and will not re-fire
+        // until a value changes.
+        engine.setCells(cellsRef.current);
+        engine.setZone(zoneRef.current);
+        engine.setSelected(selectedRef.current);
         engine.start();
       }).catch(() => {
         setWebglOk(false);
@@ -101,9 +113,9 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
 
   if (webglOk === false) {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-blue-950 via-slate-950 to-violet-950 px-4" role="region" aria-label="colony plate fallback">
-        <div className="h-40 w-40 rounded-full border-4 border-teal-300/40 bg-slate-900/80 shadow-[0_0_40px_rgba(45,212,191,0.25)]" aria-hidden="true" />
-        <p className="text-xs lowercase text-slate-300">3d unavailable — tap a cell to open the lab</p>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--bg)] px-4" role="region" aria-label="colony plate fallback">
+        <div className="h-40 w-40 rounded-full border-2 border-[var(--ink-hi)] bg-[var(--pl-dish)] shadow-[8px_8px_0_var(--pl-shadow)]" aria-hidden="true" />
+        <p className="text-xs lowercase text-[var(--ink)]">3d unavailable — tap a cell to open the lab</p>
         <div className="flex flex-wrap justify-center gap-2">
           {cells.map((cell) => (
             <button
@@ -112,7 +124,7 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
               onClick={() => callbacksRef.current(cell.id)}
               data-testid={`plate-cell-${cell.id}`}
               aria-label={`open strain ${cell.id}`}
-              className="min-h-[44px] rounded-full bg-emerald-500 px-4 text-xs font-semibold lowercase text-slate-950 focus-visible:ring-2 focus-visible:ring-emerald-300 focus:outline-none"
+              className="keycap min-h-[44px] px-4 text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
             >
               strain #{cell.id}
             </button>

@@ -449,11 +449,11 @@ export const App: React.FC = () => {
       : optimistic.currentVitality.toLocaleString("en-US");
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-slate-950 font-sans">
+    <main className="relative h-screen w-screen overflow-hidden bg-[var(--bg)] font-sans text-[var(--ink-hi)]">
       <div className="absolute inset-0">
         <Suspense
           fallback={
-            <div className="flex h-full w-full items-center justify-center text-xs lowercase text-slate-400" role="status">
+            <div className="flex h-full w-full items-center justify-center text-xs lowercase text-[var(--ink)]" role="status">
               loading colony plate…
             </div>
           }
@@ -465,15 +465,18 @@ export const App: React.FC = () => {
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between gap-2 p-2.5 select-none sm:p-4">
         <header className="flex flex-wrap items-start justify-between gap-2">
           <div className="pointer-events-auto flex flex-col gap-1.5">
-            <span className="text-xs font-bold tracking-wider text-slate-100">
-              $SNACC <span className="font-normal text-slate-500">·</span>{" "}
-              <span className="hidden font-medium text-slate-300 min-[420px]:inline">living cell crucible</span>
+            <span className="label-plate">
+              <span className="lp-label">fig</span>
+              <span className="font-mono text-xs font-bold tracking-wider text-[var(--ink-hi)]">
+                $SNACC <span className="font-normal text-[var(--ink)]">·</span>{" "}
+                <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">living cell crucible</span>
+              </span>
             </span>
             <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
             <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
-            <span className="rounded-full bg-slate-950/80 px-2 py-1 text-[10px] lowercase text-slate-300 backdrop-blur-md">
-              vitality: <span className="font-mono font-bold text-emerald-300">{vitalityLabel}</span>
-              {mode === "live" ? " · select a cell for lab" : " · tap a cell to open the lab"}
+            <span className="label-plate">
+              vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
+              <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
             </span>
           </div>
           <div className="flex flex-col items-end gap-1.5">
@@ -486,7 +489,7 @@ export const App: React.FC = () => {
 
         {toast ? (
           <div
-            className="pointer-events-auto mx-auto max-w-md rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold lowercase text-slate-950 shadow-lg"
+            className="pointer-events-auto mx-auto max-w-md rounded-xl border border-[var(--ink-hi)] bg-[var(--accent)] px-4 py-2 text-xs font-semibold lowercase text-[var(--accent-ink)] shadow-[0_3px_0_var(--ink-hi)]"
             role="status"
             data-testid="hud-toast"
           >
@@ -500,12 +503,12 @@ export const App: React.FC = () => {
               type="button"
               onClick={() => setPanelsOpen((v) => !v)}
               aria-expanded={panelsOpen}
-              className="pointer-events-auto min-h-[40px] rounded-full bg-slate-950/85 px-4 text-[11px] font-semibold lowercase backdrop-blur-md focus-visible:ring-2 focus-visible:ring-cyan-300 focus:outline-none"
+              className="keycap pointer-events-auto min-h-[40px] px-4 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
             >
               telemetry {panelsOpen ? "hide" : "show"}
             </button>
-            <span className="pointer-events-auto rounded-full bg-slate-950/80 px-2 py-1 text-[10px] lowercase text-slate-400 backdrop-blur-md">
-              {mode === "demo" ? "demo · simulated" : "live · /api data only"}
+            <span className="label-plate pointer-events-auto lowercase">
+              <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · /api data only"}</span>
             </span>
           </div>
           {panelsOpen ? (
@@ -540,11 +543,11 @@ export const App: React.FC = () => {
           ) : null}
           <ActionDock dock={dock} onDock={handleDock} />
           {mode === "live" ? (
-            <span className="pointer-events-auto text-center text-[10px] lowercase text-slate-400">
+            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
               on-chain transactions need a wallet — outside this demo
             </span>
           ) : (
-            <span className="pointer-events-auto text-center text-[10px] lowercase text-slate-500">
+            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
               demo · simulated — numbers come from local constants, not the chain
             </span>
           )}

@@ -26,23 +26,23 @@ export function classifyZone(crucibleTempMk: number): MacroZone {
  */
 export const ZONE_THEMES = {
   Hypothermia: {
-    color: "#06b6d4",
-    glow: "rgba(6, 182, 212, 0.45)",
-    dishGlow: "rgba(6, 182, 212, 0.22)",
+    color: "#2b7a8c",
+    glow: "rgba(43, 122, 140, 0.4)",
+    dishGlow: "rgba(43, 122, 140, 0.2)",
     label: "hypothermia",
     description: "metabolic cooling · catalyst rebate +2.00%",
   },
   Goldilocks: {
-    color: "#10b981",
-    glow: "rgba(16, 185, 129, 0.45)",
-    dishGlow: "rgba(16, 185, 129, 0.22)",
+    color: "#b87800",
+    glow: "rgba(184, 120, 0, 0.4)",
+    dishGlow: "rgba(248, 170, 6, 0.2)",
     label: "goldilocks",
     description: "homeostatic balance · no burn fee",
   },
   Fever: {
-    color: "#f97316",
-    glow: "rgba(249, 115, 22, 0.5)",
-    dishGlow: "rgba(249, 115, 22, 0.26)",
+    color: "#b3402e",
+    glow: "rgba(179, 64, 46, 0.45)",
+    dishGlow: "rgba(179, 64, 46, 0.22)",
     label: "fever",
     description: "reactive supply burn · burn -3.50%",
   },
