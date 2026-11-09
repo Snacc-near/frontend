@@ -7,14 +7,14 @@ import { makeMech } from "../mech.mjs";
 export const GEO = {
   MC: F.MC,
   wheel: { u: -27, v: 0, z: 33, R: 15, n: 8, rv: 2.8, labels: ["CIT", "ISO", "AKG", "SCA", "SUC", "FUM", "MAL", "OAA"] },
-  turb: { u: 58, v: -2, z0: 9, n: 10, zf1: 24 },
-  tank: { u0: 4, u1: 49, v: -19, z: 27, r: 3.6 },
+  turb: { u: 55.5, v: -1, z0: 9, n: 10, zf1: 24 },
+  tank: { u0: 4, u1: 49, v: -17.4, z: 27, r: 3.6 },
   complexes: [{ name: "I", u: 5, w: 10 }, { name: "III", u: 21, w: 10 }, { name: "IV", u: 37, w: 10 }],
   ridge: { u0: 2, u1: 50, v0: -13, v1: -3, z0: 7, h: 5 },
-  car: { u0: 1, u1: 51, v: 3.5, zCable: 33 },
+  car: { u0: 4.2, u1: 51, v: 6.5, zCable: 33 },
   gate: { u: -69, v: 0 },
   split: { u: -62, v: -5, w: 12, d: 10, h: 9 },
-  chimney: { u: -38, v: -20, h: 20 },
+  chimney: { u: -38, v: -18.5, h: 20 },
   rack: { u: -8, v: -5, w: 9, d: 8 },
   o2: { u: 38, v: 15 },
   beaker: { u: 51, v: 12 },
@@ -53,44 +53,54 @@ export function hero() {
   const lab = planeM(F.W3(-38, 36.5, 5.2), F.Uvec.map((x) => x), [F.Vvec[0], F.Vvec[1], 0]);
   add(-1000, pl.join(""));
 
-  // ---- back wall: inner faces + top ring + cut ends ----
+  // ---- tall back wall, split into back / left / right pieces so the inner items sit between them ----
+  // (one full ring interlocked with everything the audit could not order)
   const vc = wall.vcut;
-  const backQ = F.wallQuads(INN, wall.z0, wall.top, { mode: "inner", pred: (u, v) => v < vc });
-  const lowQ = F.wallQuads(INN, wall.z0, wall.rim, { mode: "inner", pred: (u, v) => v >= vc });
-  const outQ = F.wallQuads(OUT, wall.z0, wall.top, { mode: "outer", pred: (u, v) => v < vc });
-  const bw = [];
-  bw.push(`<g class="cyto">${F.quadSvg(backQ)}${F.quadSvg(lowQ)}</g>`, F.quadSvg(outQ));
-  // top ring of the tall back part: outer run (v<vc) + inner run
-  const runOf = (loc) => loc.filter(([, v]) => v < vc);
-  // keep ring order: rotate so the run is contiguous
-  const contiguous = (loc) => {
-    const n = loc.length; const flags = loc.map(([, v]) => v < vc);
+  const runOf = (loc, pred) => loc.filter(pred);
+  const contiguous = (loc, pred) => {
+    const n = loc.length; const flags = loc.map((pt) => pred(pt[0], pt[1]));
     let start = flags.findIndex((f, i) => f && !flags[(i + n - 1) % n]);
-    const out = []; for (let i = 0; i < n; i++) { const j = (start + i) % n; if (flags[j]) out.push(loc[j]); else if (out.length) break; }
+    if (start < 0) start = 0;
+    const out = []; for (let i = 0; i < n && out.length < n; i++) { const j = (start + i) % n; if (flags[j]) out.push(loc[j]); else if (out.length) break; }
     return out;
   };
-  const oRun = contiguous(OUT), iRun = contiguous(INN);
-  const topPoly = [...F.ringPts(oRun, wall.top), ...F.ringPts(iRun, wall.top).reverse()];
-  noteShape(A.extruded([...F.toWorldRing(oRun), ...F.toWorldRing(iRun).reverse()], wall.z0, wall.top - wall.z0, { name: "hero.wall.back" }));
-  bw.push(`<path d="${O.pathOf(topPoly, true)}" fill="var(--anatomy-top)" class="ink" style="stroke-width:.9px"/>`);
-  bw.push(`<path d="${O.pathOf(F.ringPts(iRun, wall.top - 1.2))}" class="ink3" style="stroke-width:.4px;opacity:.8"/>`);
-  // inner base line of the back wall + the ink top edges of inner faces
-  bw.push(`<path d="${O.pathOf(F.ringPts(iRun, wall.top))}" class="ink" style="stroke-width:.9px"/>`);
-  // cut-section faces at both ends (cream with marigold hatch)
-  for (const side of [0, 1]) {
-    const o = side ? oRun[oRun.length - 1] : oRun[0];
-    const i = side ? iRun[iRun.length - 1] : iRun[0];
-    const q = [at(F.W3(o[0], vc, wall.rim)), at(F.W3(i[0], vc, wall.rim)), at(F.W3(i[0], vc, wall.top)), at(F.W3(o[0], vc, wall.top))];
-    bw.push(`<path d="${O.pathOf(q, true)}" fill="#fff7e0" class="ink" style="stroke-width:.9px"/>`);
-    for (let h = 1; h < 6; h++) {
-      const t = h / 6;
-      const a = at(F.W3(o[0] + (i[0] - o[0]) * 0, vc, wall.rim + (wall.top - wall.rim) * t));
-      const b = at(F.W3(i[0], vc, wall.rim + (wall.top - wall.rim) * t));
-      bw.push(`<path d="${O.pathOf([a, b])}" fill="none" style="stroke:#f8aa06;stroke-width:.9px;opacity:.85"/>`);
+  const wallPieces = [
+    { key: -900, name: "hero.wall.back", pred: (u, v) => v < -14 && v < vc },
+    { key: -880, name: "hero.wall.left", pred: (u, v) => v >= -14 && v < vc && u < -34 },
+    { key: -870, name: "hero.wall.right", pred: (u, v) => v >= -14 && v < vc && u > 34 },
+  ];
+  const wallShapes = {};
+  for (const piece of wallPieces) {
+    const innerQ = F.wallQuads(INN, wall.z0, wall.top, { mode: "inner", pred: piece.pred });
+    const outerQ = F.wallQuads(OUT, wall.z0, wall.top, { mode: "outer", pred: piece.pred });
+    const oRun = contiguous(OUT, piece.pred), iRun = contiguous(INN, piece.pred);
+    const parts = [];
+    parts.push(`<g class="cyto">${F.quadSvg(innerQ)}</g>`, F.quadSvg(outerQ));
+    const topPoly = [...F.ringPts(oRun, wall.top), ...F.ringPts(iRun, wall.top).reverse()];
+    const shape = A.extruded([...F.toWorldRing(oRun), ...F.toWorldRing(iRun).reverse()], wall.z0, wall.top - wall.z0, { name: piece.name });
+    noteShape(shape);
+    wallShapes[piece.name] = shape;
+    parts.push(`<path d="${O.pathOf(topPoly, true)}" fill="var(--anatomy-top)" class="ink" style="stroke-width:.9px"/>`);
+    parts.push(`<path d="${O.pathOf(F.ringPts(iRun, wall.top - 1.2))}" class="ink3" style="stroke-width:.4px;opacity:.8"/>`);
+    parts.push(`<path d="${O.pathOf(F.ringPts(iRun, wall.top))}" class="ink" style="stroke-width:.9px"/>`);
+    // cut-section face at the front cut (v = vc), only for pieces that reach it (cream with marigold hatch)
+    let oEnd = null, oEndV = -Infinity;
+    for (const pt of oRun) if (pt[1] > oEndV) { oEndV = pt[1]; oEnd = pt; }
+    if (oEnd && oEndV > vc - 1) {
+      const aO = Math.atan2(oEnd[1] / 35, oEnd[0] / 78);
+      let iEnd = iRun[0], best = 1e9;
+      for (const pt of iRun) { const d = Math.abs(Math.atan2(pt[1] / 29.5, pt[0] / 72) - aO); if (d < best) { best = d; iEnd = pt; } }
+      const q = [at(F.W3(oEnd[0], vc, wall.rim)), at(F.W3(iEnd[0], vc, wall.rim)), at(F.W3(iEnd[0], vc, wall.top)), at(F.W3(oEnd[0], vc, wall.top))];
+      parts.push(`<path d="${O.pathOf(q, true)}" fill="#fff7e0" class="ink" style="stroke-width:.9px"/>`);
+      for (let h = 1; h < 6; h++) {
+        const t = h / 6;
+        const a = at(F.W3(oEnd[0], vc, wall.rim + (wall.top - wall.rim) * t));
+        const b = at(F.W3(iEnd[0], vc, wall.rim + (wall.top - wall.rim) * t));
+        parts.push(`<path d="${O.pathOf([a, b])}" fill="none" style="stroke:#f8aa06;stroke-width:.9px;opacity:.85"/>`);
+      }
     }
+    add(piece.key, parts.join(""));
   }
-  // outer membrane: marigold seam stripe on the tall wall's inner face (double membrane look)
-  add(-900, bw.join(""));
 
   // ---- inner membrane: low ring wall along the back half, with intermembrane gap ----
   const imw = [];
@@ -100,10 +110,38 @@ export function hero() {
   imw.push(`<path d="${O.pathOf(F.ringPts(imRun.sort((a, b) => a[0] - b[0]), 15.5))}" class="ink" style="stroke-width:.8px"/>`);
   add(-850, imw.join(""));
 
+  // ---- low front rim (front wall piece; drawn last by key, built early so the gate can seat in it) ----
+  const frontQ = F.wallQuads(OUT, wall.z0, wall.rim, { mode: "outer", pred: (u, v) => v >= vc });
+  const lowQ = F.wallQuads(INN, wall.z0, wall.rim, { mode: "inner", pred: (u, v) => v >= vc });
+  const fr = [];
+  fr.push(`<g class="cyto">${F.quadSvg(lowQ)}</g>`);
+  fr.push(F.quadSvg(frontQ));
+  const frontShape = A.extruded([...F.toWorldRing(OUT.filter(([, v]) => v >= vc)), ...F.toWorldRing(INN.filter(([, v]) => v >= vc)).reverse()], wall.z0, wall.rim - wall.z0, { name: "hero.wall.front" });
+  noteShape(frontShape);
+  wallShapes["hero.wall.front"] = frontShape;
+  const fRunO = OUT.filter(([, v]) => v >= vc), fRunI = INN.filter(([, v]) => v >= vc);
+  const byAngle = (loc) => loc.map(([u, v]) => [Math.atan2(v / 30, u / 75), u, v]).sort((a, b) => b[0] - a[0]).map(([, u, v]) => [u, v]);
+  const fO = byAngle(fRunO), fI = byAngle(fRunI);
+  const topF = [...F.ringPts(fO, wall.rim), ...F.ringPts(fI, wall.rim).reverse()];
+  fr.push(`<path d="${O.pathOf(topF, true)}" fill="var(--anatomy-top)" class="ink" style="stroke-width:.9px"/>`);
+  fr.push(`<path d="${O.pathOf(F.ringPts(fO, wall.z0))}" class="ink" style="stroke-width:.9px"/>`);
+  fr.push(Dm(fO.filter((_, i) => i % 3 === 1).map(([u, v]) => { const m = Math.hypot(u / 78, v / 35); return at(F.W3(u * (1 - 2.6 / 78 / m * 0 + -0.03), v * 0.96, wall.rim)); }), { size: 0.5, tone: "hi" }));
+  fr.push(`<g data-dyn="lamps"></g>`);
+  add(9999, fr.join(""));
+
   // ---- cristae ridge with folds ----
   const r = GEO.ridge;
   const rg = [];
   rg.push(F.boxL(r.u0, r.v0, r.u1 - r.u0, r.v1 - r.v0, r.z0, r.h, { r: 1.2, bevel: 0.5, className: "tan" }));
+  const ridgeShape = F.boxL.last;
+  // turbine base + stator ring: one casting with the ridge (same item, so it cannot cycle against it)
+  const tc0 = F.Wxy(GEO.turb.u, GEO.turb.v);
+  const turbBaseShape = noteShape(A.cylinder(tc0[0], tc0[1], 13.8, 7, 2.2, { name: "hero.turbine.base", seated: true, cut: ridgeShape }));
+  const turbRingShape = noteShape(A.cylinder(tc0[0], tc0[1], 12.0, 9.2, 1.0, { name: "hero.turbine.ring", seated: true, cut: ridgeShape }));
+  rg.push(S(k.cylinder(tc0[0], tc0[1], 13.8, 7, 2.2, P, 44, 0.4), { tone: "hi", className: "tan" }));
+  rg.push(S(k.cylinder(tc0[0], tc0[1], 12.0, 9.2, 1.0, P, 44, 0.2), { tone: "hi", className: "steel" }));
+  rg.push(Ln(k.ring(tc0[0], tc0[1], 13.0, 9.2, P, 44), { tone: "faint" }));
+  rg.push(Dm(Array.from({ length: 12 }, (_, i) => { const aa = (i / 12) * Math.PI * 2; return at([tc0[0] + Math.cos(aa) * 13.0, tc0[1] + Math.sin(aa) * 13.0, 9.2]); }), { size: 0.5, tone: "hi" }));
   // cristae folds are drawn live (drawFolds): 4 + level folds stand, `level` of them are lit marigold
   rg.push(`<g data-dyn="folds"></g>`);
   add(F.depthKey(-8, 0), rg.join(""));
@@ -139,7 +177,8 @@ export function hero() {
     prof.push([len - t.r * 0.9, t.r]);
     for (let i = 6; i >= 0; i--) { const q = i / 6; prof.push([len - t.r * (1 - Math.cos((q * Math.PI) / 2)) * 0.9, t.r * Math.sin((q * Math.PI) / 2), 1]); }
     prof.push([len, 0.01]);
-    noteShape(A.lathe(Fr, prof, { name: "hero.tank" }));
+    const tankShape = A.lathe(Fr, prof, { name: "hero.tank" });
+    noteShape(tankShape);
     const body = G.lathe(prof, Fr, P, { steps: 28, fill: "hull" });
     tk.push(S(body, { tone: "hi", className: "water", crease: "none" }));
     // water level (marigold float line) drawn live via data-part, plus graduation ticks on the tank
@@ -148,32 +187,23 @@ export function hero() {
       const p0 = at(F.W3(uu, t.v + t.r, t.z - 0.6)), p1 = at(F.W3(uu, t.v + t.r, t.z + (i % 3 ? 0.4 : 1.4)));
       tk.push(`<path d="${O.pathOf([p0, p1])}" class="ink2" style="stroke-width:.5px"/>`);
     }
-    // saddle brackets + end cap rings
-    for (const uu of [t.u0 + 6, (t.u0 + t.u1) / 2, t.u1 - 6]) tk.push(F.boxL(uu - 1.4, t.v - 2, 2.8, 4, t.z - t.r - 3.6, 3.6, { r: 0.5, bevel: 0.2, className: "steel" }));
-    // intake funnels on the front face above each complex
-    for (const c of GEO.complexes) tk.push(F.cylW(c.u + c.w - 2.8, t.v + t.r + 0.8, 1.7, t.z - 1.6, 1.8, { className: "steel", steps: 12 }));
+    // saddle hangers: from the tank back to the back wall (seated in both)
+    for (const uu of [t.u0 + 6, (t.u0 + t.u1) / 2, t.u1 - 6]) tk.push(F.boxL(uu - 1.4, -25, 2.8, (t.v + 2) + 25, 23, 4, { r: 0.5, bevel: 0.2, className: "steel", meta: { seated: true, cut: [tankShape, wallShapes["hero.wall.back"]] } }));
+    // intake funnels from the tank's front face (bosses into the tank)
+    for (const c of GEO.complexes) tk.push(F.cylW(c.u + c.w - 2.8, t.v + t.r + 0.8, 1.7, t.z - 1.6, 1.8, { className: "steel", steps: 12, meta: { seated: true, cut: tankShape } }));
   }
   tk.push(`<g data-dyn="tank-level"></g>`);
   add(F.depthKey(t.v, 20), tk.join(""));
 
-  // ---- ATP synthase base + spout pipe from tank ----
+  // ---- ATP synthase rotor (base is merged into the ridge item above) ----
   const tb = GEO.turb;
-  const tbl = [];
   const tc = F.Wxy(tb.u, tb.v);
-  noteShape(A.cylinder(tc[0], tc[1], 13.8, 7, 2.2, { name: "hero.turbine.base" }));
-  noteShape(A.cylinder(tc[0], tc[1], 12.0, 9.2, 1.0, { name: "hero.turbine.ring" }));
-  tbl.push(S(k.cylinder(tc[0], tc[1], 13.8, 7, 2.2, P, 44, 0.4), { tone: "hi", className: "tan" }));
-  tbl.push(S(k.cylinder(tc[0], tc[1], 12.0, 9.2, 1.0, P, 44, 0.2), { tone: "hi", className: "steel" }));
-  tbl.push(Ln(k.ring(tc[0], tc[1], 13.0, 9.2, P, 44), { tone: "faint" }));
-  // stator bolts
-  tbl.push(Dm(Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * Math.PI * 2; return at([tc[0] + Math.cos(a) * 13.0, tc[1] + Math.sin(a) * 13.0, 9.2]); }), { size: 0.5, tone: "hi" }));
-  // stator pillars (b-subunits): two posts + yoke carrying the F1 head
-  add(F.depthKey(tb.v, 0), tbl.join(""));
+  void tc;
   add(F.depthKey(tb.v, 5), `<g data-dyn="rotor">${MECH.rotor(0, 0)}</g>`);
-  // yoke over the rotor: two stator posts either side and a crossbar carrying the F1 head
+  // yoke over the rotor: two stator posts standing on the base between ring and rim, crossbar on top
   const yk = [];
-  yk.push(F.cylW(tb.u - 11.2, tb.v + 4, 1.1, 9.4, 12.6, { className: "steel", steps: 12 }));
-  yk.push(F.cylW(tb.u + 11.2, tb.v + 4, 1.1, 9.4, 12.6, { className: "steel", steps: 12 }));
+  yk.push(F.cylW(tb.u - 12.4, tb.v + 4, 1.1, 9.2, 11.4, { className: "steel", steps: 12 }));
+  yk.push(F.cylW(tb.u + 12.4, tb.v + 4, 1.1, 9.2, 11.4, { className: "steel", steps: 12 }));
   yk.push(F.boxL(tb.u - 12.4, tb.v + 2.8, 24.8, 2.4, 20.6, 1.6, { r: 0.5, bevel: 0.2, className: "steel" }));
   add(F.depthKey(tb.v + 4, 12), yk.join(""));
   add(F.depthKey(tb.v + 1, 25), `<g data-dyn="f1">${MECH.f1head(0)}</g>`);
@@ -234,9 +264,10 @@ export function hero() {
   // ---- membrane transporter gate (flipping flap) ----
   const g = GEO.gate;
   const gs = [];
-  gs.push(F.boxL(g.u - 4, g.v - 8, 2.4, 3, 7, 12, { r: 0.4, bevel: 0.2, className: "steel" }));
-  gs.push(F.boxL(g.u - 4, g.v + 5, 2.4, 3, 7, 12, { r: 0.4, bevel: 0.2, className: "steel" }));
-  gs.push(F.boxL(g.u - 4.6, g.v - 8, 3.6, 16, 19, 2, { r: 0.5, bevel: 0.3, className: "tan" }));
+  // the gate is set into the membrane: posts and crossbar seated in the wall pieces
+  gs.push(F.boxL(g.u - 4, g.v - 8, 2.4, 3, 7, 12, { r: 0.4, bevel: 0.2, className: "steel", meta: { seated: true, cut: wallShapes["hero.wall.left"] } }));
+  gs.push(F.boxL(g.u - 4, g.v + 5, 2.4, 3, 7, 12, { r: 0.4, bevel: 0.2, className: "steel", meta: { seated: true, cut: wallShapes["hero.wall.front"] } }));
+  gs.push(F.boxL(g.u - 4.6, g.v - 8, 3.6, 16, 19, 2, { r: 0.5, bevel: 0.3, className: "tan", meta: { seated: true, cut: wallShapes["hero.wall.left"] } }));
   gs.push(`<g data-dyn="gate"></g>`);
   add(F.depthKey(g.v, 0), gs.join(""));
 
@@ -256,7 +287,7 @@ export function hero() {
   const c = GEO.car;
   const cb = [];
   for (const u of [c.u0, c.u1]) {
-    cb.push(F.boxL(u - 1.2, c.v - 1.2, 2.4, 2.4, 7, c.zCable - 7, { r: 0.5, bevel: 0.2, className: "steel" }));
+    cb.push(F.boxL(u - 1.2, c.v - 1.2, 2.4, 2.4, 8.2, c.zCable - 8.2, { r: 0.5, bevel: 0.2, className: "steel" }));
     cb.push(F.boxL(u - 2.6, c.v - 2.6, 5.2, 5.2, 7, 1.2, { r: 0.5, bevel: 0.2, className: "tan" }));
     cb.push(F.boxL(u - 2.2, c.v - 1.2, 4.4, 2.4, c.zCable, 1.4, { r: 0.4, bevel: 0.15, className: "steel" }));
   }
@@ -278,7 +309,7 @@ export function hero() {
   const bs = [];
   {
     const p = F.Wxy(bk.u, bk.v);
-    noteShape(A.cylinder(p[0], p[1], 4.2, 7, 0.6, { name: "hero.beaker.base" }));
+    noteShape(A.cylinder(p[0], p[1], 4.2, 7, 0.6, { name: "hero.beaker.base", seated: true, cut: turbBaseShape }));
     bs.push(S(k.cylinder(p[0], p[1], 4.2, 7, 0.6, P, 20, 0.1), { tone: "hi", className: "tan" }));
     const gl = G.frameAlong([p[0], p[1], 7.6], [0, 0, 1]);
     bs.push(`<path d="${O.pathOf([at([p[0] - 3.4, p[1] + 3.4, 8]), at([p[0] - 3.4, p[1] + 3.4, 17])].concat([]))}" class="ink3" style="stroke-width:.5px;opacity:0"/>`);
@@ -286,24 +317,12 @@ export function hero() {
   }
   add(F.depthKey(bk.v, 0), bs.join(""));
 
-  // ---- low front rim (drawn last) ----
-  const frontQ = F.wallQuads(OUT, wall.z0, wall.rim, { mode: "outer", pred: (u, v) => v >= vc });
-  const fr = [];
-  fr.push(F.quadSvg(frontQ));
-  noteShape(A.extruded([...F.toWorldRing(OUT.filter(([, v]) => v >= vc)), ...F.toWorldRing(INN.filter(([, v]) => v >= vc)).reverse()], wall.z0, wall.rim - wall.z0, { name: "hero.wall.front" }));
-  const fRunO = OUT.filter(([, v]) => v >= vc), fRunI = INN.filter(([, v]) => v >= vc);
-  const sortU = (a, b) => a[0] - b[0];
-  // order front runs along the ring consistently by angle (left end to right end)
-  const byAngle = (loc) => loc.map(([u, v]) => [Math.atan2(v / 30, u / 75), u, v]).sort((a, b) => b[0] - a[0]).map(([, u, v]) => [u, v]);
-  const fO = byAngle(fRunO), fI = byAngle(fRunI);
-  const topF = [...F.ringPts(fO, wall.rim), ...F.ringPts(fI, wall.rim).reverse()];
-  fr.push(`<path d="${O.pathOf(topF, true)}" fill="var(--anatomy-top)" class="ink" style="stroke-width:.9px"/>`);
-  fr.push(`<path d="${O.pathOf(F.ringPts(fO, wall.z0))}" class="ink" style="stroke-width:.9px"/>`);
-  // rim rivets
-  fr.push(Dm(fO.filter((_, i) => i % 3 === 1).map(([u, v]) => { const m = Math.hypot(u / 78, v / 35); return at(F.W3(u * (1 - 2.6 / 78 / m * 0 + -0.03), v * 0.96, wall.rim)); }), { size: 0.5, tone: "hi" }));
-  // five level lamps inlaid in the front rim (lit count = organel.mitokondria), drawn live
-  fr.push(`<g data-dyn="lamps"></g>`);
-  add(9999, fr.join(""));
+  // the tank hangs on the back wall: same assembly (ride with its host), before stamping the other seats
+  const tankRef = HR.solids.find((s) => s.name === "hero.tank");
+  const wallBackRef = wallShapes["hero.wall.back"];
+  if (tankRef && wallBackRef) tankRef.ride = wallBackRef.ride ?? wallBackRef.piece;
+  // seated pads ride with their hosts (a saddle belongs to its host's assembly)
+  for (const s of HR.solids) if (s.seated && s.cut) for (const host of [s.cut].flat()) { const hp = host.ride ?? host.piece; if (hp) s.ride = hp; }
 
   items.sort((a, b) => a.key - b.key);
   return items;
