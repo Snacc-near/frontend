@@ -1,0 +1,19 @@
+---
+title: "Homunculus Bioreactor"
+---
+stateDiagram-v2
+  [*] --> dormant
+  dormant: Dormant Spore
+  homeostasis: Homeostasis (310 mK)
+  transmuting: Transmuting Spores
+  fever: Thermal Fever (>610 mK)
+  lysis: Cell Lysis (Bounty Burst)
+
+  dormant --> homeostasis: awaken culture
+  homeostasis --> homeostasis: feed $SNACC
+  homeostasis --> transmuting: catalyze spores [has nutrients]
+  transmuting --> fever: thermal buildup
+  transmuting --> homeostasis: complete cycle
+  fever --> homeostasis: vent crucible
+  fever --> lysis: trigger lysis
+  lysis --> [*]
