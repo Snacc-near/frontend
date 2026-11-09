@@ -47,7 +47,7 @@ export class OptimisticManager {
   }
 
   /**
-   * Terapkan kenaikan vitalitas secara optimis (garis belang menunggu).
+   * Apply the vitality increase optimistically (striped bar while pending).
    */
   public applyFeed(delta = 250, timeoutMs = 8000): void {
     if (this.timeoutId) {

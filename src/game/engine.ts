@@ -172,7 +172,7 @@ export class GameEngine {
   }
 
   /**
-   * Backward compatibility alias untuk mode demo.
+   * Backward-compatibility alias for demo mode.
    */
   public setLiveCells(strains: { id: number; owner: string; vitality?: number }[]): void {
     this.setLiveStrains(strains);

@@ -145,7 +145,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
                 />
               </div>
               <div className="flex justify-between text-[11px] text-slate-400">
-                <span className="lowercase">laju lapar (bmr)</span>
+                <span className="lowercase">hunger rate (bmr)</span>
                 <span className="font-mono text-amber-300">{strain.bmr_per_hour} / jam</span>
               </div>
             </div>

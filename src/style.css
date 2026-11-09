@@ -561,7 +561,7 @@ body {
 }
 
 /* ==========================================================================
-   HUD Bawah: UI-118 Zone Banner & Spektrum Termostat + Simulator
+   Bottom HUD: UI-118 Zone Banner & Thermostat Spectrum + Simulator
    ========================================================================== */
 .hud-bottom {
   display: flex;

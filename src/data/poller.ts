@@ -179,7 +179,7 @@ export class TelemetryPoller {
             const enriched = { ...ev, received_at_ms: receivedAt };
             newEvents.push(enriched);
 
-            // Audit SLA latensi & log ambang
+            // Latency SLA audit & threshold log
             if (ev.kind === "zone_changed" || ev.kind === "nutrient_burst_released" || ev.kind === "strain_liquidated") {
               const actor = resolveEventActor(ev, eventsRes.events, this.strainsCache);
               const summary = formatEventSummary(ev, actor);

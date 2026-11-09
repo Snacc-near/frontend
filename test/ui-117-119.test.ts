@@ -66,7 +66,7 @@ describe("UI-117: Global Nutrient Burst Badge (EN-102)", () => {
 });
 
 describe("UI-118: Macro Zone Banner & Thermostat Spectrum (ECON-111 & ADR-31)", () => {
-  it("mengklasifikasikan Hypothermia (<600 mK), Goldilocks (600..610 mK), dan Fever (>610 mK)", () => {
+  it("classifies Hypothermia (<600 mK), Goldilocks (600..610 mK), and Fever (>610 mK)", () => {
     assert.equal(classifyZone(599), "Hypothermia");
     assert.equal(classifyZone(600), "Goldilocks");
     assert.equal(classifyZone(605), "Goldilocks");
