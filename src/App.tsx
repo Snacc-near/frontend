@@ -143,6 +143,9 @@ export const App: React.FC = () => {
     });
 
     engineRef.current = engine;
+    // The engine is re-created on every mode change and defaults to demo: set the real mode,
+    // otherwise the demo player cell would also be drawn on top of the live strains.
+    engine.setMode(mode);
     engine.start();
 
     return () => {

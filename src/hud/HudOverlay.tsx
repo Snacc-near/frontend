@@ -97,6 +97,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
           <SkinSwitch skin={skin} onChange={onSkinChange} />
           <AtpPill
             atpBalance={atpBalance}
+            isLive={mode === "live"}
             liveAtp={mode === "live" ? selectedStrain?.atp_balance ?? null : null}
             skin={skin}
           />

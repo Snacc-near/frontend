@@ -145,8 +145,20 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
                 />
               </div>
               <div className="flex justify-between text-[11px] text-slate-400">
+                <span className="lowercase">effective vitality (after bmr decay)</span>
+                <span className="font-mono text-slate-200">
+                  {typeof strain.effective_vitality === "number"
+                    ? strain.effective_vitality.toLocaleString("en-US")
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-400">
+                <span className="lowercase">status</span>
+                <span className="font-mono text-slate-200">{strain.status ?? "—"}</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-slate-400">
                 <span className="lowercase">hunger rate (bmr)</span>
-                <span className="font-mono text-amber-300">{strain.bmr_per_hour} / jam</span>
+                <span className="font-mono text-amber-300">{strain.bmr_per_hour} / hour</span>
               </div>
             </div>
 

@@ -7,13 +7,15 @@ interface AtpPillProps {
   atpBalance: number;
   /** Live ATP balance (a u128 string from the API); "—" when absent. */
   liveAtp: string | null;
+  /** Live mode never falls back to the demo ATP counter ("—" until a strain is selected). */
+  isLive?: boolean;
   skin: SkinMode;
 }
 
-export const AtpPill: React.FC<AtpPillProps> = ({ atpBalance, liveAtp, skin }) => {
+export const AtpPill: React.FC<AtpPillProps> = ({ atpBalance, liveAtp, isLive = false, skin }) => {
   const labels = SKIN_LABELS[skin];
   // Demo mode shows the in-game collected ATP; live mode shows only API data.
-  const shown = liveAtp !== null ? formatLiveAtp(liveAtp) : atpBalance.toLocaleString("en-US");
+  const shown = isLive ? formatLiveAtp(liveAtp) : atpBalance.toLocaleString("en-US");
 
   return (
     <div
