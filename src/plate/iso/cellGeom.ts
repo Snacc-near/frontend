@@ -23,6 +23,7 @@ import { hashRand, type PlacedCell } from "./layout.ts";
 export interface CellGeometry {
   wall: SolidPaths;
   membrane: string;
+  innerMembrane: string;
   wallGlint: string;
   nucleus: SolidPaths;
   nucleolus: Flat[];
@@ -36,16 +37,17 @@ export interface CellGeometry {
 
 export function cellGeometry(cell: PlacedCell, P: Projection): CellGeometry {
   const { x, y, z, radius: r } = cell;
-  const top = z + 2.4;
+  const top = z + 3.2;
 
-  const wall = cylinder(x, y, r, z, 2.4, P, 28, 0.6);
+  const wall = cylinder(x, y, r, z, 3.2, P, 28, 0.6);
   const membrane = ring(x, y, r - 0.8, top, P, 28);
-  const wallGlint = sideArc(x, y, r, z + 1.9, P, 20);
+  const innerMembrane = ring(x, y, r * 0.62, top + 0.1, P, 24);
+  const wallGlint = sideArc(x, y, r, z + 2.5, P, 20);
 
-  const nucleus = cylinder(x, y, r * 0.42, top, 1.6, P, 24, 0.4);
+  const nucleus = cylinder(x, y, r * 0.5, top, 2.0, P, 24, 0.4);
   const nucleolus = pointsAt(
     [
-      [x + r * 0.1, y + r * 0.06, top + 1.6],
+      [x + r * 0.1, y + r * 0.06, top + 2.0],
     ],
     P,
   );
@@ -95,8 +97,8 @@ export function cellGeometry(cell: PlacedCell, P: Projection): CellGeometry {
   }
 
   const scarAngle = hashRand(cell.id, 41) * Math.PI * 2;
-  const scarX = x + Math.cos(scarAngle) * r * 0.7;
-  const scarY = y + Math.sin(scarAngle) * r * 0.7;
+  const scarX = x + Math.cos(scarAngle) * r * 0.86;
+  const scarY = y + Math.sin(scarAngle) * r * 0.86;
   const scarCount = Math.min(4, Math.max(1, cell.generation));
   const budScars: string[] = [];
   for (let i = 0; i < scarCount; i++) {
@@ -116,6 +118,7 @@ export function cellGeometry(cell: PlacedCell, P: Projection): CellGeometry {
   return {
     wall,
     membrane,
+    innerMembrane,
     wallGlint,
     nucleus,
     nucleolus,

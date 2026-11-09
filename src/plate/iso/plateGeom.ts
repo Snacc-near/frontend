@@ -43,7 +43,7 @@ export const LID_CY = 26;
 export const LID_R = 27;
 export const THERMO: Plan = { x: -64, y: -34, w: 0, d: 0, r: 0 };
 export const LABEL_PLAN: Plan = { x: 6, y: 44, w: 56, d: 16, r: 2 };
-export const RULER_PLAN: Plan = { x: -80, y: 52, w: 118, d: 8, r: 1.5 };
+export const RULER_PLAN: Plan = { x: -80, y: 52, w: 70, d: 8, r: 1.5 };
 
 export function plateProjection(): Projection {
   const pts: Point3[] = [

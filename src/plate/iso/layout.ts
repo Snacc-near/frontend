@@ -68,7 +68,7 @@ export function placeCells(cells: PlateCellInput[], P: Projection): PlacedCell[]
     const slot = i;
     const angle = slot * 2.39996 + hashRand(cell.id, 1) * 0.5; // golden angle
     const ring = slot + 1;
-    const rr = Math.min(DISH_R - 12, 8 + Math.sqrt(ring) * 9);
+    const rr = Math.min(DISH_R - 12, 10 + Math.sqrt(ring) * 11);
     const jitter = hashRand(cell.id, 2) * 3;
     const x = Math.round((Math.cos(angle) * (rr + jitter) + DISH_CX) * 10) / 10;
     const y = Math.round((Math.sin(angle) * (rr + jitter) * 0.78 + DISH_CY) * 10) / 10;

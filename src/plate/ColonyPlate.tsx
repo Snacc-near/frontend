@@ -33,7 +33,7 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
   const stillness = useStillness();
 
   const ratio = needleRatio(crucibleTempMk);
-  const targetDeg = -120 + 240 * (ratio ?? 0);
+  const targetDeg = -105 + 210 * (ratio ?? 0);
   const needleRef = useRef<SVGGElement | null>(null);
   const degRef = useRef(targetDeg);
   const targetRef = useRef(targetDeg);
@@ -41,19 +41,12 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
   useLoop(
     (dt, calm) => {
       const next = follow(degRef.current, targetRef.current, dt, 0.35, calm);
-      if (next !== degRef.current) {
-        degRef.current = next;
-        needleRef.current?.setAttribute(
-          "transform",
-          `rotate(${next.toFixed(2)} ${geo.needleHub[0]} ${geo.needleHub[1]})`,
-        );
-        return true;
-      }
+      degRef.current = next;
       needleRef.current?.setAttribute(
         "transform",
         `rotate(${next.toFixed(2)} ${geo.needleHub[0]} ${geo.needleHub[1]})`,
       );
-      return false;
+      return true;
     },
     true,
   );
@@ -61,7 +54,7 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
   const paintOrder = useMemo(() => [...placed].sort((a, b) => a.depth - b.depth), [placed]);
 
   return (
-    <div className="plate-wrap" role="region" aria-label="colony plate">
+    <div className="plate-wrap iso" role="region" aria-label="colony plate">
       <IsoFigure
         width={VIEW_W}
         height={VIEW_H}
@@ -121,8 +114,9 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
                 cy={center[1]}
                 r={Math.max(cell.radius * 1.9, 26)}
               />
-              <Solid paths={g.wall} tone={look.tone} className="cell-wall" />
+              <Solid paths={g.wall} tone={look.tone} className="cell-wall" halo />
               <Line d={g.membrane} tone="mid" />
+              <Line d={g.innerMembrane} tone="faint" />
               <Line d={g.wallGlint} tone="faint" />
               {g.mitochondria.map((mitoPaths, i) => (
                 <Solid
