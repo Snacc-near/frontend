@@ -118,6 +118,8 @@ export interface PollerCallbacks {
   onStrainsUpdate?: (strains: StrainSummary[]) => void;
   onStrainFed?: (strainId: number) => void;
   onStrainLiquidated?: (strainId: number) => void;
+  /** Reports the API's `indexer_incomplete` flag; true also when a poll failed (honest degradation). */
+  onIndexerIncomplete?: (incomplete: boolean) => void;
 }
 
 export class TelemetryPoller {
@@ -167,6 +169,9 @@ export class TelemetryPoller {
       if (macro) {
         this.callbacks.onMacroUpdate(macro);
       }
+
+      // Honest indexer status: unknown/failed polls must read as incomplete
+      this.callbacks.onIndexerIncomplete?.(eventsRes ? eventsRes.indexer_incomplete : true);
 
       if (eventsRes?.events) {
         const receivedAt = Date.now();

@@ -86,6 +86,24 @@ export interface MacroTelemetry {
 export interface StrainSummary {
   strain_id: number;
   owner_id: string;
+  // The full StrainVesselView fields (present on /api/strains responses):
+  vault_subaccount?: string;
+  vitality?: number;
+  effective_vitality?: number;
+  atp_balance?: string;
+  status?: string;
+  generation?: number;
+  efficiency_bps?: number;
+  bmr_per_hour?: number;
+  last_fed_sec?: number;
+  role_mask?: number;
+  state_nonce?: number;
+  pending_callbacks?: number;
+  organel?: {
+    mitokondria: number;
+    nukleus: number;
+    lisosom: number;
+  };
 }
 
 export interface StrainDetail {

@@ -10,10 +10,40 @@ import type {
   StrainSummary,
 } from "./data/types.ts";
 import { fetchStrain } from "./data/api.ts";
+import { filterLogsForMode, resolveSelectedStrain } from "./data/liveView.ts";
 import { OptimisticManager, type OptimisticVitalityState } from "./data/optimistic.ts";
 import { TelemetryPoller } from "./data/poller.ts";
 import { GameEngine, type GameMode } from "./game/engine.ts";
 import { HudOverlay } from "./hud/HudOverlay.tsx";
+
+// Demo-mode seed entries for the breach log. Never rendered in live mode:
+// there the log only contains events from /api/events.
+const demoSeedLogs: BreachLogItem[] = [
+  {
+    id: "seed-1",
+    kind: "nutrient_burst_released",
+    actor: "strain #3",
+    summary: "cell lysis released 7200 nutrients · discount -20.00% until epoch 2",
+    crucibleTemp: 591,
+    tempDeltaMk: 0,
+    timestampMs: Date.now() - 2400,
+    renderedAtMs: Date.now() - 2380,
+    latencyMs: 20,
+    meetsSla: true,
+  },
+  {
+    id: "seed-2",
+    kind: "zone_changed",
+    actor: "alkemis.testnet",
+    summary: "alkemis.testnet triggered a zone shift from hypothermia to goldilocks (605 mK)",
+    crucibleTemp: 605,
+    tempDeltaMk: 14,
+    timestampMs: Date.now() - 1100,
+    renderedAtMs: Date.now() - 1085,
+    latencyMs: 15,
+    meetsSla: true,
+  },
+];
 
 export const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -28,6 +58,7 @@ export const App: React.FC = () => {
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
   const [userAccount, setUserAccount] = useState("");
   const [liveStrains, setLiveStrains] = useState<StrainSummary[]>([]);
+  const [indexerIncomplete, setIndexerIncomplete] = useState(false);
   const [selectedStrain, setSelectedStrain] = useState<StrainDetail | null>(null);
   const [isLoadingStrain, setIsLoadingStrain] = useState(false);
 
@@ -43,32 +74,12 @@ export const App: React.FC = () => {
     optimisticManagerRef.current.getState(),
   );
 
-  const [logs, setLogs] = useState<BreachLogItem[]>([
-    {
-      id: "init-1",
-      kind: "nutrient_burst_released",
-      actor: "strain #3",
-      summary: "cell lysis released 7200 nutrients · discount -20.00% until epoch 2",
-      crucibleTemp: 591,
-      tempDeltaMk: 0,
-      timestampMs: Date.now() - 2400,
-      renderedAtMs: Date.now() - 2380,
-      latencyMs: 20,
-      meetsSla: true,
-    },
-    {
-      id: "init-2",
-      kind: "zone_changed",
-      actor: "alkemis.testnet",
-      summary: "alkemis.testnet triggered a zone shift from hypothermia to goldilocks (605 mK)",
-      crucibleTemp: 605,
-      tempDeltaMk: 14,
-      timestampMs: Date.now() - 1100,
-      renderedAtMs: Date.now() - 1085,
-      latencyMs: 15,
-      meetsSla: true,
-    },
-  ]);
+  // Refs mirroring the values used inside stable engine/poller callbacks
+  const liveStrainsRef = useRef<StrainSummary[]>([]);
+  const userAccountRef = useRef("");
+  const atpBalanceRef = useRef(INITIAL_ATP);
+
+  const [logs, setLogs] = useState<BreachLogItem[]>(demoSeedLogs);
 
   // Count the strains matching the account filter
   const matchedStrainsCount = useMemo(() => {
@@ -97,7 +108,7 @@ export const App: React.FC = () => {
         if (mode === "demo" && cellId === 1) {
           setSelectedStrain({
             strain_id: 1,
-            owner_id: userAccount.trim() || "player.testnet",
+            owner_id: userAccountRef.current.trim() || "player.testnet",
             vault_subaccount: "v1.snacc-crucible.testnet",
             vitality: optimisticManagerRef.current.getState().currentVitality,
             efficiency_bps: 9850,
@@ -106,7 +117,7 @@ export const App: React.FC = () => {
             role_mask: 1,
             state_nonce: 12,
             pending_callbacks: 0,
-            atp_balance: String(atpBalance),
+            atp_balance: String(atpBalanceRef.current),
             generation: 1,
             organel: {
               mitokondria: 2,
@@ -119,32 +130,12 @@ export const App: React.FC = () => {
           return;
         }
 
-        // Live mode: fetch the on-chain data from /api/strains/:id
+        // Live mode: fetch the on-chain data from /api/strains/:id.
+        // If the API has no record, show nothing rather than inventing values.
         setIsLoadingStrain(true);
         try {
           const detail = await fetchStrain(cellId);
-          if (detail) {
-            setSelectedStrain(detail);
-          } else {
-            const summary = liveStrains.find((s) => s.strain_id === cellId);
-            setSelectedStrain({
-              strain_id: cellId,
-              owner_id: summary?.owner_id ?? `strain #${cellId}`,
-              vault_subaccount: "",
-              vitality: 8000,
-              efficiency_bps: 9500,
-              bmr_per_hour: 40,
-              last_fed_sec: Math.floor(Date.now() / 1000) - 240,
-              role_mask: 1,
-              state_nonce: 1,
-              pending_callbacks: 0,
-              atp_balance: "100",
-              generation: 1,
-              organel: { mitokondria: 2, nukleus: 1, lisosom: 1 },
-              status: "Active",
-              effective_vitality: 8000,
-            });
-          }
+          setSelectedStrain(detail ?? resolveSelectedStrain(cellId, liveStrainsRef.current));
         } finally {
           setIsLoadingStrain(false);
         }
@@ -158,7 +149,33 @@ export const App: React.FC = () => {
       engine.dispose();
       engineRef.current = null;
     };
-  }, [mode, atpBalance, userAccount, liveStrains]);
+  }, [mode]);
+
+  // Keep the callback-facing refs in sync with state
+  useEffect(() => {
+    liveStrainsRef.current = liveStrains;
+  }, [liveStrains]);
+  useEffect(() => {
+    userAccountRef.current = userAccount;
+  }, [userAccount]);
+  useEffect(() => {
+    atpBalanceRef.current = atpBalance;
+  }, [atpBalance]);
+
+  // Push the live strains into the dish whenever the data or the mode changes
+  useEffect(() => {
+    if (mode === "live" && engineRef.current) {
+      engineRef.current.setLiveStrains(
+        liveStrains.map((s) => ({
+          id: s.strain_id,
+          owner: s.owner_id,
+          vitality: s.vitality,
+          status: s.status,
+        })),
+        userAccount,
+      );
+    }
+  }, [liveStrains, mode, userAccount]);
 
   // 2. Subscribe to the optimistic state
   useEffect(() => {
@@ -188,15 +205,12 @@ export const App: React.FC = () => {
       onStrainsUpdate: (strains) => {
         setIsBackendConnected(true);
         setLiveStrains(strains);
-        if (mode === "live" && engineRef.current) {
-          engineRef.current.setLiveStrains(
-            strains.map((s) => ({ id: s.strain_id, owner: s.owner_id })),
-            userAccount,
-          );
-        }
       },
       onNewEvents: (_events) => {
         setIsBackendConnected(true);
+      },
+      onIndexerIncomplete: (incomplete) => {
+        setIndexerIncomplete(incomplete);
       },
       onBreachLogItem: (item) => {
         setLogs((prev) => [item, ...prev.slice(0, 15)]);
@@ -232,12 +246,14 @@ export const App: React.FC = () => {
     setMode(nextMode);
     if (engineRef.current) {
       engineRef.current.setMode(nextMode);
-      if (nextMode === "live" && liveStrains.length > 0) {
-        engineRef.current.setLiveStrains(
-          liveStrains.map((s) => ({ id: s.strain_id, owner: s.owner_id })),
-          userAccount,
-        );
-      }
+    }
+    // Live mode: the breach log must only ever contain API-sourced events,
+    // so the demo seed entries are dropped on entry (and restored on exit).
+    if (nextMode === "live") {
+      setLogs([]);
+      setSelectedStrain(null);
+    } else {
+      setLogs(demoSeedLogs);
     }
   };
 
@@ -343,7 +359,8 @@ export const App: React.FC = () => {
         atpBalance={atpBalance}
         burst={burst}
         optimistic={optimistic}
-        logs={logs}
+        logs={filterLogsForMode(logs, mode)}
+        indexerIncomplete={indexerIncomplete}
         userAccount={userAccount}
         onUserAccountChange={handleUserAccountChange}
         matchedStrainsCount={matchedStrainsCount}

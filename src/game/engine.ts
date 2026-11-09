@@ -37,6 +37,7 @@ export class GameEngine {
   private height = 0;
 
   // Input state
+  private resizeObserver: ResizeObserver | null = null;
   private keysDown = new Set<string>();
   private pointerDown = false;
   private targetPointerX = 0;
@@ -144,7 +145,7 @@ export class GameEngine {
    * Update the cell list from the on-chain Live data (/api/strains).
    */
   public setLiveStrains(
-    strains: { id: number; owner: string; vitality?: number }[],
+    strains: { id: number; owner: string; vitality?: number; status?: string }[],
     highlightOwner?: string,
   ): void {
     const normFilter = highlightOwner?.trim().toLowerCase();
@@ -155,6 +156,8 @@ export class GameEngine {
       const angle = (idx / total) * Math.PI * 2;
       const dist = Math.min(this.dish.radiusX, this.dish.radiusY) * 0.58;
       const isOwner = Boolean(normFilter && s.owner.toLowerCase() === normFilter);
+      // Only use an API-provided vitality; no fabricated default number
+      const vit = typeof s.vitality === "number" ? s.vitality : null;
 
       return new LivingCell({
         id: s.id,
@@ -165,8 +168,9 @@ export class GameEngine {
         x: this.dish.centerX + Math.cos(angle) * dist,
         y: this.dish.centerY + Math.sin(angle) * dist,
         radius: isOwner ? 38 : 30,
-        vitalityRatio: (s.vitality ?? 8000) / 10000,
+        vitalityRatio: vit === null ? 0.6 : Math.max(0.05, Math.min(1, vit / 10000)),
         zone: this.dish.zone,
+        status: s.status,
       });
     });
   }
@@ -308,8 +312,12 @@ export class GameEngine {
 
   private handleResize = (): void => {
     const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
+    // Size the drawing surface from the canvas element's actual CSS box, not
+    // window.innerWidth: the canvas is laid out by CSS (absolute inset-0), and a
+    // mismatch here draws the dish off-center relative to the visible area.
+    const rect = this.canvas.getBoundingClientRect();
+    this.width = Math.max(1, Math.round(rect.width) || window.innerWidth);
+    this.height = Math.max(1, Math.round(rect.height) || window.innerHeight);
 
     this.canvas.width = Math.round(this.width * dpr);
     this.canvas.height = Math.round(this.height * dpr);
@@ -330,6 +338,12 @@ export class GameEngine {
 
   private bindEvents(): void {
     window.addEventListener("resize", this.handleResize);
+
+    // Track CSS-layout changes of the canvas element itself (not only window resizes)
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver(() => this.handleResize());
+      this.resizeObserver.observe(this.canvas);
+    }
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
@@ -386,5 +400,7 @@ export class GameEngine {
   public dispose(): void {
     this.stop();
     window.removeEventListener("resize", this.handleResize);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
   }
 }

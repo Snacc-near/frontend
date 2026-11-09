@@ -3,9 +3,11 @@ import type { BreachLogItem } from "../data/types.ts";
 
 interface BreachLogProps {
   logs: BreachLogItem[];
+  /** True while the backend reports `indexer_incomplete` (or a poll failed). */
+  indexerIncomplete?: boolean;
 }
 
-export const BreachLog: React.FC<BreachLogProps> = ({ logs }) => {
+export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = false }) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   return (
@@ -29,6 +31,15 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs }) => {
         </button>
         <span className="text-slate-500 font-mono">sla &lt; 2000 ms</span>
       </div>
+
+      {indexerIncomplete && (
+        <div
+          className="px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-800/60 text-[10px] text-amber-300 lowercase font-mono"
+          role="status"
+        >
+          indexer catching up — the event list may be incomplete
+        </div>
+      )}
 
       {isExpanded && (
         <div

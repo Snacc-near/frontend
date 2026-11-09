@@ -2,9 +2,14 @@ import React from "react";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS, VITALITY_MAX } from "../config/constants.ts";
+import { formatLiveVitality } from "../data/liveView.ts";
 
 interface VitalsPillProps {
   optimistic: OptimisticVitalityState;
+  /** Live vitality from the API for the selected strain; "—" when absent. */
+  liveVitality: number | null;
+  /** Live strain status (e.g. Active | Distressed | Liquidated | SplicedBurned). */
+  liveStatus: string | null;
   skin: SkinMode;
   mode: "demo" | "live";
   onFeedClick?: () => void;
@@ -12,13 +17,21 @@ interface VitalsPillProps {
 
 export const VitalsPill: React.FC<VitalsPillProps> = ({
   optimistic,
+  liveVitality,
+  liveStatus,
   skin,
   mode,
   onFeedClick,
 }) => {
   const labels = SKIN_LABELS[skin];
   const isPending = optimistic.status === "pending";
-  const pct = Math.min(100, Math.max(0, (optimistic.currentVitality / VITALITY_MAX) * 100));
+  const shownValue = mode === "live" ? formatLiveVitality(liveVitality) : optimistic.currentVitality.toLocaleString("en-US");
+  const pct =
+    mode === "live"
+      ? typeof liveVitality === "number"
+        ? Math.min(100, Math.max(0, (liveVitality / VITALITY_MAX) * 100))
+        : 0
+      : Math.min(100, Math.max(0, (optimistic.currentVitality / VITALITY_MAX) * 100));
 
   return (
     <div
@@ -30,16 +43,34 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
         <div className="flex items-center justify-between gap-3 text-xs">
           <span className="text-slate-300 lowercase">{labels.vitality}</span>
           <span className="font-mono text-slate-100 font-bold">
-            {optimistic.currentVitality.toLocaleString("en-US")}{" "}
-            <span className="text-slate-400 font-normal">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
+            {shownValue}{" "}
+            {mode === "live" && liveVitality === null ? null : (
+              <span className="text-slate-400 font-normal">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
+            )}
           </span>
         </div>
+        {mode === "live" && liveStatus && (
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 lowercase">
+            <span>status:</span>
+            <span
+              className={`font-mono font-semibold ${
+                liveStatus === "Liquidated"
+                  ? "text-red-400"
+                  : liveStatus === "SplicedBurned"
+                    ? "text-slate-500"
+                    : "text-emerald-400"
+              }`}
+            >
+              {liveStatus}
+            </span>
+          </div>
+        )}
 
         {/* Progress bar with a striped animation while pending (UI-126) */}
         <div
           className="w-36 h-2 mt-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden relative"
           role="progressbar"
-          aria-valuenow={optimistic.currentVitality}
+          aria-valuenow={mode === "live" ? liveVitality ?? 0 : optimistic.currentVitality}
           aria-valuemin={0}
           aria-valuemax={VITALITY_MAX}
         >

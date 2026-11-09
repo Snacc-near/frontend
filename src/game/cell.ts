@@ -22,6 +22,7 @@ export interface CellOptions {
   nukleus?: number;
   lisosom?: number;
   isLiquidated?: boolean;
+  status?: string;
 }
 
 export class LivingCell {
@@ -43,6 +44,7 @@ export class LivingCell {
   public nukleus: number;
   public lisosom: number;
   public isLiquidated: boolean;
+  public status?: string;
   public fedPulse = 0;
   private phaseOffset: number;
 
@@ -63,6 +65,7 @@ export class LivingCell {
     this.nukleus = opts.nukleus ?? 1;
     this.lisosom = opts.lisosom ?? 1;
     this.isLiquidated = opts.isLiquidated ?? false;
+    this.status = opts.status;
     this.phaseOffset = Math.random() * Math.PI * 2;
   }
 
@@ -108,11 +111,14 @@ export class LivingCell {
 
   public render(ctx: CanvasRenderingContext2D, timeSec: number): void {
     const theme = ZONE_THEMES[this.zone];
-    const cellColor = this.isLiquidated
+    const burned = this.status === "SplicedBurned";
+    const cellColor = this.isLiquidated || this.status === "Liquidated"
       ? "#ef4444"
-      : this.isHighlighted
-        ? "#38bdf8"
-        : theme.color;
+      : burned
+        ? "#64748b"
+        : this.isHighlighted
+          ? "#38bdf8"
+          : theme.color;
 
     const pulseSpeed = this.isPlayer || this.isHighlighted ? 2.4 : 1.6;
     const pulseAmp = 0.06 + (1 - this.vitalityRatio) * 0.08;
@@ -120,6 +126,11 @@ export class LivingCell {
     const r = this.baseRadius * breath;
 
     ctx.save();
+
+    // Terminal statuses are drawn dimmed so they read as dead cells, not live ones
+    if (burned || this.isLiquidated || this.status === "Liquidated") {
+      ctx.globalAlpha = 0.55;
+    }
 
     // 1. A soft shadow under the cell on the dish glass
     ctx.beginPath();
@@ -231,8 +242,13 @@ export class LivingCell {
     ctx.font = "11px 'DM Sans', -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.fillStyle = this.isHighlighted ? "#7dd3fc" : "rgba(241, 245, 249, 0.85)";
+    const statusSuffix = this.isLiquidated || this.status === "Liquidated"
+      ? " (liquidated)"
+      : this.status === "SplicedBurned"
+        ? " (burned)"
+        : "";
     ctx.fillText(
-      this.isHighlighted ? `${this.label} (yours)` : this.label,
+      this.isHighlighted ? `${this.label} (yours)${statusSuffix}` : `${this.label}${statusSuffix}`,
       this.x,
       this.y + r + 16,
     );

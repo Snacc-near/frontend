@@ -27,6 +27,7 @@ interface HudOverlayProps {
   burst: NutrientBurstState;
   optimistic: OptimisticVitalityState;
   logs: BreachLogItem[];
+  indexerIncomplete: boolean;
   userAccount: string;
   onUserAccountChange: (account: string) => void;
   matchedStrainsCount: number;
@@ -50,6 +51,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
   burst,
   optimistic,
   logs,
+  indexerIncomplete,
   userAccount,
   onUserAccountChange,
   matchedStrainsCount,
@@ -93,9 +95,15 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
 
         <div className="flex flex-wrap items-center justify-end gap-2 pointer-events-auto">
           <SkinSwitch skin={skin} onChange={onSkinChange} />
-          <AtpPill atpBalance={atpBalance} skin={skin} />
+          <AtpPill
+            atpBalance={atpBalance}
+            liveAtp={mode === "live" ? selectedStrain?.atp_balance ?? null : null}
+            skin={skin}
+          />
           <VitalsPill
             optimistic={optimistic}
+            liveVitality={selectedStrain?.vitality ?? null}
+            liveStatus={selectedStrain?.status ?? null}
             skin={skin}
             mode={mode}
             onFeedClick={onFeedClick}
@@ -143,7 +151,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
       {/* Bottom bar: the threshold log & the temperature gauge */}
       <footer className="flex flex-wrap items-end justify-between gap-3 sm:gap-4 mt-auto">
         <div className="pointer-events-auto">
-          <BreachLog logs={logs} />
+          <BreachLog logs={logs} indexerIncomplete={indexerIncomplete} />
         </div>
 
         <div className="pointer-events-auto">
