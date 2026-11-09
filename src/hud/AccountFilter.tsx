@@ -13,7 +13,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
 }) => {
   return (
     <div
-      className="flex flex-col gap-1 px-3.5 py-1.5 rounded-2xl bg-slate-950/80 border border-slate-700/50 backdrop-blur-md shadow-lg"
+      className="flex flex-col gap-1 px-2.5 sm:px-3.5 py-1.5 rounded-2xl bg-slate-950/80 border border-slate-700/50 backdrop-blur-md shadow-lg"
       role="search"
       aria-label="near account highlighter"
     >
@@ -27,7 +27,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
           value={account}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g.: alice.testnet"
-          className="bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-3 py-2 text-xs font-mono focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[44px] w-48 transition-all"
+          className="bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-mono focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[40px] sm:min-h-[44px] w-36 sm:w-48 min-w-0 transition-all"
           spellCheck={false}
           autoComplete="off"
         />
@@ -36,7 +36,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
             type="button"
             onClick={() => onChange("")}
             aria-label="clear the account filter"
-            className="w-11 h-11 flex items-center justify-center rounded-xl bg-slate-900 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-mono cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none"
+            className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center rounded-xl bg-slate-900 text-slate-300 hover:text-slate-100 hover:bg-slate-800 text-xs font-mono cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none"
           >
             ✕
           </button>

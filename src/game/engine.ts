@@ -311,13 +311,16 @@ export class GameEngine {
   }
 
   private handleResize = (): void => {
-    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
     // Size the drawing surface from the canvas element's actual CSS box, not
     // window.innerWidth: the canvas is laid out by CSS (absolute inset-0), and a
     // mismatch here draws the dish off-center relative to the visible area.
     const rect = this.canvas.getBoundingClientRect();
     this.width = Math.max(1, Math.round(rect.width) || window.innerWidth);
     this.height = Math.max(1, Math.round(rect.height) || window.innerHeight);
+    // Phones get a lower pixel-ratio cap: the organic cells are mostly soft
+    // gradients, so 1.5x looks identical while cutting fill cost roughly in half.
+    const dprCap = this.width < 640 ? 1.5 : MAX_DPR;
+    const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
 
     this.canvas.width = Math.round(this.width * dpr);
     this.canvas.height = Math.round(this.height * dpr);

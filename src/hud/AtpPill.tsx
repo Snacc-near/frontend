@@ -19,7 +19,7 @@ export const AtpPill: React.FC<AtpPillProps> = ({ atpBalance, liveAtp, isLive = 
 
   return (
     <div
-      className="flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg select-none"
+      className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full bg-slate-950/85 border border-slate-700/50 backdrop-blur-md shadow-lg select-none"
       role="region"
       aria-label={labels.atp}
     >

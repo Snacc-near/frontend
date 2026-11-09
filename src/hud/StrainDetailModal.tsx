@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
-import type { StrainDetail } from "../data/types.ts";
+import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS, VITALITY_MAX } from "../config/constants.ts";
 import type { GameMode } from "../game/engine.ts";
@@ -14,6 +14,8 @@ import type { GameMode } from "../game/engine.ts";
 interface StrainDetailModalProps {
   strain: StrainDetail | null;
   isLoading?: boolean;
+  svgDataUri?: string | null;
+  svgStatus?: SvgLoadStatus;
   skin: SkinMode;
   mode: GameMode;
   onClose: () => void;
@@ -23,6 +25,8 @@ interface StrainDetailModalProps {
 export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   strain,
   isLoading,
+  svgDataUri,
+  svgStatus = "idle",
   skin,
   mode,
   onClose,
@@ -81,7 +85,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
     >
       <div
         ref={modalRef}
-        className="w-full max-w-md p-6 rounded-3xl bg-slate-950/90 border border-slate-700/60 shadow-2xl shadow-cyan-950/30 text-slate-100 flex flex-col gap-4 focus:outline-none"
+        className="w-full max-w-md p-4 sm:p-6 rounded-3xl bg-slate-950/90 border border-slate-700/60 shadow-2xl shadow-cyan-950/30 text-slate-100 flex flex-col gap-4 focus:outline-none max-h-[92dvh] overflow-y-auto"
         tabIndex={-1}
       >
         {/* The modal header */}
@@ -111,6 +115,40 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
           </div>
         ) : strain ? (
           <>
+            {/* SVG inspector from nft_token media (rendered safely via img) */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400 lowercase">on-chain svg</span>
+                <span className="text-slate-500 font-mono lowercase">
+                  {mode === "live" ? (svgStatus === "ready" ? "from /api/strains/{id}/svg" : svgStatus === "loading" ? "loading…" : svgStatus === "error" ? "unavailable" : "no data") : "demo, simulated"}
+                </span>
+              </div>
+              {mode === "live" && svgStatus === "loading" ? (
+                <div className="w-full h-40 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-center text-xs text-slate-400 lowercase animate-pulse">
+                  loading the on-chain svg…
+                </div>
+              ) : mode === "live" && svgDataUri ? (
+                <img
+                  src={svgDataUri}
+                  alt={`on-chain svg for strain ${strain.strain_id}`}
+                  className="w-full h-40 object-contain rounded-2xl bg-slate-900/60 border border-slate-800/80"
+                />
+              ) : mode === "live" ? (
+                <div className="w-full h-40 rounded-2xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-center text-xs text-slate-500 lowercase">
+                  <span className="font-mono text-lg text-slate-300">—</span>
+                  <span className="ml-2">
+                    {svgStatus === "error" ? "svg request failed" : "no svg for this strain yet"}
+                  </span>
+                </div>
+              ) : svgDataUri ? (
+                <img
+                  src={svgDataUri}
+                  alt={`demo svg for strain ${strain.strain_id}`}
+                  className="w-full h-40 object-contain rounded-2xl bg-slate-900/60 border border-slate-800/80"
+                />
+              ) : null}
+            </div>
+
             {/* Owner & Vault */}
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex justify-between items-baseline">

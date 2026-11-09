@@ -4,7 +4,7 @@
  * Integrity rule: never fabricate data while the backend is offline / 501.
  */
 
-import type { MacroTelemetry, CrucibleEvent, StrainSummary, StrainDetail } from "./types.ts";
+import type { MacroTelemetry, CrucibleEvent, StrainSummary, StrainDetail, AppetiteTelemetry } from "./types.ts";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/+$/, "") || "";
 
@@ -67,5 +67,33 @@ export async function fetchStrain(id: number): Promise<StrainDetail | null> {
     return (await res.json()) as StrainDetail;
   } catch {
     return null;
+  }
+}
+
+export async function fetchAppetite(): Promise<AppetiteTelemetry | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/appetite`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as AppetiteTelemetry;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchStrainSvg(
+  id: number,
+): Promise<{ svg: string | null; status: number | null }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/strains/${id}/svg`);
+    if (!res.ok) return { svg: null, status: res.status };
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("svg")) return { svg: null, status: res.status };
+    const text = await res.text();
+    if (!text || !text.trimStart().startsWith("<svg")) return { svg: null, status: res.status };
+    return { svg: text, status: res.status };
+  } catch {
+    return { svg: null, status: null };
   }
 }

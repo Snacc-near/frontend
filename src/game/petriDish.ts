@@ -18,10 +18,13 @@ export class PetriDish {
     this.centerX = width / 2;
     this.centerY = height / 2;
 
-    // Responsive elliptical dish scale for portrait (phones) and landscape (desktop)
+    // Portrait phones (390x844): the stacked header/footer reserve the
+    // top and bottom bands, so the dish is capped to the middle band and
+    // never reaches under the vitality pill at the top.
     if (width < height) {
-      this.radiusX = Math.min(width * 0.43, 360);
-      this.radiusY = this.radiusX * 0.78;
+      const bandH = Math.max(200, height - 430);
+      this.radiusX = Math.min(width * 0.38, bandH * 0.60, 340);
+      this.radiusY = Math.min(this.radiusX * 0.62, bandH * 0.30);
     } else {
       this.radiusX = Math.min(width * 0.44, 460);
       this.radiusY = Math.min(height * 0.42, 310);

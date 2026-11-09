@@ -8,7 +8,9 @@ interface BreachLogProps {
 }
 
 export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = false }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= 640,
+  );
 
   return (
     <aside
@@ -44,7 +46,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
       {isExpanded && (
         <div
           id="breach-log-list"
-          className="flex flex-col gap-1 max-h-36 overflow-y-auto pr-1"
+          className="flex flex-col gap-1 max-h-24 sm:max-h-36 overflow-y-auto pr-1"
           role="log"
           aria-live="polite"
           aria-atomic="false"

@@ -1,7 +1,7 @@
 import React from "react";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
-import type { BreachLogItem, NutrientBurstState, StrainDetail } from "../data/types.ts";
+import type { AppetiteViewModel, BreachLogItem, NutrientBurstState, StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
 import type { GameMode } from "../game/engine.ts";
 import { VitalsPill } from "./VitalsPill.tsx";
@@ -13,6 +13,7 @@ import { BreachLog } from "./BreachLog.tsx";
 import { SkinSwitch } from "./SkinSwitch.tsx";
 import { ModeSwitch } from "./ModeSwitch.tsx";
 import { AccountFilter } from "./AccountFilter.tsx";
+import { AppetitePanel } from "./AppetitePanel.tsx";
 import { StrainDetailModal } from "./StrainDetailModal.tsx";
 
 interface HudOverlayProps {
@@ -33,6 +34,11 @@ interface HudOverlayProps {
   matchedStrainsCount: number;
   selectedStrain: StrainDetail | null;
   isLoadingStrain: boolean;
+  svgDataUri?: string | null;
+  svgStatus?: SvgLoadStatus;
+  appetite: AppetiteViewModel | null;
+  appetiteLoading: boolean;
+  appetiteError: boolean;
   onCloseStrainModal: () => void;
   onFeedClick: () => void;
   onTriggerBurst?: () => void;
@@ -57,22 +63,27 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
   matchedStrainsCount,
   selectedStrain,
   isLoadingStrain,
+  svgDataUri,
+  svgStatus,
+  appetite,
+  appetiteLoading,
+  appetiteError,
   onCloseStrainModal,
   onFeedClick,
   onTriggerBurst,
   onShiftZone,
 }) => {
   return (
-    <div className="absolute inset-0 pointer-events-none p-3 sm:p-6 flex flex-col justify-between z-10 select-none overflow-hidden">
-      {/* Top bar: brand, mode switch, account filter, burst badge, vitals, ATP */}
-      <header className="flex flex-wrap items-start justify-between gap-2.5">
-        <div className="flex flex-col gap-2 pointer-events-auto">
+    <div className="absolute inset-0 pointer-events-none p-2.5 sm:p-6 flex flex-col justify-between z-10 select-none overflow-hidden">
+      {/* Top bar: two-column grid on phones so the dish top stays clear (390x844) */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1.5 sm:flex sm:flex-wrap sm:items-start sm:justify-between sm:gap-2.5">
+        <div className="flex flex-col gap-1.5 sm:gap-2 pointer-events-auto min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-slate-100 tracking-wider">
               $SNACC
             </span>
             <span className="text-slate-500 text-xs">·</span>
-            <span className="text-xs text-slate-300 font-medium lowercase">
+            <span className="text-xs text-slate-300 font-medium lowercase hidden min-[420px]:inline">
               living cell crucible
             </span>
           </div>
@@ -88,27 +99,33 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
-          <NutrientBurstBadge burst={burst} skin={skin} />
-          <ZoneBanner zone={zone} skin={skin} />
+        <div className="flex flex-col items-stretch justify-start gap-1.5 sm:contents pointer-events-auto">
+          <div className="flex flex-col items-end gap-1.5 sm:contents">
+            <SkinSwitch skin={skin} onChange={onSkinChange} />
+            <AtpPill
+              atpBalance={atpBalance}
+              isLive={mode === "live"}
+              liveAtp={mode === "live" ? selectedStrain?.atp_balance ?? null : null}
+              skin={skin}
+            />
+            <VitalsPill
+              optimistic={optimistic}
+              liveVitality={selectedStrain?.vitality ?? null}
+              liveStatus={selectedStrain?.status ?? null}
+              skin={skin}
+              mode={mode}
+              onFeedClick={onFeedClick}
+            />
+          </div>
+          <div className="hidden sm:flex flex-row gap-2 justify-center pointer-events-auto">
+            <NutrientBurstBadge burst={burst} skin={skin} />
+            <ZoneBanner zone={zone} skin={skin} />
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 pointer-events-auto">
-          <SkinSwitch skin={skin} onChange={onSkinChange} />
-          <AtpPill
-            atpBalance={atpBalance}
-            isLive={mode === "live"}
-            liveAtp={mode === "live" ? selectedStrain?.atp_balance ?? null : null}
-            skin={skin}
-          />
-          <VitalsPill
-            optimistic={optimistic}
-            liveVitality={selectedStrain?.vitality ?? null}
-            liveStatus={selectedStrain?.status ?? null}
-            skin={skin}
-            mode={mode}
-            onFeedClick={onFeedClick}
-          />
+        <div className="col-span-2 flex flex-row flex-wrap gap-1.5 sm:hidden pointer-events-auto">
+          <NutrientBurstBadge burst={burst} skin={skin} />
+          <ZoneBanner zone={zone} skin={skin} />
         </div>
       </header>
 
@@ -149,13 +166,19 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
         </div>
       )}
 
-      {/* Bottom bar: the threshold log & the temperature gauge */}
-      <footer className="flex flex-wrap items-end justify-between gap-3 sm:gap-4 mt-auto">
-        <div className="pointer-events-auto">
+      {/* Bottom bar: threshold log on the left, appetite & gauge stacked on the right */}
+      <footer className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 mt-auto">
+        <div className="pointer-events-auto w-full sm:w-auto">
           <BreachLog logs={logs} indexerIncomplete={indexerIncomplete} />
         </div>
 
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto w-full sm:w-auto flex flex-col gap-2">
+          <AppetitePanel
+            appetite={appetite}
+            isLoading={appetiteLoading}
+            error={appetiteError}
+            mode={mode}
+          />
           <ThermalGauge crucibleTempMk={crucibleTempMk} skin={skin} />
         </div>
       </footer>
@@ -165,6 +188,8 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
         <StrainDetailModal
           strain={selectedStrain}
           isLoading={isLoadingStrain}
+          svgDataUri={svgDataUri}
+          svgStatus={svgStatus}
           skin={skin}
           mode={mode}
           onClose={onCloseStrainModal}
