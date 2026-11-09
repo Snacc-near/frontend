@@ -6,36 +6,39 @@ export const JAR_TOP = JAR.base + JAR.cyl + JAR.cap;
 
 export function chamber() {
   const [CX, CY] = CELLC;
-  // ---- stage: collar discs ----
+  // ---- stage: collar discs (base disc separate from the raised steps, so the clamps order between them) ----
   const st = [];
   const collar = [[74, 0, 5], [69, 5, 4], [66, 9, 3], [58, 12, 1.2]].map(([r, z, h]) => noteShape(A.cylinder(CX, CY, r, z, h, { name: "chamber.collar" })));
   st.push(S(k.cylinder(CX, CY, 74, 0, 5, P, 72, 0.8), { tone: "hi", className: "bone" }));
   st.push(Ln(k.sideArc(CX, CY, 74, 2.5, P, 48), { tone: "faint" }));
-  st.push(S(k.cylinder(CX, CY, 69, 5, 4, P, 72, 0.8), { tone: "hi", className: "tan" }));
+  emit(dep(CX, CY, 0) - 4, st.join(""), "stage");
+  flushItem(R, dep(CX, CY, 0) - 4, "stage");
+  const stp = [];
+  stp.push(S(k.cylinder(CX, CY, 69, 5, 4, P, 72, 0.8), { tone: "hi", className: "tan" }));
   st.push(Ln(k.knurl(CX, CY, 69, 5, 9, 72, P, 0.1), { tone: "lo" }));
   st.push(S(k.cylinder(CX, CY, 66, 9, 3, P, 72, 0.6), { tone: "hi", className: "steel" }));
   // glass seat groove + bolt circle
-  st.push(Ln(k.ring(CX, CY, 63.5, 12, P, 72), { tone: "mid" }));
-  st.push(Ln(k.ring(CX, CY, 60.5, 12, P, 72), { tone: "faint" }));
+  stp.push(Ln(k.ring(CX, CY, 63.5, 12, P, 72), { tone: "mid" }));
+  stp.push(Ln(k.ring(CX, CY, 60.5, 12, P, 72), { tone: "faint" }));
   const bolts = Array.from({ length: 16 }, (_, i) => {
     const a = (i / 16) * Math.PI * 2 + 0.2;
     return at([CX + 71.6 * Math.cos(a), CY + 71.6 * Math.sin(a), 5]);
   }).filter((_, i) => true);
-  st.push(Dm(Array.from({ length: 20 }, (_, i) => {
+  stp.push(Dm(Array.from({ length: 20 }, (_, i) => {
     const a = (i / 20) * Math.PI * 2;
     return [CX + 67.5 * Math.cos(a), CY + 67.5 * Math.sin(a)];
   }).filter(([x, y]) => (x - CX) * Math.SQRT1_2 + (y - CY) * Math.SQRT1_2 > -30).map(([x, y]) => at([x, y, 9])), { size: 0.6, tone: "hi" }));
   // cytoplasm bath floor disc inside the glass
-  st.push(S(k.cylinder(CX, CY, 58, 12, 1.2, P, 64, 0.2), { tone: "hi", className: "cyto", crease: "none" }));
-  emit(dep(CX, CY, 0) - 2, st.join(""), "stage");
-  flushItem(R, dep(CX, CY, 0) - 2, "stage");
+  stp.push(S(k.cylinder(CX, CY, 58, 12, 1.2, P, 64, 0.2), { tone: "hi", className: "cyto", crease: "none" }));
+  emit(dep(CX, CY, 0) - 2, stp.join(""), "stage.steps");
+  flushItem(R, dep(CX, CY, 0) - 2, "stage.steps");
 
-  // ---- clamps around the collar (4 thumb screws) ----
+  // ---- clamps around the collar (8 thumb screws, on the top step at r 63, clear of the bath r 58) ----
   const cl = [];
   for (const a of [20, 70, 98, 160, 200, 250, 290, 340]) {  // 98, not 120: the feed port sits at 122 deg
     const rad = (a * Math.PI) / 180;
-    const gx = CX + 70 * Math.cos(rad), gy = CY + 70 * Math.sin(rad);
-    cl.push({ gx, gy, d: dep(gx, gy, 6) });
+    const gx = CX + 63 * Math.cos(rad), gy = CY + 63 * Math.sin(rad);
+    cl.push({ gx, gy, d: dep(gx, gy, 15) });
   }
   cl.sort((a, b) => a.d - b.d);
   // the back clamps stand behind the raised steps of the stage, the front ones in front: two items, so the order never interlocks
@@ -43,12 +46,12 @@ export function chamber() {
   for (const [name, set, key] of [["clamps.back", cl.filter((c) => c.d < mid), mid - 3], ["clamps", cl.filter((c) => c.d >= mid), mid - 1.5]]) {
     const clamps = [];
     for (const { gx, gy } of set) {
-      // the clamp straddles the collar's steps: it is a pad cut by its host (seated), not a block sunk into it
-      noteShape(A.slab({ x: gx - 4.5, y: gy - 4.5, w: 9, d: 9, r: 2 }, 5, 6, { name: "chamber.clamp", seated: true, cut: collar.slice(0, 3) }, 3));
-      noteShape(A.cylinder(gx, gy, 2.4, 11, 2.6, { name: "chamber.clamp.screw" }));
-      clamps.push(S(k.slabOf({ x: gx - 4.5, y: gy - 4.5, w: 9, d: 9, r: 2 }, 5, 6, P, 3, 0.5), { tone: "hi", className: "steel" }));
-      clamps.push(S(k.cylinder(gx, gy, 2.4, 11, 2.6, P, 14), { tone: "hi", className: "tan" }));
-      clamps.push(Dm([at([gx, gy, 13.6])], { size: 0.5 }));
+      // the clamp stands on the top step (flush on the r66 face, clear of the bath disc): a knob + thumb screw
+      noteShape(A.cylinder(gx, gy, 2.6, 12, 6, { name: "chamber.clamp" }));
+      noteShape(A.cylinder(gx, gy, 2.4, 18, 2.6, { name: "chamber.clamp.screw" }));
+      clamps.push(S(k.cylinder(gx, gy, 2.6, 12, 6, P, 20, 0.5), { tone: "hi", className: "steel" }));
+      clamps.push(S(k.cylinder(gx, gy, 2.4, 18, 2.6, P, 14), { tone: "hi", className: "tan" }));
+      clamps.push(Dm([at([gx, gy, 20.6])], { size: 0.5 }));
     }
     emit(key, clamps.join(""), name);
     flushItem(R, key, name, "stage");

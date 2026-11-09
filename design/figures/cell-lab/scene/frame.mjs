@@ -28,16 +28,22 @@ export function circLocal(u, v, r, n = 20) {
   return Array.from({ length: n }, (_, i) => { const a = (i / n) * Math.PI * 2; return Wxy(u + Math.cos(a) * r, v + Math.sin(a) * r); });
 }
 
-/** Extruded local box as a solid string. */
-export function boxL(u0, v0, w, d, z, h, { r = 0.8, bevel = 0.35, tone = "hi", className = "", crease = "faint", inner = "" } = {}) {
-  noteShape(A.extruded(rrLocal(u0, v0, w, d, r), z, h, { name: "hero.box" }));
+/** Extruded local box as a solid string. opts.meta merges into the recorded shape (e.g. { seated, cut }). */
+export function boxL(u0, v0, w, d, z, h, { r = 0.8, bevel = 0.35, tone = "hi", className = "", crease = "faint", inner = "", meta = {} } = {}) {
+  const shape = A.extruded(rrLocal(u0, v0, w, d, r), z, h, { name: "hero.box", ...meta });
+  noteShape(shape);
+  boxL.last = shape;
   return S(k.extrude(rrLocal(u0, v0, w, d, r), z, h, P, { bevel }), { tone, className, crease, inner });
 }
-export const cylW = (u, v, rad, z, h, { steps = 28, bevel = 0.3, tone = "hi", className = "", crease = "faint" } = {}) => {
+boxL.last = null;
+export const cylW = (u, v, rad, z, h, { steps = 28, bevel = 0.3, tone = "hi", className = "", crease = "faint", meta = {} } = {}) => {
   const [x, y] = Wxy(u, v);
-  noteShape(A.cylinder(x, y, rad, z, h, { name: "hero.cyl" }));
+  const shape = A.cylinder(x, y, rad, z, h, { name: "hero.cyl", ...meta });
+  noteShape(shape);
+  cylW.last = shape;
   return S(k.cylinder(x, y, rad, z, h, P, steps, bevel), { tone, className, crease });
 };
+cylW.last = null;
 
 /** Kidney (bean) outline in local (u, v): dent on the back side (v < 0). */
 export function beanLocal(Lh, Wh, n = 72, dent = 0.2) {

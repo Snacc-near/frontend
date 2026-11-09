@@ -320,7 +320,23 @@ function placeLabels() {
   if (!labelsOn) return;
   const m = svg.getScreenCTM(), b = box.getBoundingClientRect(); if (!m) return;
   if (!labelsEl.children.length) labelsEl.innerHTML = LABELS.map(([n]) => `<span>${n}</span>`).join("");
-  LABELS.forEach(([, p], i) => { const e = labelsEl.children[i], x = m.a * p[0] + m.e - b.left, y = m.d * p[1] + m.f - b.top; e.style.left = f1(x) + "px"; e.style.top = f1(y) + "px"; e.style.display = x > 4 && y > 4 && x < b.width - 30 && y < b.height - 4 ? "" : "none"; });
+  // collision avoidance: stack chips on the side the point sits on, sorted by y, min vertical gap
+  const cx = b.width / 2, GAP = 16;
+  const pts = LABELS.map(([, p], i) => ({ el: labelsEl.children[i], x: m.a * p[0] + m.e - b.left, y: m.d * p[1] + m.f - b.top }));
+  for (const left of [true, false]) {
+    const group = pts.filter((q) => (q.x < cx) === left).sort((a, c) => a.y - c.y);
+    let prev = -Infinity;
+    for (const q of group) {
+      q.y = Math.max(q.y, prev + GAP);
+      prev = q.y;
+      q.el.classList.toggle("l", left);
+      // anchor on the point (CSS transform offsets the chip); clamp right chips inside the box
+      const lx = left ? q.x : Math.min(q.x, Math.max(2, b.width - (q.el.offsetWidth || 56) - 14));
+      q.el.style.left = f1(lx) + "px";
+      q.el.style.top = f1(Math.min(q.y, Math.max(4, b.height - 10))) + "px";
+      q.el.style.display = q.x > 4 && q.x < b.width - 10 ? "" : "none";
+    }
+  }
 }
 function setVB(v) { vb = v; svg.setAttribute("viewBox", v.map(f1).join(" ")); placeLabels(); }
 function viewTarget(i) {

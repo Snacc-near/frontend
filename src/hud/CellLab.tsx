@@ -407,23 +407,28 @@ export const CellLab: React.FC<CellLabProps> = ({
 
             <section className="plate-panel p-3" aria-label="on chain svg">
               <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">on-chain svg</h3>
-              {live && svgStatus === "loading" ? (
-                <div className="eyepiece relative h-32 flex-col rounded-xl border border-[var(--edge)]" role="status" aria-label="focusing">
-                  <div className="eyepiece-ring" aria-hidden="true" />
-                  <span className="absolute bottom-2 font-mono text-[10px] lowercase text-[var(--ink)]">focusing…</span>
-                </div>
-              ) : svgDataUri ? (
-                <img
-                  src={svgDataUri}
-                  alt={strain ? `on-chain svg for strain ${strain.strain_id}` : "strain svg"}
-                  className="h-32 w-full rounded-xl border border-[var(--edge)] bg-white object-contain"
-                />
-              ) : (
-                <div className="flex h-32 flex-col items-center justify-center gap-1 rounded-xl border border-[var(--edge)] bg-white text-xs lowercase text-[var(--ink)]">
-                  <span className="font-mono text-lg text-[var(--ink-hi)]">—</span>
-                  <span>{svgStatus === "error" ? "svg request failed" : "no svg for this strain yet"}</span>
-                </div>
-              )}
+              <div className="onchain-frame rounded-xl border border-[var(--line)] bg-[var(--pl-base)] p-2">
+                {live && svgStatus === "loading" ? (
+                  <div className="eyepiece relative flex h-32 flex-col rounded-lg border border-[var(--line)]" role="status" aria-label="focusing">
+                    <div className="eyepiece-ring" aria-hidden="true" />
+                    <span className="absolute bottom-2 font-mono text-[10px] lowercase text-[var(--ink)]">focusing…</span>
+                  </div>
+                ) : svgDataUri ? (
+                  <img
+                    src={svgDataUri}
+                    alt={strain ? `on-chain svg for strain ${strain.strain_id}` : "strain svg"}
+                    className="h-32 w-full rounded-lg object-contain"
+                  />
+                ) : (
+                  <div className="flex h-32 flex-col items-center justify-center gap-1 rounded-lg text-xs lowercase text-[var(--ink)]">
+                    <span className="font-mono text-lg text-[var(--ink-hi)]">—</span>
+                    <span>{svgStatus === "error" ? "svg request failed" : "no svg for this strain yet"}</span>
+                  </div>
+                )}
+                <p className="onchain-frame__caption mt-1.5 text-center font-mono text-[10px] tracking-[0.18em] text-[var(--ink-mute)]">
+                  {live ? "on-chain svg" : "on-chain svg (demo stub)"}
+                </p>
+              </div>
             </section>
           </aside>
         </div>
