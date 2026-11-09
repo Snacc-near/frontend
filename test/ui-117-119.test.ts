@@ -8,7 +8,7 @@
  * - Motionmaxxing easing curves (FE-26): batas matematis f(0)=0 dan f(1)=1.
  */
 
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import {
   KAMUS_ANGKA,
