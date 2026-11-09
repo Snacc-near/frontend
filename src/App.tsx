@@ -361,12 +361,12 @@ export const App: React.FC = () => {
     window.setTimeout(() => setToast(null), 2200);
   };
 
-  const doSimAction = useCallback((action: LabAction | "harvest") => {
+  const doSimAction = useCallback((action: LabAction | "harvest"): boolean => {
     const result = applySimAction(simRef.current, action as LabAction);
     if (!result.ok) {
       bioSound.playDenied();
       showToast(result.error ?? "action unavailable");
-      return;
+      return false;
     }
     setSim(result.state);
     if (action === "feed") {
@@ -380,16 +380,17 @@ export const App: React.FC = () => {
     if (action === "feed" || action === "harvest") {
       showToast(result.state.log[0] ?? "done");
     }
+    return true;
   }, []);
 
   const handleLabAction = useCallback(
-    (action: LabAction) => {
+    (action: LabAction): boolean => {
       if (mode === "live") {
-        // Preview only: play is handled by CellLab; live numbers never change.
-        showToast("preview only (live numbers unchanged)");
-        return;
+        // Preview only: the animation is played by CellLab; live numbers never change.
+        showToast("preview only — on-chain transactions need a wallet");
+        return true;
       }
-      doSimAction(action);
+      return doSimAction(action);
     },
     [mode, doSimAction],
   );

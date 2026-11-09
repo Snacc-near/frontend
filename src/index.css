@@ -248,6 +248,18 @@ canvas {
   background: var(--panel-2);
 }
 
+/* Cell Lab figure area: same cream card as the anatomy plate, never a black canvas.
+   The embed page declares `color-scheme: dark`; an iframe whose scheme differs from its
+   embedder gets an opaque canvas, so the element declares the same scheme to stay transparent. */
+.lab-figure {
+  background: var(--panel);
+}
+
+.lab-figure__frame {
+  color-scheme: dark;
+  background: transparent;
+}
+
 /* ---- anatomy iso arena: plain-marigold light theme over the kit ---- */
 
 .iso {
