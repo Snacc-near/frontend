@@ -11,7 +11,7 @@
 import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import {
-  KAMUS_ANGKA,
+  OFFICIAL_CONSTANTS,
   classifyZone,
   computeActiveBurstBps,
   computeBurstEpochsRemaining,
@@ -45,7 +45,7 @@ describe("UI-117: Global Nutrient Burst Badge (EN-102)", () => {
   });
 
   it("clamps the discount at MAX_BURST_BPS (2000 bps = 20.00%) and expires when currentEpoch >= untilEpoch", () => {
-    assert.equal(computeActiveBurstBps(4500, 5, 2), KAMUS_ANGKA.MAX_BURST_BPS);
+    assert.equal(computeActiveBurstBps(4500, 5, 2), OFFICIAL_CONSTANTS.MAX_BURST_BPS);
     assert.equal(computeActiveBurstBps(2000, 2, 2), 0);
     assert.equal(computeBurstEpochsRemaining(2, 5), 0);
 

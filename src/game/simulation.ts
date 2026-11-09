@@ -1,7 +1,7 @@
 /**
  * Local demo simulation for the colony production loop.
  * Pure functions with no React or network dependency so they stay testable.
- * Every number comes from the official constants in `src/types.ts` (KAMUS_ANGKA)
+ * Every number comes from the official constants in `src/types.ts` (OFFICIAL_CONSTANTS)
  * and the zone thresholds in `src/config/zones.ts`. Demo output is simulated
  * and must never be presented as on-chain data.
  */

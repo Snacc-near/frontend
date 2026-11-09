@@ -3,7 +3,7 @@
  * Honesty rule: the numbers are copied verbatim from the contract state & the number dictionary.
  */
 
-export const KAMUS_ANGKA = {
+export const OFFICIAL_CONSTANTS = {
   HYPOTHERMIA_THRESHOLD_MK: 600,
   FEVER_THRESHOLD_MK: 610, // ECON-111: supersedes 1400 -> 610 mK so the thermostat is active
   FEVER_BURN_BPS: 350, // I-01: the 3.50% fee burn during Fever (>610 mK)
@@ -97,8 +97,8 @@ export interface ThresholdBreachEvent {
  * Classify the CrucibleTemp temperature into a zone per the number dictionary & ECON-111.
  */
 export function classifyZone(crucibleTemp: number): MacroZone {
-  if (crucibleTemp > KAMUS_ANGKA.FEVER_THRESHOLD_MK) return "Fever";
-  if (crucibleTemp < KAMUS_ANGKA.HYPOTHERMIA_THRESHOLD_MK) return "Hypothermia";
+  if (crucibleTemp > OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK) return "Fever";
+  if (crucibleTemp < OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK) return "Hypothermia";
   return "Goldilocks";
 }
 
@@ -113,7 +113,7 @@ export function computeActiveBurstBps(
   currentEpoch: number,
 ): number {
   if (burstBps <= 0 || currentEpoch >= untilEpoch) return 0;
-  return Math.min(burstBps, KAMUS_ANGKA.MAX_BURST_BPS);
+  return Math.min(burstBps, OFFICIAL_CONSTANTS.MAX_BURST_BPS);
 }
 
 /**
@@ -136,7 +136,7 @@ export function formatBps(bps: number): string {
  */
 export function computeThermalGaugeRatio(crucibleTemp: number): number {
   const minMk = 0;
-  const maxMk = KAMUS_ANGKA.FEVER_THRESHOLD_MK * 2;
+  const maxMk = OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK * 2;
   const clamped = Math.min(Math.max(crucibleTemp, minMk), maxMk);
   return (clamped - minMk) / (maxMk - minMk);
 }
@@ -163,9 +163,9 @@ export function describeZonePolicy(
           : "Pyrolytic Fever — Excess Spore Liquidity Vaporized",
       policyRule:
         skin === "fintech"
-          ? `Protocol burns ${formatBps(KAMUS_ANGKA.FEVER_BURN_BPS)} of every catalyst fee permanently via ft_burn.`
-          : `Crucible heat > ${KAMUS_ANGKA.FEVER_THRESHOLD_MK} mK incinerates ${formatBps(KAMUS_ANGKA.FEVER_BURN_BPS)} of all feeding & transmutation fees.`,
-      rateLabel: `-${formatBps(KAMUS_ANGKA.FEVER_BURN_BPS)} SUPPLY BURN`,
+          ? `Protocol burns ${formatBps(OFFICIAL_CONSTANTS.FEVER_BURN_BPS)} of every catalyst fee permanently via ft_burn.`
+          : `Crucible heat > ${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK incinerates ${formatBps(OFFICIAL_CONSTANTS.FEVER_BURN_BPS)} of all feeding & transmutation fees.`,
+      rateLabel: `-${formatBps(OFFICIAL_CONSTANTS.FEVER_BURN_BPS)} SUPPLY BURN`,
       invariantCode: "I-01",
     };
   }
@@ -179,9 +179,9 @@ export function describeZonePolicy(
           : "Cryo-Metabolic Slowdown — Catalyst Subsidy Active",
       policyRule:
         skin === "fintech"
-          ? `Rule-Bound Treasury subsidizes ${formatBps(KAMUS_ANGKA.HYPO_REBATE_BPS)} of catalyst fees (capped at ${formatBps(KAMUS_ANGKA.MAX_EPOCH_TREASURY_DRAIN_BPS)}/epoch).`
-          : `Crucible temp < ${KAMUS_ANGKA.HYPOTHERMIA_THRESHOLD_MK} mK releases ${formatBps(KAMUS_ANGKA.HYPO_REBATE_BPS)} enzyme rebate to prevent colony extinction.`,
-      rateLabel: `+${formatBps(KAMUS_ANGKA.HYPO_REBATE_BPS)} TREASURY REBATE`,
+          ? `Rule-Bound Treasury subsidizes ${formatBps(OFFICIAL_CONSTANTS.HYPO_REBATE_BPS)} of catalyst fees (capped at ${formatBps(OFFICIAL_CONSTANTS.MAX_EPOCH_TREASURY_DRAIN_BPS)}/epoch).`
+          : `Crucible temp < ${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK} mK releases ${formatBps(OFFICIAL_CONSTANTS.HYPO_REBATE_BPS)} enzyme rebate to prevent colony extinction.`,
+      rateLabel: `+${formatBps(OFFICIAL_CONSTANTS.HYPO_REBATE_BPS)} TREASURY REBATE`,
       invariantCode: "I-04",
     };
   }
@@ -194,8 +194,8 @@ export function describeZonePolicy(
         : "Homeostatic Balance — Optimal Cellular Division & Synthesis",
     policyRule:
       skin === "fintech"
-        ? `Velocity inside ${KAMUS_ANGKA.HYPOTHERMIA_THRESHOLD_MK}–${KAMUS_ANGKA.FEVER_THRESHOLD_MK} mK band; 100% of non-burn fees route to Treasury & Industrial Dividend Pool.`
-        : `Thermal equilibrium (${KAMUS_ANGKA.HYPOTHERMIA_THRESHOLD_MK}–${KAMUS_ANGKA.FEVER_THRESHOLD_MK} mK) sustains steady basal metabolic rate across all castes.`,
+        ? `Velocity inside ${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK}–${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK band; 100% of non-burn fees route to Treasury & Industrial Dividend Pool.`
+        : `Thermal equilibrium (${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK}–${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK) sustains steady basal metabolic rate across all castes.`,
     rateLabel: "0.00% NEUTRAL BAND",
     invariantCode: "EN-105",
   };
