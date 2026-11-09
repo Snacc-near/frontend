@@ -80,7 +80,7 @@ export class LivingCell {
     }
 
     if (this.isPlayer) {
-      // Inersia halus menuju target pointer/keyboard
+      // Gentle inertia toward the pointer/keyboard target
       const dx = this.targetX - this.x;
       const dy = this.targetY - this.y;
       this.vx = dx * 0.12;

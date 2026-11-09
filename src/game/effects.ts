@@ -118,7 +118,7 @@ export class EffectsManager {
       p.life += dt * 60;
       p.x += p.vx;
       p.y += p.vy;
-      p.vx *= 0.96; // gesekan medium cair
+      p.vx *= 0.96; // liquid-medium drag
       p.vy *= 0.96;
       p.alpha = Math.max(0, 1 - p.life / p.maxLife);
       if (p.life >= p.maxLife || p.alpha <= 0) {

@@ -14,11 +14,11 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
         radius: 30,
       });
 
-      // Tepat di pusat
+      // Exactly at the center
       expect(cell.containsPoint(200, 150)).toBe(true);
-      // Di dalam radius toleransi (30 * 1.35 = 40.5)
+      // Within the tolerance radius (30 * 1.35 = 40.5)
       expect(cell.containsPoint(230, 150)).toBe(true);
-      // Di luar radius
+      // Outside the radius
       expect(cell.containsPoint(300, 300)).toBe(false);
     });
 

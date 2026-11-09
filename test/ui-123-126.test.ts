@@ -71,14 +71,14 @@ describe("Stage 3: UI-123..126 Polish & Verification", () => {
       expect(effects.shockwaves.length).toBeGreaterThan(0);
       expect(effects.particles.length).toBeGreaterThan(0);
 
-      // Update efek visual
+      // Update the visual effects
       const { offsetX, offsetY } = effects.update(0.016);
       expect(typeof offsetX).toBe("number");
       expect(typeof offsetY).toBe("number");
     });
   });
 
-  describe("UI-126: State Optimis (Pending, Confirmed, Reverted)", () => {
+  describe("UI-126: Optimistic State (Pending, Confirmed, Reverted)", () => {
     it("transitions the optimistic state with an instant vitality increase", () => {
       const opt = new OptimisticManager(8000);
       expect(opt.getState().status).toBe("idle");

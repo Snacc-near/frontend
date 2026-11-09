@@ -62,7 +62,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
 }) => {
   return (
     <div className="absolute inset-0 pointer-events-none p-3 sm:p-6 flex flex-col justify-between z-10 select-none overflow-hidden">
-      {/* Bilah Atas: Brand, Mode Switch, Filter Akun, Burst Badge, Vitals, ATP */}
+      {/* Top bar: brand, mode switch, account filter, burst badge, vitals, ATP */}
       <header className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="flex flex-col gap-2 pointer-events-auto">
           <div className="flex items-center gap-2">

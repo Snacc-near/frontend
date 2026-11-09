@@ -98,7 +98,7 @@ export class PetriDish {
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // Cincin dalam tipis
+    // The thin inner ring
     ctx.beginPath();
     ctx.ellipse(this.centerX, this.centerY, this.radiusX - 8, this.radiusY - 6, 0, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";

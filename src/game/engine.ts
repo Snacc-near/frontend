@@ -259,7 +259,7 @@ export class GameEngine {
       }
     }
 
-    // 4. Update efek visual
+    // 4. Update the visual effects
     this.effects.update(dt);
   }
 
@@ -276,7 +276,7 @@ export class GameEngine {
     // 2. Draw the floating spores
     this.sporeManager.render(this.ctx, this.timeSec);
 
-    // 3. Gambar efek gelombang & partikel
+    // 3. Draw the shockwave & particle effects
     this.effects.render(this.ctx);
 
     // 4. Draw the other cells in the arena

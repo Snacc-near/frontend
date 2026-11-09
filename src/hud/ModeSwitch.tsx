@@ -29,7 +29,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
               : "text-slate-300 hover:text-slate-100"
           }`}
         >
-          demo simulasi
+          demo simulation
         </button>
 
         <button
@@ -53,7 +53,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
 
       {mode === "demo" && (
         <span className="text-[10px] text-amber-300 font-mono lowercase pl-2">
-          prototipe tampilan, data simulasi
+          display prototype, simulated data
         </span>
       )}
     </div>

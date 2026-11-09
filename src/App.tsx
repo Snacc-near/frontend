@@ -97,7 +97,7 @@ export const App: React.FC = () => {
         if (mode === "demo" && cellId === 1) {
           setSelectedStrain({
             strain_id: 1,
-            owner_id: userAccount.trim() || "pemain.testnet",
+            owner_id: userAccount.trim() || "player.testnet",
             vault_subaccount: "v1.snacc-crucible.testnet",
             vitality: optimisticManagerRef.current.getState().currentVitality,
             efficiency_bps: 9850,
@@ -160,7 +160,7 @@ export const App: React.FC = () => {
     };
   }, [mode, atpBalance, userAccount, liveStrains]);
 
-  // 2. Langganan state optimis
+  // 2. Subscribe to the optimistic state
   useEffect(() => {
     const unsub = optimisticManagerRef.current.subscribe((nextState) => {
       setOptimistic(nextState);
@@ -227,7 +227,7 @@ export const App: React.FC = () => {
     return () => poller.stop();
   }, [mode, userAccount]);
 
-  // Handler perpindahan mode
+  // The mode-change handler
   const handleModeChange = (nextMode: GameMode) => {
     setMode(nextMode);
     if (engineRef.current) {
@@ -249,9 +249,9 @@ export const App: React.FC = () => {
   };
 
   const handleFeedClick = () => {
-    if (mode === "live") return; // Transaksi nyata di luar cakupan
+    if (mode === "live") return; // Real transactions are out of scope
 
-    // Terapkan aksi optimis di mode demo
+    // Apply the optimistic action in demo mode
     optimisticManagerRef.current.applyFeed(220);
     setAtpBalance((prev) => Math.max(0, prev - 10));
 
@@ -286,7 +286,7 @@ export const App: React.FC = () => {
       {
         id: `sim-burst-${Date.now()}`,
         kind: "nutrient_burst_released",
-        actor: "strain #3 (simulasi)",
+        actor: "strain #3 (simulated)",
         summary: "cell lysis triggers a nutrient burst wave into the dish",
         crucibleTemp: crucibleTempMk,
         timestampMs: Date.now(),
@@ -331,7 +331,7 @@ export const App: React.FC = () => {
         aria-label="snacc petri dish arena with living cells"
       />
 
-      {/* Lapisan HUD DOM Terbuka */}
+      {/* The open DOM HUD layer */}
       <HudOverlay
         mode={mode}
         onModeChange={handleModeChange}
