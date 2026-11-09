@@ -1,0 +1,801 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cell Lab</title>
+<style>@keyframes clbr{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}
+.cl-breathe{transform-box:fill-box;transform-origin:center}</style></head><body>
+<script src="core.js"></script>
+<script>
+/* =========================================================================
+   Cell Lab -- an interactive cutaway eukaryotic cell whose organelles WORK.
+   (truth first: real cell biology, and the parts list; every part is held
+   by another, named as HANDS below.)
+
+   HOW IT REALLY WORKS (each button = one real step, moving along real paths):
+   Feed      nutrient molecules pass through membrane channel proteins
+             (aqueous pores in the lipid bilayer) into the cytoplasm.
+   ATP       glucose enters a mitochondrion; the folded inner membrane
+             (cristae) glow as the electron transport chain pumps protons;
+             ATP synthase releases ATP, which streams out to the cytoplasm.
+   Extract   free ribosomes / rough ER translate mRNA into spore granules
+             that bud off the membrane surface into the cytoplasm.
+   Transmute spores ride the smooth ER and are chemically assembled into
+             enzymes (repackaged along the tubules).
+   Synthesize the Golgi stack (cis -> medial -> trans) modifies and packs
+             cargo into vesicles that travel the cytoskeleton to the
+             membrane and fuse, exocytosing an elixir drop.
+   Nucleus   chromatin is transcribed; mRNA threads out through nuclear
+             pores to free ribosomes, which build protein.
+   Lysosome  a lysosome (single membrane + acid hydrolases) engulfs
+             debris by phagocytosis and digests it inside.
+   Divide    mitosis: chromatin condenses, chromosomes congress on the
+             metaphase plate, spindle fibres from the duplicated
+             centrosomes pull sister chromatids apart, cytokinesis pinches.
+   Lyse      osmotic failure: the membrane ruptures and contents spill.
+   Splice    two cells fuse: membranes join, contents mix.
+
+   PARTS (each held by another):
+   CASE      plasma membrane (far+near shell, held by the petri medium
+             it rests on) . inner leaflet (bilayer, held by membrane) .
+             channel proteins x9 (held by membrane, straddling bilayer) .
+             glycoprotein dots (held by membrane) . cytoplasm tint
+             (held by membrane).
+   NUCLEUS   envelope (double shell, held by chromatin pressure) .
+             nuclear pores x6 (held by envelope) . chromatin loops
+             (held by envelope) . nucleolus (held by chromatin).
+   ENDOMEMBRANE   rough ER sacs x4 (continuous with nuclear envelope,
+             hence held by it) . ribosomes on rough ER x10 (held by sacs) .
+             smooth ER tubules x4 (held by rough ER) . free ribosomes x8
+             (floating in cytoplasm) . Golgi cisternae x3 (held by
+             microtubules near nucleus) . transport vesicles (budded
+             from Golgi, held by donor membrane until release).
+   ENERGY    mitochondria x6 (positions by level; held in cytoplasm,
+             touching other organelles) . outer membrane + matrix +
+             cristae x3 per mitochondrion (cristae held by matrix)
+             . ATP sparks (released by mitochondria, travel to membrane).
+   DIGEST    lysosomes x6 (by level; held in cytoplasm) . debris x2
+             (held in cytoplasm until eaten) . digestive enzymes (dots
+             inside lysosomes).
+   FRAME     centrosome (two centriole barrels, held by microtubule
+             aster) . microtubules x6 + actin filaments x4 (held by
+             centrosome / membrane) . vacuole (held by membrane).
+   EXTRAS    dish + medium (held on ground) . second cell (held in
+             medium, approaches for splice) . chromosomes + spindle
+             (during divide only) . mRNA ribbon (pore to ribosome).
+   Count: 45+ real parts; every drive touches what it drives
+   (channel spans the bilayer, cristae line the matrix, pores pierce
+   the envelope, vesicle path runs along the microtubule route).
+   ========================================================================= */
+
+/* ---------- palettes (bioluminescent, kept hand-inked) ---------- */
+PALS.bio = { l:'#8fe3ff', m:'#3f8fe0', d:'#173a75' };
+const MEM = PALS.bio;
+const nucM   = matOf('#9d6ff0'), nucInner = matOf('#c9a6ff');
+const nucleoM= matOf('#ffb84d');
+const mitoM  = matOf('#ff8a66'), matrixM  = matOf('#ffb08a');
+const erM    = matOf('#f58fc4'), smoothM  = matOf('#f7a8d8');
+const golgiM = matOf('#f4b829');
+const lysoM  = matOf('#ff9f43');
+const riboM  = matOf('#4ad6c2');
+const vesM   = matOf('#b6f0c9');
+const vacuM  = matOf('#a8e6f5');
+const filM   = matOf('#53c7c7');
+const chanM  = matOf('#ffd166');
+const dishM  = matOf('#2b6cb0'), mediumM = matOf('#7fd4ff');
+const debrisM= matOf('#8a6b4a');
+const sporeM = matOf('#c9a6ff'), enzM = matOf('#7fe07a'), atpM = matOf('#ffd23f');
+const goldM  = matOf('#ffd23f');
+const chromC = '#5b2ea6', cristaC = '#7a2e16';
+
+/* ---------- geometry constants (x depth, y width, z up; 1 unit ~ 1 cm at 100x) ---------- */
+const DCX = 46, DCY = 50;                 // dish centre
+const CELL = [46, 50, 36], CR = 30;       // cell centre + radius (bottom at z=6, rests on medium 5.8)
+const NUC = [39, 56, 43], NRX = 13, NRY = 13, NRZ = 12;  // nucleus
+const CAS = [33, 52, 49];                 // centrosome
+const GOLG = [60, 40, 40];                // golgi centre
+const VAC = [58, 28, 48], VACR = 8;       // vacuole
+const HERO = [63, 66, 33];                // hero mitochondrion (ATP)
+const DISH_R = 46, MED_R = 42;
+const MITO_POS = [
+  { p:[63,66,33], r:[10,7,6]  },   // hero
+  { p:[25,66,47], r:[9,6,5.5] },
+  { p:[32,30,26], r:[8,6,5]   },
+  { p:[65,32,52], r:[9,6,5]   },
+  { p:[47,76,28], r:[8,6,5]   },
+  { p:[55,22,36], r:[8,6,5]   },
+];
+const MITO_COUNT = [1,2,2,3,3,4];            // organel.mitokondria level 0..5
+const LYSO_POS = [
+  [38,72,24],[58,68,22],[30,60,20],[66,52,20],[44,30,20],[36,44,18]
+];
+const LYSO_COUNT = [1,1,2,2,3,4];            // organel.lisosom level 0..5
+const RIBO_FREE = [
+  [40,70,52],[52,72,44],[30,52,30],[48,36,60],[58,58,48],[34,36,42],[62,44,30],[46,64,62]
+];
+const ER_RIBO = [[24,44,52],[28,50,47],[22,52,42],[26,40,37],[30,48,52],[22,46,47],[28,42,47]];
+const CHAN_ANG = [22,68,112,158,202,248,292,338];   // channel proteins around equator (deg, 0=+x)
+const GLYCO_ANG = [45,90,135,180,225,270,315,0];
+const DEBRIS = [{ p:[33,66,19], r:3.2 }, { p:[62,62,20], r:2.8 }];
+const FEED_TARGETS = [[50,58,30],[44,44,28],[56,52,42],[40,60,42],[52,40,34],[46,56,50]];
+const ATP_EXITS = [[1,1,0],[.6,1,.4],[1,.4,.6]];
+const SPARK_OFF = [[0,0,0],[3,2,1],[-3,1,2],[2,-3,0],[-2,-2,-2],[4,-1,-1],[-4,3,0],[1,4,2],[0,-4,-1],[5,3,-2]];
+const EXO_DIR = norm([GOLG[0]-CELL[0], GOLG[1]-CELL[1], GOLG[2]-CELL[2]]);
+const EXO_SITE = [CELL[0]+EXO_DIR[0]*(CR-1), CELL[1]+EXO_DIR[1]*(CR-1), CELL[2]+EXO_DIR[2]*(CR-1)];
+const MRNA_FROM = [47,64,48], MRNA_TO = [52,72,44];
+const ACTIONS = ['feed','atp','extract','transmute','synthesize','nucleus','lysosome','divide','lysis','splice'];
+const REDUCED = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+
+/* ---------- small helpers ---------- */
+const clamp01 = t => Math.max(0, Math.min(1, t));
+const smooth = t => { t = clamp01(t); return t*t*(3-2*t); };
+const seg = (a, b, t) => a + (b-a)*t;
+const seg3 = (a, b, t) => [seg(a[0],b[0],t), seg(a[1],b[1],t), seg(a[2],b[2],t)];
+const dot3 = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const step01 = (p, a, b) => clamp01((p-a)/(b-a));
+const scr = (pt3, r, colour, extra='') => { const q = P(pt3[0],pt3[1],pt3[2]); const rr = r*1.2247;
+  return `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${f(rr)}" fill="${colour}" ${extra}/>`; };
+const scrInk = (pt3, r, w=1) => { const q = P(pt3[0],pt3[1],pt3[2]); const rr = r*1.2247;
+  return `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${f(rr)}" fill="none" stroke="${INK}" stroke-width="${w}"/>`; };
+const lerpCol = (a, b, t) => mix(a, b, clamp01(t));
+const star4 = (pt3, s, colour, deg) => { const q = P(pt3[0],pt3[1],pt3[2]);
+  const d = `M${f(q[0])} ${f(q[1]-s)}L${f(q[0]+s*.3)} ${f(q[1]-s*.3)}L${f(q[0]+s)} ${f(q[1])}L${f(q[0]+s*.3)} ${f(q[1]+s*.3)}L${f(q[0])} ${f(q[1]+s)}L${f(q[0]-s*.3)} ${f(q[1]+s*.3)}L${f(q[0]-s)} ${f(q[1])}L${f(q[0]-s*.3)} ${f(q[1]-s*.3)}Z`;
+  return `<path d="${d}" fill="${colour}" stroke="${INK}" stroke-width="1" transform="rotate(${f(deg||0)} ${f(q[0])} ${f(q[1])})"/>`; };
+const bbOf = (pts, e=1) => [[0,1,2].map(i => Math.min(...pts.map(p=>p[i]))-e), [0,1,2].map(i => Math.max(...pts.map(p=>p[i]))+e)];
+
+/* Ellipsoid shell split into far / near buckets (no depth buffer in engine).
+   Rings are horizontal (PZ planes); poles are explicit fans. */
+function ringPts(cx, cy, cz, rx, ry, rz, t, n) {
+  const zz = cz + t*rz, f = Math.sqrt(Math.max(0, 1 - t*t));
+  return on(PZ(zz), ellUV(cx, cy, Math.max(.01, rx*f), Math.max(.01, ry*f), n));
+}
+function bandQuads(cx, cy, cz, rx, ry, rz, n, ts) {
+  const rings = ts.map(t => ringPts(cx, cy, cz, rx, ry, rz, t, n));
+  const cen = [cx, cy, cz], out = [];
+  for (let b = 0; b < rings.length-1; b++) {
+    const A = rings[b], B = rings[b+1];
+    for (let i = 0; i < n; i++) {
+      const a0 = A[i], a1 = A[(i+1)%n], b1 = B[(i+1)%n], b0 = B[i];
+      let nr = norm(cross(sub(a1,a0), sub(b0,a0)));
+      if (!isFinite(nr[0])) continue;
+      const qc = avg([a0,a1,b1,b0]);
+      if (dot3(nr, sub(qc, cen)) < 0) nr = nr.map(v => -v);
+      out.push({ quad:[a0,a1,b1,b0], n:nr, c:qc });
+    }
+  }
+  for (const poleT of [-1, 1]) {
+    const pole = [cx, cy, cz + poleT*rz], R0 = rings[poleT < 0 ? 0 : rings.length-1];
+    for (let i = 0; i < n; i++) {
+      const a = R0[i], b = R0[(i+1)%n];
+      let nr = norm(cross(sub(b, pole), sub(a, pole)));
+      if (!isFinite(nr[0])) continue;
+      if (dot3(nr, sub(avg([pole,a,b]), cen)) < 0) nr = nr.map(v => -v);
+      out.push({ quad:[pole,a,b], n:nr, c:avg([pole,a,b]) });
+    }
+  }
+  return out;
+}
+function shellBuckets(cx, cy, cz, rx, ry, rz, m, shade, n=24, ts=[-1,-.66,-.33,0,.33,.66,1], op={}) {
+  let far = '', near = '';
+  const skip = op.skip || null;
+  for (const q of bandQuads(cx, cy, cz, rx, ry, rz, n, ts)) {
+    if (skip && skip(q)) continue;
+    const col = shade(q.n, m);
+    const s = vis(q.n) ? `<path d="${pd(q.quad)}" fill="${col}" ${op.nearOp != null ? `opacity="${op.nearOp}"` : ''}/>`
+                       : `<path d="${pd(q.quad)}" fill="${col}" ${op.farOp != null ? `opacity="${op.farOp}"` : ''}/>`;
+    if (vis(q.n)) near += s; else far += s;
+  }
+  const all = [];
+  for (const t of ts) all.push(...ringPts(cx, cy, cz, rx, ry, rz, t, n));
+  return { far, near, ink: hullInk(all, 2.6) };
+}
+function ball(cx, cy, cz, rx, ry, rz, m, shade=toneI, n=18, op={}) {
+  const b = shellBuckets(cx, cy, cz, rx, ry, rz, m, shade, n, [-1,-.5,0,.5,1], op);
+  return b.far + b.near + b.ink;
+}
+/* breath: membrane scale via CSS on the whole cell group (no per-frame loop) */
+function breathStyle(u) {
+  if (REDUCED || u.status === 'Liquidated') return 'animation:none';
+  const sp = u.status === 'Distressed' || u.zone === 'Hypothermia' ? '7s' : u.zone === 'Fever' ? '2.4s' : '4s';
+  return `animation:clbr ${sp} ease-in-out infinite`;
+}
+
+/* status palettes */
+function memPaletteFor(u) {
+  let m = { l:MEM.l, m:MEM.m, d:MEM.d };
+  const st = (u.status||'').toLowerCase(), zn = (u.zone||'').toLowerCase();
+  if (st.includes('distress')) m = { l:mix(m.l,'#d6dbe2',.45), m:mix(m.m,'#d6dbe2',.45), d:mix(m.d,'#d6dbe2',.4) };
+  else if (st.includes('liquid')) m = { l:mix(m.l,'#e2483d',.5), m:mix(m.m,'#e2483d',.5), d:mix(m.d,'#7a241d',.45) };
+  else if (st.includes('spliced') || st.includes('burned')) m = { l:mix(m.l,'#9a9a94',.55), m:mix(m.m,'#9a9a94',.55), d:mix(m.d,'#9a9a94',.5) };
+  if (zn.includes('fever')) m = { l:mix(m.l,'#ffb347',.28), m:mix(m.m,'#ff8a3d',.25), d:m.d };
+  else if (zn.includes('hypo')) m = { l:mix(m.l,'#aee6ff',.32), m:mix(m.m,'#aee6ff',.28), d:m.d };
+  return m;
+}
+function ghostFactor(u) { return ((u.status||'').toLowerCase().includes('spliced') || (u.status||'').toLowerCase().includes('burned')) ? .55 : 1; }
+
+/* ---------- organelle builders (each returns svg; held-by noted above) ---------- */
+function mitoFigure(pt, rad, glow, lum) {
+  const [mx,my,mz] = pt, [rx,ry,rz] = rad;
+  const matCol = lerpCol('#ffb08a', '#ffe9a0', glow*.8);
+  const mm = { l:lerpCol(mitoM.l,'#ffd166',glow*.5), m:lerpCol(mitoM.m,'#ff9f43',glow*.5), d:mitoM.d };
+  /* outer membrane: translucent coral shell held by matrix */
+  const shell = shellBuckets(mx,my,mz, rx,ry,rz, mm, toneI, 16, [-1,-.5,0,.5,1], { farOp:.55, nearOp:.6 });
+  /* matrix: solid inner body */
+  let s = shell.far;
+  s += ball(mx,my,mz, rx*.78, ry*.74, rz*.72, matOf(matCol), toneI, 14);
+  /* cristae: folded arcs held by matrix (glow when producing ATP) */
+  const cristaR = glow > .05 ? 1.4+1.6*glow : 1.4;
+  for (const dxo of [-.42, 0, .42]) {
+    const x = mx + dxo*rx, pts = [];
+    for (let i = 0; i <= 10; i++) { const t = i/10;
+      pts.push([x, my + Math.sin(t*Math.PI)*ry*.62*(i%2? .55:.95) + (i%2? -1:1)*0, mz + (t*2-1)*rz*.68]); }
+    const d = pd(pts, false);
+    s += `<path d="${d}" fill="none" stroke="${cristaC}" stroke-width="${cristaR}" stroke-linecap="round"/>`;
+    if (glow > .03) s += `<path d="${d}" fill="none" stroke="#ffd166" stroke-width="${cristaR*.9}" stroke-linecap="round" opacity="${f(glow*.95)}"/>`;
+  }
+  s += shell.near + shell.ink;
+  if (glow > .03) { // halo of light around a working mitochondrion
+    const q = P(mx,my,mz);
+    s += `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${f(rx*1.9)}" fill="#ffe9a0" opacity="${f(.28*glow)}" pointer-events="none"/>`;
+  }
+  return s;
+}
+function nucleusFigure(u, envOp, chromGlow, dissolved) {
+  const [nx,ny,nz] = NUC;
+  const envM = { l:lerpCol(nucM.l,'#e0c8ff',chromGlow*.4), m:nucM.m, d:nucM.d };
+  const shell = shellBuckets(nx,ny,nz, NRX,NRY,NRZ, envM, toneI, 26, [-1,-.6,-.3,0,.3,.6,1], { farOp:.5*envOp, nearOp:.62*envOp });
+  let s = shell.far;
+  /* chromatin: wavy loops held by envelope, glow with nucleus level/action */
+  const chCol = lerpCol('#6a3fb8', '#e6d5ff', chromGlow);
+  for (let li = 0; li < 4; li++) {
+    const zz = nz - 6 + li*4, pts = [];
+    for (let i = 0; i <= 14; i++) { const a = i/14*Math.PI*2 + li*.8;
+      pts.push([nx + Math.cos(a)*10.5, ny + Math.sin(a)*10.5, zz + Math.sin(a*3)*1.6]); }
+    const d = pd(pts, false);
+    s += `<path d="${d}" fill="none" stroke="${chCol}" stroke-width="${1.4 + 1.6*chromGlow}" opacity="${f(.65+.35*envOp)}" stroke-linecap="round"/>`;
+  }
+  /* nucleolus: held by chromatin */
+  if (!dissolved) s += ball(nx,ny,nz+1, 4.5,4.5,4, nucleoM, toneI, 14);
+  /* nuclear pores: held by envelope (pierce it) */
+  if (envOp > .4) {
+    const poreDirs = [[.7,.7,.15],[-.7,.7,.15],[.7,-.6,.3],[-.6,-.7,.25],[.2,.9,.4],[.2,-.5,.6]];
+    for (const dir of poreDirs) {
+      const dd = norm(dir), pt = [nx+dd[0]*NRX, ny+dd[1]*NRY, nz+dd[2]*NRZ];
+      s += scr(pt, 1.8, '#e8dcff') + scrInk(pt, 1.8, .8);
+    }
+  }
+  s += shell.near + (envOp > .15 ? shell.ink : '');
+  return s;
+}
+function channelPair(th, u) {
+  const a = th*Math.PI/180, dir = [Math.cos(a), Math.sin(a), 0];
+  const inner = [CELL[0]+dir[0]*(CR-3.5), CELL[1]+dir[1]*(CR-3.5), CELL[2]];
+  const outer = [CELL[0]+dir[0]*(CR+2.5), CELL[1]+dir[1]*(CR+2.5), CELL[2]];
+  const fNear = facing(dir);
+  const svg = rod(inner, outer, 2.1, chanM, toneI, 1) + scr(outer, 2.1, chanM.l) + scr(outer, 1.15, chanM.d);
+  return { fNear, svg, at: [CELL[0]+dir[0]*CR, CELL[1]+dir[1]*CR, CELL[2]], box: bbOf([inner, outer], 2.5) };
+}
+function glycoDot(th) {
+  const a = th*Math.PI/180, dir = [Math.cos(a), Math.sin(a), .35];
+  const pt = [CELL[0]+dir[0]*(CR+1.5), CELL[1]+dir[1]*(CR+1.5), CELL[2]+dir[2]*(CR+1.5)];
+  return { fNear: facing(norm(dir)), svg: scr(pt, 1.3, ink === undefined ? '#231e16' : '#eaf6ff') + scrInk(pt, 1.3, .7), at: pt, box: bbOf([pt], 2) };
+}
+
+/* draw a screen-space glow disc (screen circle at 3D centre) */
+function glowDisc(pt3, rScreen, colour, op) {
+  const q = P(pt3[0],pt3[1],pt3[2]);
+  return `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${f(rScreen)}" fill="${colour}" opacity="${f(op)}" pointer-events="none"/>`;
+}
+
+/* ---------- the scene ---------- */
+function cellScene(u, m) {
+  const now = performance.now()/1000;
+  const anim = u.anim;
+  const p = anim ? clamp01((performance.now()-anim.t0)/anim.dur) : 0;
+  const name = anim ? anim.name : '';
+  const kXR = ease(u.xr || 0);
+  const memM = memPaletteFor(u);
+  const ghost = ghostFactor(u);
+  const stLower = (u.status||'').toLowerCase(), znLower = (u.zone||'').toLowerCase();
+  const fever = znLower.includes('fever'), hypo = znLower.includes('hypo');
+  const dist = stLower.includes('distress') || stLower.includes('liquid') || hypo;
+
+  /* --- morphology: divide morph + lysis spill + splice second cell --- */
+  let sep = 0, lobeR = CR, LobA = CELL, LobB = CELL;
+  if (name === 'divide' && p > .3) {
+    sep = 13 * smooth(step01(p, .45, .68)) * (1 - smooth(step01(p, .9, 1)));
+    lobeR = CR - sep*.42;
+    LobA = [CELL[0]-sep, CELL[1], CELL[2]]; LobB = [CELL[0]+sep, CELL[1], CELL[2]];
+  }
+  const spillK = name === 'lysis' ? smooth(step01(p, .25, .6)) * (1 - smooth(step01(p, .85, 1))) : 0;
+  const spill = pt => [pt[0]+(pt[0]-CELL[0])*spillK*.55, pt[1]+(pt[1]-CELL[1])*spillK*.55, pt[2]+(pt[2]-CELL[2])*spillK*.35];
+  const lysisBreach = name === 'lysis' ? smooth(step01(p, .05, .5)) : 0;
+
+  /* membrane skip for lysis breach: front sector around 45 degrees, mid band */
+  const skipFn = lysisBreach > .02 ? (q => {
+    const ang = Math.atan2(q.c[1]-CELL[1], q.c[0]-CELL[0])*180/Math.PI;
+    const dd = Math.abs(((ang-45+540)%360)-180);
+    return dd < 26*lysisBreach && Math.abs(q.c[2]-CELL[2]) < 20*lysisBreach;
+  }) : null;
+
+  const parts = [];      // interior parts (byDepth)
+  const outParts = [];   // particles outside the membrane (drawn over the near shell)
+  const put = (pt, e, svg) => parts.push({ at: pt.slice(), box: bbOf([pt], e), svg });
+  const putOut = (pt, e, svg) => outParts.push({ at: pt.slice(), box: bbOf([pt], e), svg });
+  const insideCell = pt => Math.hypot(pt[0]-CELL[0], pt[1]-CELL[1], pt[2]-CELL[2]) < CR - 1;
+
+  /* ===== static interior (positions spill-offset when lysing) ===== */
+  /* nucleus (dissolves during divide early phase) */
+  let envOp = 1, chromGlow = u.nukLvl/5 * .8, dissolved = false;
+  if (name === 'divide' && p < .35) { envOp = 1 - smooth(step01(p, .05, .3)); dissolved = p > .15; }
+  if (name === 'nucleus') chromGlow = Math.max(chromGlow, Math.sin(Math.min(1,p*1.25)*Math.PI));
+  if (name === 'divide' && p > .8) { envOp = 1; } // re-formed below via daughter nuclei
+  if (!(name === 'divide' && p > .8)) {
+    const np = spill(NUC);
+    put(np, 14, nucleusFigure(u, envOp, chromGlow, dissolved) + (name === 'divide' ? '' : ''));
+  }
+
+  /* chromosomes during divide */
+  if (name === 'divide' && p >= .12) {
+    const chroms = [];
+    for (let ci = 0; ci < 4; ci++) {
+      const off = (ci-1.5)*3.2;
+      let pos;
+      if (p < .45) pos = [NUC[0] + Math.sin(p*20+ci)*1.2, NUC[1] + off*.3, NUC[2] + off];           // condensing near centre
+      else if (p < .62) { const q = smooth(step01(p, .45, .62)); pos = seg3([NUC[0], NUC[1]+off*.3, NUC[2]+off], [NUC[0], NUC[1], NUC[2]+off], q); } // congress to plate
+      else if (p < .85) { const q = smooth(step01(p, .62, .85)); const side = ci < 2 ? -1 : 1; pos = seg3([NUC[0], NUC[1], NUC[2]+off], [(46+side*(sep+6)), 50, 38], q); }
+      else { const q = smooth(step01(p, .85, 1)); const side = ci < 2 ? -1 : 1; pos = seg3([46+side*(sep+6), 50, 38], [46+side*(sep+6), 50, 38+off*.2], q); }
+      const len = 2.2 + (p < .45 ? smooth(step01(p, .12, .3))*1.2 : 2.4 - smooth(step01(p, .85, 1))*1.0);
+      const X = [[0,-len,0],[0,len,0]];
+      const rodA = [[-len*.5,-len*.5,0],[len*.5,len*.5,0]].map(v => [pos[0]+v[0], pos[1]+v[1], pos[2]+v[2]]);
+      const rodB = [[-len*.5,len*.5,0],[len*.5,-len*.5,0]].map(v => [pos[0]+v[0], pos[1]+v[1], pos[2]+v[2]]);
+      chroms.push({ pos, svg: rod(rodA[0], rodA[1], 1.3, nucInner, toneI, .7) + rod(rodB[0], rodB[1], 1.3, nucInner, toneI, .7), box: bbOf([rodA[0],rodA[1],rodB[0],rodB[1]], 1.6) });
+    }
+    /* spindle fibres from the two centrosome poles */
+    const poleT = spill([CAS[0]-4, CAS[1], CAS[2]+4]), poleB = spill([NUC[0]-2, NUC[1]-4, NUC[2]-13]);
+    let sp = '';
+    for (const ch of chroms) {
+      sp += `<path d="${pd([poleT, ch.pos], false)}" fill="none" stroke="${filM.m}" stroke-width=".8" opacity=".8"/>`;
+      sp += `<path d="${pd([poleB, ch.pos], false)}" fill="none" stroke="${filM.m}" stroke-width=".8" opacity=".8"/>`;
+    }
+    put(poleT, 4, scr(poleT, 2.6, filM.l) + sp);
+    for (const ch of chroms) put(ch.pos, 3, ch.svg);
+    /* daughter nuclei forming late */
+    if (p > .82) {
+      for (const side of [-1, 1]) {
+        const c = [46+side*(sep+6), 50, 38], r = (sep + 6 < 8 ? sep + 6 : 7) * smooth(step01(p, .82, .97));
+        if (r > 1) put(c, r, ball(c[0],c[1],c[2], r, r, r*.9, nucM, toneI, 14, { farOp:.55, nearOp:.6 }));
+      }
+    }
+  }
+
+  /* rough ER sacs (held by nuclear envelope) + ribosomes */
+  const erP = spill([26, 46, 40]);
+  for (let si = 0; si < 4; si++) {
+    const c = spill([26, 46, 34 + si*5.5]);
+    put(c, 10, ball(c[0],c[1],c[2], 9, 12, 2.6, erM, toneI, 14, { farOp:.8, nearOp:.85 }));
+  }
+  for (const rp of ER_RIBO) put(spill(rp), 2, scr(spill(rp), 1.6, riboM.m) + scrInk(spill(rp), 1.6, .7));
+
+  /* smooth ER tubules (held by rough ER) + enzyme store */
+  const smPath = [[48,38,48],[54,36,52],[58,42,54],[54,48,52],[48,46,50]];
+  let smSvg = '';
+  for (let i = 0; i < smPath.length-1; i++) smSvg += rod(smPath[i], smPath[i+1], 1.6, smoothM, toneI, .8);
+  put([53, 42, 51], 8, smSvg);
+  for (let ei = 0; ei < 4; ei++) {
+    const em = u.inv.enzyme > ei && name !== 'transmute';
+    if (em) put([smPath[ei][0], smPath[ei][1], smPath[ei][2]+2.5], 2, star4([smPath[ei][0], smPath[ei][1], smPath[ei][2]+2.5], 3.2, enzM.l, 0));
+  }
+
+  /* Golgi stack (held by microtubules) + vesicles budding */
+  const golGlow = name === 'synthesize' ? Math.sin(Math.min(1, p*3)*Math.PI) : 0;
+  for (let gi = 0; gi < 3; gi++) {
+    const c = spill([GOLG[0], GOLG[1], GOLG[2]-3 + gi*3]);
+    put(c, 11, ball(c[0],c[1],c[2], 11, 8, 1.7, golgiM, toneI, 14, { farOp:.85, nearOp:.9 }));
+  }
+  for (const [vx,vy] of [[56,38],[64,36],[60,44]]) put(spill([vx,vy,46]), 3, ball(vx,vy,46, 2.6,2.6,2.6, vesM, toneI, 10));
+
+  /* mitochondria (count/glow by level; hero is MITO_POS[0]) */
+  const mitoN = MITO_COUNT[u.mitoLvl] || 1;
+  for (let mi = 0; mi < mitoN; mi++) {
+    const mp = MITO_POS[mi], c = spill(mp.p);
+    let glow = u.mitoLvl/5 * .35;
+    if (name === 'atp' && mi === 0) glow = Math.max(glow, Math.sin(Math.min(1, Math.max(0, (p-.3)/.5))*Math.PI));
+    if (name === 'atp' && mi > 0) glow = Math.max(glow, .15*Math.sin(Math.min(1, p*1.4)*Math.PI));
+    put(c, 10, mitoFigure(c, mp.r, glow, u.mitoLvl));
+  }
+
+  /* lysosomes (count by level; L1 eats during lysosome action) */
+  const lysoN = LYSO_COUNT[u.lysoLvl] || 1;
+  for (let li = 0; li < lysoN; li++) {
+    let c = LYSO_POS[li].slice();
+    if (name === 'lysosome' && li === 0) {
+      const D1 = DEBRIS[0].p;
+      if (p < .4) c = seg3(c, D1, ease(p/.4));
+      else if (p < .85) c = D1.slice();
+      else c = seg3(D1, LYSO_POS[0], ease((p-.85)/.15));
+    }
+    c = spill(c);
+    const pulse = (name === 'lysosome' && li === 0 && p >= .4 && p < .85) ? 1 + .18*Math.sin((p-.4)/.45*Math.PI*2) : 1;
+    let svg = ball(c[0],c[1],c[2], 4.2*pulse, 4.2*pulse, 4*pulse, lysoM, toneI, 12, { farOp:.85, nearOp:.9 });
+    /* enzyme dots inside */
+    for (const [dx,dy] of [[-1.6,.8],[1.4,-1],[.2,1.8]]) svg += scr([c[0]+dx, c[1]+dy, c[2]], .9, '#fff3d0');
+    put(c, 5, svg);
+  }
+
+  /* centrosome (held by nuclear envelope / aster) + cytoskeleton filaments */
+  const csP = spill(CAS);
+  put(csP, 5, rod([csP[0]-4, csP[1], csP[2]], [csP[0]+4, csP[1], csP[2]], 1.8, filM, toneI, .8)
+              + rod([csP[0], csP[1]-4, csP[2]], [csP[0], csP[1]+4, csP[2]], 1.8, filM, toneI, .8));
+  const asterDirs = [[1,.4,.3],[-1,.5,.2],[.5,-1,.25],[.2,.9,-.3],[-.6,-.6,.4],[.9,.1,-.4]];
+  let aster = '';
+  for (const dir of asterDirs) {
+    const dd = norm(dir);
+    aster += rod(csP, [csP[0]+dd[0]*11, csP[1]+dd[1]*11, csP[2]+dd[2]*11], .55, filM, toneI, .5);
+  }
+  put([csP[0], csP[1], csP[2]], 20, aster);
+  /* actin filaments near membrane */
+  let actin = '';
+  for (const th of [30, 80, 200, 320]) {
+    const a = th*Math.PI/180;
+    const a0 = [CELL[0]+Math.cos(a)*CR*.7, CELL[1]+Math.sin(a)*CR*.7, CELL[2]+8];
+    const a1 = [CELL[0]+Math.cos(a+.5)*CR*.8, CELL[1]+Math.sin(a+.5)*CR*.8, CELL[2]+16];
+    actin += rod(a0, a1, .5, filM, toneI, .5);
+  }
+  put([CELL[0], CELL[1], CELL[2]], 24, actin);
+
+  /* free ribosomes (floating in cytoplasm) */
+  const riboGlow = name === 'nucleus' ? Math.sin(Math.min(1, Math.max(0, (p-.6)/.4))*Math.PI) : 0;
+  for (const rp of RIBO_FREE) {
+    const c = spill(rp);
+    put(c, 2, scr(c, 1.7, riboGlow > .05 ? '#ffe9a0' : riboM.l) + scrInk(c, 1.7, .7));
+  }
+
+  /* vacuole (held by membrane) */
+  const vacP = spill(VAC);
+  put(vacP, 9, ball(vacP[0],vacP[1],vacP[2], VACR,VACR,VACR-1, vacuM, toneI, 18, { farOp:.3, nearOp:.42 }));
+
+  /* debris (held in cytoplasm until eaten; returns after digestion) */
+  for (let di = 0; di < 2; di++) {
+    const D = DEBRIS[di];
+    let sc = 1, op = 1;
+    if (name === 'lysosome' && di === 0) { sc = 1 - smooth(step01(p, .4, .7)); op = 1 - smooth(step01(p, .7, .85)); }
+    if (sc > .03) {
+      const c = spill(D.p);
+      put(c, D.r+1, `<g opacity="${f(op)}">${ball(c[0],c[1],c[2], D.r*sc, D.r*sc*.9, D.r*sc, debrisM, toneI, 10)}</g>`);
+    }
+  }
+
+  /* spore store (extracted granules resting near rough ER base) */
+  for (let si2 = 0; si2 < 6; si2++) {
+    if (u.inv.spore > si2 && name !== 'extract' && name !== 'transmute') {
+      const c = [22 + (si2%3)*4, 40 + Math.floor(si2/3)*4, 30];
+      put(c, 3, ball(c[0],c[1],c[2], 2.8,2.8,2.8, sporeM, toneI, 10));
+    }
+  }
+
+  /* ===== animation particles (interior stage) ===== */
+  if (name === 'feed') {
+    for (let oi = 0; oi < 6; oi++) {
+      const th = [22,68,112,158,202,248][oi], a = th*Math.PI/180, dir = [Math.cos(a), Math.sin(a), 0];
+      const chanP = [CELL[0]+dir[0]*CR, CELL[1]+dir[1]*CR, CELL[2]];
+      const start = [chanP[0]+dir[0]*15, chanP[1]+dir[1]*15, chanP[2]+5];
+      const q = clamp01((p - oi*.05)/.72);
+      if (q <= 0 || q >= 1) continue;
+      const target = FEED_TARGETS[oi];
+      let pos, r = 3.2, op = 1;
+      if (q < .45) { const e = ease(q/.45); pos = seg3(start, chanP, e); pos[2] += Math.sin(e*Math.PI)*3; }
+      else if (q < .68) { const e = (q-.45)/.23; pos = seg3(chanP, [chanP[0]-dir[0]*4, chanP[1]-dir[1]*4, chanP[2]], e); r = 3.2 - 1.0*e; }
+      else { const e = (q-.68)/.32; pos = seg3([chanP[0]-dir[0]*4, chanP[1]-dir[1]*4, chanP[2]], target, e); op = 1 - e*.4; r = 2.2; }
+      const orbSvg = `<g opacity="${f(op)}">${scr(pos, r, goldM.l) + scrInk(pos, r, .9)}</g>`;
+      if (insideCell(pos)) put(pos, 4, orbSvg); else putOut(pos, 4, orbSvg);
+    }
+  }
+  if (name === 'atp') {
+    const M1 = MITO_POS[0].p;
+    /* glucose travelling in */
+    const gq = clamp01(p/.38);
+    if (gq > 0 && gq < 1) {
+      const gp = seg3([52,62,26], M1, ease(gq));
+      put(gp, 3, scr(gp, 2.8, '#9fe8ff') + scrInk(gp, 2.8, .9));
+    }
+    /* sparks streaming out */
+    for (let sj = 0; sj < 10; sj++) {
+      const q = clamp01((p - .55 - sj*.03)/.42);
+      if (q <= 0 || q >= 1) continue;
+      const exit = ATP_EXITS[sj % 3];
+      const end = [CELL[0]+exit[0]*(CR-2), CELL[1]+exit[1]*(CR-2), CELL[2]+exit[2]*(CR-2)];
+      const off = SPARK_OFF[sj];
+      const start = [M1[0]+off[0], M1[1]+off[1], M1[2]+off[2]];
+      const e = ease(q);
+      const pos = seg3(start, end, e); pos[2] += Math.sin(e*Math.PI)*4;
+      const sc = Math.sin(q*Math.PI);
+      put(pos, 4, star4(pos, 3.4*sc + .4, atpM.l, q*180));
+      if (q > .12) { const trail = seg3(start, end, ease(q-.12)); trail[2] += Math.sin(ease(q-.12)*Math.PI)*4;
+        put(trail, 3, scr(trail, 1.6, atpM.l, `opacity=".5"`)); }
+    }
+  }
+  if (name === 'extract') {
+    for (let si3 = 0; si3 < 5; si3++) {
+      const rp = ER_RIBO[si3], q = clamp01((p - si3*.05)/.85);
+      if (q <= 0) continue;
+      const c = spill(rp);
+      if (q < .5) { const e = ease(q/.5); put([c[0],c[1],c[2]+3*e], 3, ball(c[0],c[1],c[2]+3*e, 2.8*e+.2, 2.8*e+.2, 2.8*e+.2, sporeM, toneI, 10)); }
+      else { const e = (q-.5)/.5; const pos = [c[0]-2*e, c[1]+1*e, c[2]+3-4*e];
+        put(pos, 3, ball(pos[0],pos[1],pos[2], 2.8,2.8,2.8, sporeM, toneI, 10)); }
+    }
+  }
+  if (name === 'transmute') {
+    for (let ti = 0; ti < 4; ti++) {
+      const q = clamp01((p - ti*.06)/.8);
+      if (q <= 0) continue;
+      const dst = [smPath[ti][0], smPath[ti][1], smPath[ti][2]+2.5];
+      const src = [22 + (ti%3)*4, 40 + Math.floor(ti/3)*4, 30];
+      let pos;
+      if (q < .6) pos = seg3(src, dst, ease(q/.6));
+      else pos = dst;
+      const isEnz = q >= .7;
+      put(pos, 3, isEnz ? star4(pos, 3.2, enzM.l, 0) : ball(pos[0],pos[1],pos[2], 2.8,2.8,2.8, sporeM, toneI, 10));
+    }
+  }
+  if (name === 'synthesize') {
+    const vesBirth = [GOLG[0]+2, GOLG[1]+2, 47];
+    const vesPath = [vesBirth, [64,48,47], [68,54,46], EXO_SITE];
+    if (p > .2) {
+      const q = clamp01((p-.2)/.6);
+      let pos, r = .5;
+      if (q < .2) { pos = vesBirth; r = .5 + 2.6*ease(q/.2); }
+      else { const s = (q-.2)/.8, segIdx = Math.min(2, Math.floor(s*3));
+        pos = seg3(vesPath[segIdx], vesPath[segIdx+1], ease(s*3-segIdx)); r = 3.1 - .3*s; }
+      put(pos, 4, ball(pos[0],pos[1],pos[2], r,r,r, vesM, toneI, 12));
+      if (p > .82) { // membrane bulge then burst
+        const bq = smooth(step01(p, .82, .92));
+        put(EXO_SITE, 3.5, scr(EXO_SITE, 2.6+2*bq, '#d9f7c9') + scrInk(EXO_SITE, 2.6+2*bq, .9));
+      }
+      if (p > .93) {
+        const dq = (p-.93)/.07;
+        const dp = [EXO_SITE[0]+EXO_DIR[0]*(6+10*dq), EXO_SITE[1]+EXO_DIR[1]*(6+10*dq), EXO_SITE[2]+EXO_DIR[2]*(6+10*dq)+6*dq];
+        putOut(dp, 4, `<g opacity="${f(1-dq*.6)}">${ball(dp[0],dp[1],dp[2], 3.4,3.4,3.4, goldM, toneI, 10)}</g>`);
+      }
+    }
+  }
+  if (name === 'nucleus') {
+    /* mRNA ribbon growing from the nuclear pore to a free ribosome */
+    const q = clamp01((p-.25)/.55);
+    if (q > 0) {
+      const pts = [];
+      for (let i = 0; i <= 14; i++) {
+        const t = i/14;
+        const pt = seg3(MRNA_FROM, MRNA_TO, t);
+        pt[2] += Math.sin(t*Math.PI)*3 + Math.sin(t*9)*0.7;
+        pts.push(pt);
+      }
+      const upto = Math.max(2, Math.floor(pts.length*q));
+      const d = pd(pts.slice(0, upto), false);
+      put(MRNA_FROM, 5, `<path d="${d}" fill="none" stroke="#4ad6c2" stroke-width="3.2" opacity=".35" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#0e8a7a" stroke-width="1.6" stroke-linecap="round"/>`
+        + scr(pts[upto-1], 2.2, '#bff5ec') + scrInk(pts[upto-1], 2.2, .8));
+      if (p > .8) { const fq = smooth(step01(p, .8, 1));
+        put(MRNA_TO, 3, star4([MRNA_TO[0], MRNA_TO[1], MRNA_TO[2]+2], 2.6*fq+.4, '#ffb84d', 0)); }
+    }
+  }
+  if (name === 'lysis') {
+    /* cytoplasm spill blobs flying out */
+    for (let bi = 0; bi < 8; bi++) {
+      const q = clamp01((p-.3)/.5);
+      if (q <= 0) continue;
+      const ang = (bi/8)*Math.PI*2 + .4, dir = [Math.cos(ang), Math.sin(ang), Math.sin(bi*2.3)*.5];
+      const dd = norm(dir);
+      const src = [CELL[0]+dd[0]*8, CELL[1]+dd[1]*8, CELL[2]+dd[2]*8];
+      const dst = [src[0]+dd[0]*(18+10*q), src[1]+dd[1]*(18+10*q), src[2]+dd[2]*(18+10*q)-6*q];
+      const pos = seg3(src, dst, ease(q));
+      put(pos, 3, `<g opacity="${f((1-q*.5))}">${scr(pos, 2.4, vacuM.l)}</g>`);
+    }
+    /* fracture cracks on the near membrane */
+    if (p > .06 && p < .85) {
+      const cq = smooth(step01(p, .06, .35));
+      const crack1 = [[CELL[0]+16, CELL[1]+16, CELL[2]+10],[CELL[0]+22, CELL[1]+20, CELL[2]+2],[CELL[0]+19, CELL[1]+26, CELL[2]-8]];
+      const crack2 = [[CELL[0]+22, CELL[1]+8, CELL[2]+14],[CELL[0]+26, CELL[1]+12, CELL[2]+2],[CELL[0]+24, CELL[1]+19, CELL[2]-10]];
+      const d1 = pd(crack1.map((c,i) => [c[0]+(i? 3*cq:0), c[1]+(i? 3*cq:0), c[2]]), false);
+      const d2 = pd(crack2.map((c,i) => [c[0]+(i? 3*cq:0), c[1]+(i? 3*cq:0), c[2]]), false);
+      put([CELL[0]+22, CELL[1]+16, CELL[2]], 10, `<path d="${d1}" fill="none" stroke="${INK}" stroke-width="1.3" opacity="${f(.9)}"/><path d="${d2}" fill="none" stroke="${INK}" stroke-width="1.3" opacity="${f(.9)}"/>`);
+    }
+  }
+
+  /* ===== membrane shells (far, then interior, then near) ===== */
+  const farShells = [], nearShells = [];
+  const centres = sep > .5 ? [LobA, LobB] : [CELL];
+  for (const c of centres) {
+    const sh = shellBuckets(c[0],c[1],c[2], lobeR, lobeR, lobeR, memM, tone, 28, [-1,-.66,-.33,0,.33,.66,1],
+      { farOp: .42*ghost, nearOp: .5*ghost, skip: skipFn });
+    farShells.push(sh.far);
+    nearShells.push({ svg: sh.near + sh.ink, at: c.slice(), box: bbOf([[c[0]-lobeR, c[1]-lobeR, c[2]-lobeR],[c[0]+lobeR, c[1]+lobeR, c[2]+lobeR]], 1) });
+    /* inner leaflet (bilayer) */
+    const isl = shellBuckets(c[0],c[1],c[2], lobeR-1.6, lobeR-1.6, lobeR-1.6, memM, toneI, 22, [-1,-.5,0,.5,1], { farOp:.25, nearOp:.22, skip: skipFn });
+    farShells.push(isl.far); nearShells.push({ svg: isl.near, at: c.slice(), box: bbOf([[c[0]-lobeR, c[1]-lobeR, c[2]-lobeR],[c[0]+lobeR, c[1]+lobeR, c[2]+lobeR]], 1) });
+  }
+  /* channels + glyco dots split by facing side */
+  const farSurf = [], nearSurf = [];
+  for (const th of CHAN_ANG) { const cp = channelPair(th, u); (cp.fNear ? nearSurf : farSurf).push(cp); }
+  for (const th of GLYCO_ANG) { const gp = glycoDot(th); (gp.fNear ? nearSurf : farSurf).push(gp.svg ? gp : gp); }
+  const surfSvg = list => byDepth(list.map(cp => ({ at: cp.at || [0,0,0], box: cp.box, svg: cp.svg })));
+
+  /* second cell for splice (its own little world approaching from outside) */
+  let spliceSvg = '', spliceFar = '';
+  if (name === 'splice') {
+    const start = [90, 96, 68], dock = [73, 74, 49];
+    let scC, scOp = 1, neckR = 0;
+    if (p < .5) scC = seg3(start, dock, ease(p/.5));
+    else if (p < .72) { scC = dock; neckR = 2 + 4*smooth(step01(p, .5, .72)); }
+    else { scC = seg3(dock, [CELL[0]+9, CELL[1]+9, CELL[2]+4], ease(step01(p, .72, .92))); scOp = 1 - smooth(step01(p, .72, .92)); neckR = 6; }
+    const scSh = shellBuckets(scC[0],scC[1],scC[2], 17,17,17, memM, tone, 20, [-1,-.5,0,.5,1], { farOp:.42*scOp, nearOp:.5*scOp });
+    spliceFar = scSh.far;
+    spliceSvg += `<g opacity="${f(scOp)}">${scSh.near + scSh.ink}</g>`;
+    spliceSvg += `<g opacity="${f(scOp)}">${ball(scC[0],scC[1],scC[2], 7,7,6, nucM, toneI, 12, { farOp:.55, nearOp:.6 })}${mitoFigure([scC[0]+8, scC[1]+4, scC[2]-3], [6,4.5,4], 0, 2)}</g>`;
+    if (neckR > 0) spliceSvg += rod([CELL[0]+16, CELL[1]+16, CELL[2]+6], [scC[0]-12, scC[1]-12, scC[2]-6], neckR, memM, toneI, 1);
+  }
+
+  /* fever halo behind the cell (screen-space warm glow) */
+  let halo = '';
+  if (fever) halo = glowDisc(CELL, CR*1.5, '#ffb347', .22);
+  if (name === 'atp' && p > .3) halo += glowDisc(HERO, 26, '#ffe9a0', .14*Math.sin(Math.min(1,Math.max(0,(p-.3)/.5))*Math.PI));
+
+  /* assemble with painter order: shadow, far shells+splice far, interior, near shells, surface, splice near, labels */
+  const interior = byDepth(parts);
+  const cellGroup = `<g class="cl-breathe" style="${breathStyle(u)}">`
+    + (fever ? glowDisc(CELL, CR*1.55, '#ffb347', .18) : '')
+    + spliceFar + farShells.join('') + surfSvg(farSurf)
+    + interior
+    + nearShells.map(ns => ns.svg).join('')
+    + surfSvg(nearSurf)
+    + byDepth(outParts)
+    + spliceSvg
+    + halo
+    + `</g>`;
+
+  /* satellite tags on the closed look (membrane, channel, nucleus, mitochondrion) */
+  let labels = '';
+  if (kXR > .6) {
+    const items = [
+      { at:[CELL[0]+CR, CELL[1], CELL[2]+8], text:'MEMBRANE', on: name === 'feed' || name === 'lysis' },
+      { at: channelPair(45, u).at, text:'CHANNEL', on: name === 'feed' },
+      { at: NUC, text:'NUCLEUS', on: name === 'nucleus' || name === 'divide' },
+      { at:[NUC[0]+7, NUC[1]+5, NUC[2]-4], text:'CHROMATIN', on: name === 'nucleus' || name === 'divide' },
+      { at:[26, 46, 48], text:'ROUGH ER', on: name === 'extract' },
+      { at: ER_RIBO[0], text:'RIBOSOME', on: name === 'extract' || name === 'nucleus' },
+      { at:[53, 42, 51], text:'SMOOTH ER', on: name === 'transmute' },
+      { at: GOLG, text:'GOLGI', on: name === 'synthesize' },
+      { at: HERO, text:'MITOCHONDRION', on: name === 'atp' },
+      { at:[HERO[0]-4, HERO[1], HERO[2]], text:'CRISTAE', on: name === 'atp' },
+      { at: LYSO_POS[0], text:'LYSOSOME', on: name === 'lysosome' },
+      { at: CAS, text:'CENTROSOME', on: name === 'divide' },
+      { at:[52, 72, 44], text:'CYTOSKELETON', on: name === 'synthesize' },
+      { at: VAC, text:'VACUOLE', on: false },
+    ];
+    labels = xrCallouts(items, [14, 78, 18, 82, 0, 70]);
+  } else {
+    labels = tag([CELL[0]+CR, CELL[1]+CR*.6, CELL[2]+10], 40, -30, 'MEMBRANE', name === 'feed' || name === 'lysis')
+           + tag(channelPair(45, u).at, 34, -52, 'CHANNEL', name === 'feed')
+           + tag(NUC, -40, -40, 'NUCLEUS', name === 'nucleus' || name === 'divide')
+           + tag(HERO, 44, -20, 'MITOCHONDRION', name === 'atp');
+  }
+
+  /* dish + shadows (grounded on the medium) */
+  let ground = '';
+  const dishRing = on(PZ(1), ellUV(DCX, DCY, DISH_R, DISH_R, 32));
+  ground += castShadow([...dishRing, ...on(PZ(5), ellUV(DCX, DCY, DISH_R, DISH_R, 32))], 0);
+  ground += cyl(DCX, DCY, 0, 5, DISH_R, dishM, tone, 1.6, 36);
+  ground += cyl(DCX, DCY, 5, 5.8, MED_R, mediumM, toneI, 1.2, 36);
+  ground += fill(pd(on(PZ(5.85), ellUV(DCX, DCY, MED_R*.9, MED_R*.9, 24))), '#c9f2ff', `opacity=".35"`);
+  const cellRing = on(PZ(CELL[2]), ellUV(CELL[0], CELL[1], CR*.95, CR*.95, 24));
+  ground += castShadow(cellRing, 5.8, on(PZ(5.8), ellUV(DCX, DCY, MED_R, MED_R, 24)));
+  /* hypothermia frost specks on the medium */
+  if (hypo) {
+    for (const [fx,fy] of [[30,40],[62,60],[40,66],[56,34],[48,52]]) ground += scr([fx, fy, 5.9], 1.6, '#eaf8ff', `opacity=".8"`);
+  }
+
+  return ground + cellGroup + labels;
+}
+
+/* ---------- actions + bridge ---------- */
+let ui = null;
+function playAction(action, fromButton) {
+  const st = ui.st;
+  if (!ACTIONS.includes(action)) return;
+  let dur = { feed:2400, atp:3400, extract:2200, transmute:2400, synthesize:3400, nucleus:2800, lysosome:2800, divide:4600, lysis:3200, splice:3600 }[action];
+  const stL = (st.status||'').toLowerCase(), znL = (st.zone||'').toLowerCase();
+  if (stL.includes('distress') || stL.includes('liquid') || znL.includes('hypo')) dur *= 1.6;
+  if (REDUCED) dur = 60;
+  if (fromButton) postToApp({ type:'snacc:action', action });
+  st.anim = { name: action, t0: performance.now(), dur };
+  if (action === 'lysis') { /* crackle then restore: handled by progress */ }
+  if (!st._loop) { st._loop = true;
+    ui.animate(() => {
+      const s2 = ui.st;
+      if (!s2.anim) { s2._loop = false; return false; }
+      const pp = (performance.now() - s2.anim.t0) / s2.anim.dur;
+      if (pp >= 1) {
+        const doneName = s2.anim.name;
+        if (doneName === 'atp') s2.inv.atp += 5;
+        if (doneName === 'extract') s2.inv.spore = Math.min(8, s2.inv.spore + 5);
+        if (doneName === 'transmute') { s2.inv.spore = Math.max(0, s2.inv.spore - 4); s2.inv.enzyme = Math.min(8, s2.inv.enzyme + 4); }
+        if (doneName === 'synthesize') s2.inv.elixir = Math.min(8, s2.inv.elixir + 2);
+        s2.anim = null;
+        s2._loop = false;
+        postToApp({ type:'snacc:done', action: doneName });
+        ui.render();
+        return false;
+      }
+      return true;
+    });
+  }
+  ui.render();
+}
+function postToApp(msg) {
+  try {
+    const target = location.origin && location.origin !== 'null' ? location.origin : '*';
+    if (window.parent && window.parent !== window) window.parent.postMessage(msg, target);
+    else window.postMessage(msg, target);
+  } catch (e) { try { window.parent.postMessage(msg, '*'); } catch (e2) {} }
+}
+addEventListener('message', e => {
+  const d = e.data;
+  if (!d || typeof d !== 'object') return;
+  const sameFile = location.protocol === 'file:' && (e.origin === 'file://' || e.origin === 'null' || e.origin === '');
+  if (e.origin !== location.origin && !sameFile) return;
+  if (d.type === 'snacc:play') { if (ACTIONS.includes(d.action)) playAction(d.action, false); }
+  else if (d.type === 'snacc:state') {
+    const st = ui.st;
+    const s = d.strain || {};
+    if (typeof s.status === 'string') st.status = s.status;
+    if (typeof d.zone === 'string') st.zone = d.zone;
+    const o = s.organel || {};
+    for (const key of ['mitokondria','nukleus','lisosom']) {
+      const v = o[key];
+      if (Number.isFinite(v)) {
+        const c = Math.max(0, Math.min(5, Math.round(v)));
+        if (key === 'mitokondria') st.mitoLvl = c;
+        if (key === 'nukleus') st.nukLvl = c;
+        if (key === 'lisosom') st.lysoLvl = c;
+      }
+    }
+    ui.render();
+  }
+});
+
+/* ---------- mount ---------- */
+ui = mountFigure({
+  fig:'01', turn:'full', title:'Cell Lab', credit:false,
+  size:[98, 102, 72], center:[46, 50], palette:'bio',
+  state:{ status:'Active', zone:'Normal', mitoLvl:2, nukLvl:1, lysoLvl:1,
+          inv:{ atp:0, spore:0, enzyme:0, elixir:0 }, anim:null, _loop:false, pendingAction:null },
+  scene: (st, m) => cellScene(st, m),
+  readout: st => `status ${st.status} · zone ${st.zone} · ATP ${st.inv.atp}`,
+  stats: st => [
+    { label:'ATP', value: st.inv.atp, small:true },
+    { label:'SPORE', value: st.inv.spore, small:true },
+    { label:'ENZYME', value: st.inv.enzyme, small:true },
+    { label:'ELIXIR', value: st.inv.elixir, small:true },
+  ],
+  buttons:[
+    { label:'Feed', onClick:(st) => playAction('feed', true) },
+    { label:'ATP', onClick:(st) => playAction('atp', true) },
+    { label:'Extract', onClick:(st) => playAction('extract', true) },
+    { label:'Transmute', onClick:(st) => playAction('transmute', true) },
+    { label:'Synthesize', onClick:(st) => playAction('synthesize', true) },
+    { label:'Nucleus', onClick:(st) => playAction('nucleus', true) },
+    { label:'Lysosome', onClick:(st) => playAction('lysosome', true) },
+    { label:'Divide', onClick:(st) => playAction('divide', true) },
+    { label:'Lyse', onClick:(st) => playAction('lysis', true) },
+    { label:'Splice', onClick:(st) => playAction('splice', true) },
+  ],
+  params:(st, q) => {
+    const lvl = (k, key) => { const v = q.get(k); if (v != null && isFinite(+v)) st[key] = Math.max(0, Math.min(5, +v|0)); };
+    lvl('mito','mitoLvl'); lvl('nuk','nukLvl'); lvl('lyso','lysoLvl');
+    if (q.get('status')) st.status = q.get('status');
+    if (q.get('zone')) st.zone = q.get('zone');
+    if (q.get('action') && ACTIONS.includes(q.get('action'))) st.pendingAction = q.get('action');
+    if (q.get('inv')) { const parts = q.get('inv').split('-'); if (parts.length === 4) { st.inv.atp = +parts[0]||0; st.inv.spore = +parts[1]||0; st.inv.enzyme = +parts[2]||0; st.inv.elixir = +parts[3]||0; } }
+  },
+});
+xrMount(() => ui, st => 'Drag to turn the cell. See-through reveals the organelles and their real pathways: nutrients through membrane channels, ATP from mitochondria, spores from ribosomes, enzymes on the ER, elixir out through the Golgi, mRNA from the nucleus, digestion in lysosomes, mitosis, lysis and fusion.');
+postToApp({ type:'snacc:ready' });
+if (ui.st.pendingAction) setTimeout(() => playAction(ui.st.pendingAction, false), 420);
+</script></body></html>
