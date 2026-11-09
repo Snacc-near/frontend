@@ -20,6 +20,8 @@ export const LAB_ACTIONS: readonly LabAction[] = [
   "divide",
   "lysis",
   "splice",
+  "vacuole",
+  "attest",
 ] as const;
 
 export interface BridgeStrainState {

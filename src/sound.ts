@@ -99,6 +99,24 @@ class BioSoundEngine {
     osc.stop(now + 0.14);
   }
 
+  /** Short keycap click tick (ZzFX-style square blip). */
+  public playClick(): void {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(1050, now);
+    osc.frequency.exponentialRampToValueAtTime(320, now + 0.045);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+
   /** Low hum when an action is unavailable. CC0 original synthesis. */
   public playDenied(): void {
     const ctx = this.ensureContext();

@@ -16,7 +16,9 @@ export type LabAction =
   | "lysosome"
   | "divide"
   | "lysis"
-  | "splice";
+  | "splice"
+  | "vacuole"
+  | "attest";
 
 export type DockAction = LabAction | "harvest";
 
@@ -53,6 +55,8 @@ export interface SimulationState {
   crucibleTempMk: number;
   queue: ProductionItem[];
   log: string[];
+  totalIn: number;
+  totalOut: number;
 }
 
 export const VITALITY_MAX = 10000;
@@ -136,6 +140,8 @@ export function createInitialSimulation(): SimulationState {
     crucibleTempMk: 605,
     queue: [],
     log: ["demo · simulated: colony seeded at 600..610 mk balance band"],
+    totalIn: 0,
+    totalOut: 0,
   };
 }
 
@@ -159,6 +165,7 @@ export function startProduction(
   }
   if (costs?.spores) next.spores -= costs.spores;
   if (costs?.enzymes) next.enzymes -= costs.enzymes;
+  next.totalIn += (costs?.spores ?? 0) + (costs?.enzymes ?? 0) + 0;
 
   const amount = Math.round(baseReward(kind).baseAmount * outputMultiplier(next.organel, kind));
   const item: ProductionItem = {
@@ -211,6 +218,7 @@ export function collectProduction(
   } else {
     next.elixir += item.amount;
   }
+  next.totalOut += item.amount;
   pushLog(next, `collected +${item.amount} ${item.kind}`);
   return { state: next, ok: true, error: null };
 }
@@ -226,6 +234,7 @@ export function feedStrain(
     atpBalance: state.atpBalance + 12,
     vitality: Math.min(VITALITY_MAX, state.vitality + 220),
     crucibleTempMk: Math.min(680, state.crucibleTempMk + 2),
+    totalIn: state.totalIn + 10,
     log: [...state.log],
   };
   pushLog(next, "fed strain: +12 atp, +220 vitality (demo · simulated)");
@@ -288,6 +297,7 @@ export function harvestStrain(
     spores: state.spores + 3,
     vitality: VITALITY_INITIAL,
     lyses: state.lyses + 1,
+    totalOut: state.totalOut + released,
     log: [...state.log],
   };
   pushLog(next, `lysis harvest: released ${released} nutrients (base burst 2.00%)`);
@@ -339,5 +349,17 @@ export function applyAction(
       return harvestStrain(state);
     case "splice":
       return spliceStrains(state);
+    case "vacuole": {
+      // Demo only: the Cell Lab figure plays the vacuole pulse. No numbers move.
+      const next: SimulationState = { ...state, log: [...state.log] };
+      pushLog(next, "vacuole pulse played (demo · simulated)");
+      return { state: next, ok: true, error: null };
+    }
+    case "attest": {
+      // TEE verification preview. Changes no numbers, in demo and live alike.
+      const next: SimulationState = { ...state, log: [...state.log] };
+      pushLog(next, "attest: tee verification preview · no numbers changed");
+      return { state: next, ok: true, error: null };
+    }
   }
 }
