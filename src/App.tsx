@@ -1,9 +1,15 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import type { MacroZone } from "./config/zones.ts";
 import { classifyZone } from "./config/zones.ts";
 import type { SkinMode } from "./config/constants.ts";
 import { INITIAL_ATP, BURST_BASE_BPS } from "./config/constants.ts";
-import type { BreachLogItem, NutrientBurstState } from "./data/types.ts";
+import type {
+  BreachLogItem,
+  NutrientBurstState,
+  StrainDetail,
+  StrainSummary,
+} from "./data/types.ts";
+import { fetchStrain } from "./data/api.ts";
 import { OptimisticManager, type OptimisticVitalityState } from "./data/optimistic.ts";
 import { TelemetryPoller } from "./data/poller.ts";
 import { GameEngine, type GameMode } from "./game/engine.ts";
@@ -20,6 +26,11 @@ export const App: React.FC = () => {
   const [zone, setZone] = useState<MacroZone>("Goldilocks");
   const [crucibleTempMk, setCrucibleTempMk] = useState(605);
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
+  const [userAccount, setUserAccount] = useState("");
+  const [liveStrains, setLiveStrains] = useState<StrainSummary[]>([]);
+  const [selectedStrain, setSelectedStrain] = useState<StrainDetail | null>(null);
+  const [isLoadingStrain, setIsLoadingStrain] = useState(false);
+
   const [burst, setBurst] = useState<NutrientBurstState>({
     isActive: true,
     activeBurstBps: BURST_BASE_BPS,
@@ -27,9 +38,11 @@ export const App: React.FC = () => {
     releasedVita: "7200",
     triggeringStrainId: 3,
   });
+
   const [optimistic, setOptimistic] = useState<OptimisticVitalityState>(
     optimisticManagerRef.current.getState(),
   );
+
   const [logs, setLogs] = useState<BreachLogItem[]>([
     {
       id: "init-1",
@@ -57,6 +70,14 @@ export const App: React.FC = () => {
     },
   ]);
 
+  // Hitung jumlah strain yang cocok dengan filter akun
+  const matchedStrainsCount = useMemo(() => {
+    const q = userAccount.trim().toLowerCase();
+    if (!q) return 0;
+    if (mode === "demo") return 1;
+    return liveStrains.filter((s) => s.owner_id.toLowerCase().includes(q)).length;
+  }, [userAccount, liveStrains, mode]);
+
   // 1. Inisialisasi engine canvas
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -72,6 +93,62 @@ export const App: React.FC = () => {
           return next;
         });
       },
+      onCellClick: async (cellId) => {
+        if (mode === "demo" && cellId === 1) {
+          setSelectedStrain({
+            strain_id: 1,
+            owner_id: userAccount.trim() || "pemain.testnet",
+            vault_subaccount: "v1.snacc-crucible.testnet",
+            vitality: optimisticManagerRef.current.getState().currentVitality,
+            efficiency_bps: 9850,
+            bmr_per_hour: 45,
+            last_fed_sec: Math.floor(Date.now() / 1000) - 120,
+            role_mask: 1,
+            state_nonce: 12,
+            pending_callbacks: 0,
+            atp_balance: String(atpBalance),
+            generation: 1,
+            organel: {
+              mitokondria: 2,
+              nukleus: 1,
+              lisosom: 1,
+            },
+            status: "aktif",
+            effective_vitality: optimisticManagerRef.current.getState().currentVitality,
+          });
+          return;
+        }
+
+        // Mode Live: Ambil data on-chain dari /api/strains/:id
+        setIsLoadingStrain(true);
+        try {
+          const detail = await fetchStrain(cellId);
+          if (detail) {
+            setSelectedStrain(detail);
+          } else {
+            const summary = liveStrains.find((s) => s.strain_id === cellId);
+            setSelectedStrain({
+              strain_id: cellId,
+              owner_id: summary?.owner_id ?? `strain #${cellId}`,
+              vault_subaccount: "",
+              vitality: 8000,
+              efficiency_bps: 9500,
+              bmr_per_hour: 40,
+              last_fed_sec: Math.floor(Date.now() / 1000) - 240,
+              role_mask: 1,
+              state_nonce: 1,
+              pending_callbacks: 0,
+              atp_balance: "100",
+              generation: 1,
+              organel: { mitokondria: 2, nukleus: 1, lisosom: 1 },
+              status: "aktif",
+              effective_vitality: 8000,
+            });
+          }
+        } finally {
+          setIsLoadingStrain(false);
+        }
+      },
     });
 
     engineRef.current = engine;
@@ -81,18 +158,18 @@ export const App: React.FC = () => {
       engine.dispose();
       engineRef.current = null;
     };
-  }, []);
+  }, [mode, atpBalance, userAccount, liveStrains]);
 
   // 2. Langganan state optimis
   useEffect(() => {
     const unsub = optimisticManagerRef.current.subscribe((nextState) => {
       setOptimistic(nextState);
-      if (engineRef.current) {
+      if (engineRef.current && mode === "demo") {
         engineRef.current.setPlayerVitality(nextState.currentVitality / 10000);
       }
     });
     return unsub;
-  }, []);
+  }, [mode]);
 
   // 3. Poller on-chain telemetry
   useEffect(() => {
@@ -108,6 +185,16 @@ export const App: React.FC = () => {
           }
         }
       },
+      onStrainsUpdate: (strains) => {
+        setIsBackendConnected(true);
+        setLiveStrains(strains);
+        if (mode === "live" && engineRef.current) {
+          engineRef.current.setLiveStrains(
+            strains.map((s) => ({ id: s.strain_id, owner: s.owner_id })),
+            userAccount,
+          );
+        }
+      },
       onNewEvents: (_events) => {
         setIsBackendConnected(true);
       },
@@ -117,25 +204,54 @@ export const App: React.FC = () => {
       onBurstStateChange: (burstState) => {
         setBurst(burstState);
         if (engineRef.current) {
-          engineRef.current.triggerNutrientBurst();
+          if (burstState.triggeringStrainId) {
+            engineRef.current.triggerNutrientBurstOnStrain(burstState.triggeringStrainId);
+          } else {
+            engineRef.current.triggerNutrientBurst();
+          }
+        }
+      },
+      onStrainFed: (strainId) => {
+        if (engineRef.current) {
+          engineRef.current.triggerCellFed(strainId);
+        }
+      },
+      onStrainLiquidated: (strainId) => {
+        if (engineRef.current) {
+          engineRef.current.triggerNutrientBurstOnStrain(strainId);
         }
       },
     });
 
     poller.start();
     return () => poller.stop();
-  }, [mode]);
+  }, [mode, userAccount]);
 
-  // Handler aksi pemain
+  // Handler perpindahan mode
   const handleModeChange = (nextMode: GameMode) => {
     setMode(nextMode);
     if (engineRef.current) {
       engineRef.current.setMode(nextMode);
+      if (nextMode === "live" && liveStrains.length > 0) {
+        engineRef.current.setLiveStrains(
+          liveStrains.map((s) => ({ id: s.strain_id, owner: s.owner_id })),
+          userAccount,
+        );
+      }
+    }
+  };
+
+  const handleUserAccountChange = (account: string) => {
+    setUserAccount(account);
+    if (engineRef.current) {
+      engineRef.current.highlightAccount(account);
     }
   };
 
   const handleFeedClick = () => {
-    // Terapkan aksi optimis
+    if (mode === "live") return; // Transaksi nyata di luar cakupan
+
+    // Terapkan aksi optimis di mode demo
     optimisticManagerRef.current.applyFeed(220);
     setAtpBalance((prev) => Math.max(0, prev - 10));
 
@@ -150,12 +266,10 @@ export const App: React.FC = () => {
       return next;
     });
 
-    // Simulasi konfirmasi setelah 1.2 detik (di mode demo)
-    if (mode === "demo") {
-      setTimeout(() => {
-        optimisticManagerRef.current.confirm();
-      }, 1200);
-    }
+    // Simulasi konfirmasi setelah 1.2 detik
+    setTimeout(() => {
+      optimisticManagerRef.current.confirm();
+    }, 1200);
   };
 
   const handleTriggerBurst = () => {
@@ -230,6 +344,12 @@ export const App: React.FC = () => {
         burst={burst}
         optimistic={optimistic}
         logs={logs}
+        userAccount={userAccount}
+        onUserAccountChange={handleUserAccountChange}
+        matchedStrainsCount={matchedStrainsCount}
+        selectedStrain={selectedStrain}
+        isLoadingStrain={isLoadingStrain}
+        onCloseStrainModal={() => setSelectedStrain(null)}
         onFeedClick={handleFeedClick}
         onTriggerBurst={handleTriggerBurst}
         onShiftZone={handleShiftZone}

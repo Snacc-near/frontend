@@ -10,7 +10,9 @@ import { ZONE_THEMES } from "../config/zones.ts";
 export interface CellOptions {
   id: number;
   label: string;
+  owner?: string;
   isPlayer?: boolean;
+  isHighlighted?: boolean;
   x: number;
   y: number;
   radius?: number;
@@ -25,7 +27,9 @@ export interface CellOptions {
 export class LivingCell {
   public id: number;
   public label: string;
+  public owner?: string;
   public isPlayer: boolean;
+  public isHighlighted: boolean;
   public x: number;
   public y: number;
   public targetX: number;
@@ -39,12 +43,15 @@ export class LivingCell {
   public nukleus: number;
   public lisosom: number;
   public isLiquidated: boolean;
+  public fedPulse = 0;
   private phaseOffset: number;
 
   constructor(opts: CellOptions) {
     this.id = opts.id;
     this.label = opts.label;
+    this.owner = opts.owner;
     this.isPlayer = opts.isPlayer ?? false;
+    this.isHighlighted = opts.isHighlighted ?? false;
     this.x = opts.x;
     this.y = opts.y;
     this.targetX = opts.x;
@@ -59,7 +66,19 @@ export class LivingCell {
     this.phaseOffset = Math.random() * Math.PI * 2;
   }
 
-  public update(_dt: number, dishRadiusX: number, dishRadiusY: number, dishCenterX: number, dishCenterY: number): void {
+  public containsPoint(px: number, py: number): boolean {
+    return Math.hypot(this.x - px, this.y - py) <= this.baseRadius * 1.35;
+  }
+
+  public triggerFedPulse(): void {
+    this.fedPulse = 1.0;
+  }
+
+  public update(dt: number, dishRadiusX: number, dishRadiusY: number, dishCenterX: number, dishCenterY: number): void {
+    if (this.fedPulse > 0) {
+      this.fedPulse = Math.max(0, this.fedPulse - dt * 2.2);
+    }
+
     if (this.isPlayer) {
       // Inersia halus menuju target pointer/keyboard
       const dx = this.targetX - this.x;
@@ -89,10 +108,15 @@ export class LivingCell {
 
   public render(ctx: CanvasRenderingContext2D, timeSec: number): void {
     const theme = ZONE_THEMES[this.zone];
-    const cellColor = this.isLiquidated ? "#ef4444" : theme.color;
-    const pulseSpeed = this.isPlayer ? 2.4 : 1.6;
+    const cellColor = this.isLiquidated
+      ? "#ef4444"
+      : this.isHighlighted
+        ? "#38bdf8"
+        : theme.color;
+
+    const pulseSpeed = this.isPlayer || this.isHighlighted ? 2.4 : 1.6;
     const pulseAmp = 0.06 + (1 - this.vitalityRatio) * 0.08;
-    const breath = 1 + Math.sin(timeSec * pulseSpeed + this.phaseOffset) * pulseAmp;
+    const breath = 1 + Math.sin(timeSec * pulseSpeed + this.phaseOffset) * pulseAmp + this.fedPulse * 0.15;
     const r = this.baseRadius * breath;
 
     ctx.save();
@@ -105,21 +129,33 @@ export class LivingCell {
     ctx.fill();
     ctx.filter = "none";
 
-    // 2. Pendaran luar bioluminescent (outer glow)
-    const haloRadius = r * 1.7;
+    // 2. Lingkaran penyorotan khusus akun pemain (bila ter-highlight)
+    if (this.isHighlighted || this.isPlayer) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * 1.45, 0, Math.PI * 2);
+      ctx.strokeStyle = this.isHighlighted ? "rgba(56, 189, 248, 0.75)" : "rgba(52, 211, 153, 0.75)";
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 3. Pendaran luar bioluminescent (outer glow)
+    const haloRadius = r * (this.isHighlighted ? 2.1 : 1.7);
     const haloGrad = ctx.createRadialGradient(this.x, this.y, r * 0.6, this.x, this.y, haloRadius);
     haloGrad.addColorStop(0, cellColor);
-    haloGrad.addColorStop(0.4, theme.dishGlow);
+    haloGrad.addColorStop(0.4, this.isHighlighted ? "rgba(56, 189, 248, 0.25)" : theme.dishGlow);
     haloGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
 
     ctx.beginPath();
     ctx.arc(this.x, this.y, haloRadius, 0, Math.PI * 2);
     ctx.fillStyle = haloGrad;
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = this.isHighlighted ? 0.85 : 0.6;
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // 3. Membran sel organik (gelombang harmonik prosedural)
+    // 4. Membran sel organik (gelombang harmonik prosedural)
     const pointsCount = 36;
     ctx.beginPath();
     for (let i = 0; i <= pointsCount; i++) {
@@ -144,7 +180,7 @@ export class LivingCell {
       this.y,
       r,
     );
-    cytoGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+    cytoGrad.addColorStop(0, this.fedPulse > 0 ? "rgba(110, 231, 183, 0.98)" : "rgba(255, 255, 255, 0.95)");
     cytoGrad.addColorStop(0.3, cellColor);
     cytoGrad.addColorStop(0.85, "rgba(9, 24, 40, 0.88)");
     cytoGrad.addColorStop(1, cellColor);
@@ -154,10 +190,10 @@ export class LivingCell {
 
     // Garis tepi membran
     ctx.strokeStyle = cellColor;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = this.isHighlighted ? 2.8 : 2.2;
     ctx.stroke();
 
-    // 4. Nukleus sel (inti tengah)
+    // 5. Nukleus sel (inti tengah)
     const nucRadius = r * 0.32;
     const nucX = this.x + Math.sin(timeSec * 1.2 + this.phaseOffset) * 2;
     const nucY = this.y + Math.cos(timeSec * 1.1 + this.phaseOffset) * 2;
@@ -178,7 +214,7 @@ export class LivingCell {
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // 5. Organel (mitokondria kecil & lisosom)
+    // 6. Organel (mitokondria kecil & lisosom)
     for (let m = 0; m < Math.min(this.mitokondria, 4); m++) {
       const mAngle = (m / 4) * Math.PI * 2 + timeSec * 0.6;
       const mDist = r * 0.62;
@@ -191,11 +227,15 @@ export class LivingCell {
       ctx.fill();
     }
 
-    // 6. Label identitas sel kecil di bawah sel
+    // 7. Label identitas sel kecil di bawah sel
     ctx.font = "11px 'DM Sans', -apple-system, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(241, 245, 249, 0.85)";
-    ctx.fillText(this.label, this.x, this.y + r + 16);
+    ctx.fillStyle = this.isHighlighted ? "#7dd3fc" : "rgba(241, 245, 249, 0.85)";
+    ctx.fillText(
+      this.isHighlighted ? `${this.label} (milikmu)` : this.label,
+      this.x,
+      this.y + r + 16,
+    );
 
     ctx.restore();
   }

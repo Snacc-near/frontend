@@ -1,7 +1,7 @@
 import React from "react";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
-import type { BreachLogItem, NutrientBurstState } from "../data/types.ts";
+import type { BreachLogItem, NutrientBurstState, StrainDetail } from "../data/types.ts";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
 import type { GameMode } from "../game/engine.ts";
 import { VitalsPill } from "./VitalsPill.tsx";
@@ -12,6 +12,8 @@ import { NutrientBurstBadge } from "./NutrientBurstBadge.tsx";
 import { BreachLog } from "./BreachLog.tsx";
 import { SkinSwitch } from "./SkinSwitch.tsx";
 import { ModeSwitch } from "./ModeSwitch.tsx";
+import { AccountFilter } from "./AccountFilter.tsx";
+import { StrainDetailModal } from "./StrainDetailModal.tsx";
 
 interface HudOverlayProps {
   mode: GameMode;
@@ -25,6 +27,12 @@ interface HudOverlayProps {
   burst: NutrientBurstState;
   optimistic: OptimisticVitalityState;
   logs: BreachLogItem[];
+  userAccount: string;
+  onUserAccountChange: (account: string) => void;
+  matchedStrainsCount: number;
+  selectedStrain: StrainDetail | null;
+  isLoadingStrain: boolean;
+  onCloseStrainModal: () => void;
   onFeedClick: () => void;
   onTriggerBurst?: () => void;
   onShiftZone?: (zone: MacroZone) => void;
@@ -42,15 +50,21 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
   burst,
   optimistic,
   logs,
+  userAccount,
+  onUserAccountChange,
+  matchedStrainsCount,
+  selectedStrain,
+  isLoadingStrain,
+  onCloseStrainModal,
   onFeedClick,
   onTriggerBurst,
   onShiftZone,
 }) => {
   return (
     <div className="absolute inset-0 pointer-events-none p-4 sm:p-6 flex flex-col justify-between z-10 select-none">
-      {/* Bilah Atas: Brand, Mode Switch, Burst Badge, Vitals, ATP */}
+      {/* Bilah Atas: Brand, Mode Switch, Filter Akun, Burst Badge, Vitals, ATP */}
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-2 pointer-events-auto">
+        <div className="flex flex-col gap-2.5 pointer-events-auto">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-slate-100 tracking-wider">
               $SNACC
@@ -64,6 +78,11 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
             mode={mode}
             onChange={onModeChange}
             isBackendConnected={isBackendConnected}
+          />
+          <AccountFilter
+            account={userAccount}
+            onChange={onUserAccountChange}
+            matchedCount={matchedStrainsCount}
           />
         </div>
 
@@ -131,6 +150,18 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
           <ThermalGauge crucibleTempMk={crucibleTempMk} skin={skin} />
         </div>
       </footer>
+
+      {/* Modal Rincian Strain Saat Sel Diklik */}
+      <div className="pointer-events-auto">
+        <StrainDetailModal
+          strain={selectedStrain}
+          isLoading={isLoadingStrain}
+          skin={skin}
+          mode={mode}
+          onClose={onCloseStrainModal}
+          onFeedClick={onFeedClick}
+        />
+      </div>
     </div>
   );
 };

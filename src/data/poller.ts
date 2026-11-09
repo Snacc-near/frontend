@@ -5,7 +5,7 @@
 
 import { EVENT_POLL_INTERVAL_MS, SLA_LATENCY_MAX_MS, BURST_BASE_BPS, BURST_CAP_BPS } from "../config/constants.ts";
 import { fetchEvents, fetchMacro, fetchStrains } from "./api.ts";
-import type { CrucibleEvent, BreachLogItem, NutrientBurstState, MacroTelemetry } from "./types.ts";
+import type { CrucibleEvent, BreachLogItem, NutrientBurstState, MacroTelemetry, StrainSummary } from "./types.ts";
 
 /**
  * Menghasilkan kunci unik deduplikasi untuk setiap event.
@@ -115,6 +115,9 @@ export interface PollerCallbacks {
   onNewEvents: (events: CrucibleEvent[]) => void;
   onBreachLogItem: (item: BreachLogItem) => void;
   onBurstStateChange: (burst: NutrientBurstState) => void;
+  onStrainsUpdate?: (strains: StrainSummary[]) => void;
+  onStrainFed?: (strainId: number) => void;
+  onStrainLiquidated?: (strainId: number) => void;
 }
 
 export class TelemetryPoller {
@@ -158,6 +161,7 @@ export class TelemetryPoller {
         for (const s of strainsRes.strains) {
           this.strainsCache.set(s.strain_id, s.owner_id);
         }
+        this.callbacks.onStrainsUpdate?.(strainsRes.strains);
       }
 
       if (macro) {
@@ -209,6 +213,22 @@ export class TelemetryPoller {
                   releasedVita: String(raw.released_vita ?? "0"),
                   triggeringStrainId: typeof raw.strain_id === "number" ? raw.strain_id : undefined,
                 });
+              }
+
+              if (ev.kind === "strain_liquidated") {
+                const raw = ev.raw ?? {};
+                const targetId = typeof raw.target_id === "number" ? raw.target_id : undefined;
+                if (targetId !== undefined) {
+                  this.callbacks.onStrainLiquidated?.(targetId);
+                }
+              }
+            }
+
+            if (ev.kind === "fed") {
+              const raw = ev.raw ?? {};
+              const strainId = typeof raw.strain_id === "number" ? raw.strain_id : undefined;
+              if (strainId !== undefined) {
+                this.callbacks.onStrainFed?.(strainId);
               }
             }
           }
