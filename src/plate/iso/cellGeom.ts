@@ -270,7 +270,7 @@ export function cellGeometry(cell: PlacedCell, P: Projection, minHit = 24): Cell
     budScars,
     cracks,
     sideCrack,
-    hit: { center, radius: Math.max(r * k * 1.15, minHit) },
+    hit: { center, radius: Math.max(r * k * 0.98, minHit) },
     spark: iso([x, y, z + zc + 5], P),
   };
 }

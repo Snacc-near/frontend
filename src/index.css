@@ -488,13 +488,13 @@ canvas {
   --anatomy-shade-3: #b98a3e;
 }
 .iso .vac {
-  --anatomy-paper: #e6efe9;
-  --anatomy-face: #e6efe9;
-  --anatomy-top: #ffffff;
-  --anatomy-shade-0: #a9c0b8;
-  --anatomy-shade-1: #c0d3cb;
-  --anatomy-shade-2: #d4e3dc;
-  --anatomy-shade-3: #e6efe9;
+  --anatomy-paper: #cfe6f2;
+  --anatomy-face: #cfe6f2;
+  --anatomy-top: #f2fafe;
+  --anatomy-shade-0: #86b0c6;
+  --anatomy-shade-1: #a2c6d8;
+  --anatomy-shade-2: #bcd9e8;
+  --anatomy-shade-3: #cfe6f2;
 }
 .iso-svg .vac-shine { fill: #fff; stroke: none; opacity: 0.95; }
 .iso-svg .crista { stroke-width: 0.5px; }
@@ -582,13 +582,13 @@ canvas {
   stroke-width: 1.2;
 }
 
-.mito--lit .iso-top {
+.mito--lit .iso-shade[data-shade="3"] {
   animation: mito-glow 2.2s ease-in-out infinite;
 }
 
 @keyframes mito-glow {
-  0%, 100% { fill: #ffd57a; }
-  50% { fill: #fff0bd; }
+  0%, 100% { fill: #f8aa06; }
+  50% { fill: #ffcb54; }
 }
 
 .atp-spark {
