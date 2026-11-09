@@ -1,7 +1,7 @@
 /**
- * UI-117: Badge Nutrient Burst Global.
- * Diegetic pill HUD di atas akuarium 3D yang menyala saat terjadi lisis sel (harvest_starving_strain).
- * Memakai kurva pegas popOver dari motionmaxxing (FE-26) dan bebas inline style (patuh FE-01 CSP).
+ * UI-117: the Global Nutrient Burst Badge.
+ * A diegetic HUD pill above the 3D tank that lights up on a cell lysis (harvest_starving_strain).
+ * Uses the popOver spring curve from motionmaxxing (FE-26) with no inline styles (honors FE-01 CSP).
  */
 
 import type { NutrientBurstState } from "../types.ts";
@@ -20,7 +20,7 @@ export interface BurstBadgeViewModel {
 }
 
 /**
- * Pure view-model builder untuk UI-117 agar dapat diuji langsung oleh `node --test` (FE-04).
+ * The pure view-model builder for UI-117 so `node --test` can test it directly (FE-04).
  */
 export function buildBurstBadgeViewModel(
   burst: NutrientBurstState,
@@ -53,7 +53,7 @@ export function buildBurstBadgeViewModel(
 }
 
 /**
- * Controller DOM untuk pill UI-117 di layar utama.
+ * The DOM controller for the UI-117 pill on the main screen.
  */
 export class NutrientBurstBadgeController {
   private readonly root: HTMLButtonElement;

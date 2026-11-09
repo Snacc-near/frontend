@@ -1,7 +1,7 @@
 /**
  * Modal Detail Strain (NFT Strain On-Chain Inspector).
- * Menampilkan rincian genetik, organel, vitalitas, BMR, dan saldo ATP strain yang diklik di arena.
- * Aksesibel via keyboard (Escape untuk tutup) dan mematuhi kontras ≥ 4,5:1.
+ * Shows the clicked strain's genetics, organelles, vitality, BMR, and ATP balance.
+ * Keyboard accessible (Escape to close) and honors a >= 4.5:1 contrast ratio.
  */
 
 import React, { useEffect, useRef } from "react";
@@ -30,7 +30,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   const modalRef = useRef<HTMLDivElement | null>(null);
   const labels = SKIN_LABELS[skin];
 
-  // Tutup dengan tombol Escape
+  // Close with the Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -73,7 +73,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="tutup rincian strain"
+            aria-label="close the strain details"
             className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer text-sm font-mono"
           >
             esc
@@ -82,21 +82,21 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
 
         {isLoading ? (
           <div className="py-8 text-center text-slate-400 text-xs lowercase animate-pulse">
-            memuat data strain dari kontrak...
+            loading the strain data from the contract...
           </div>
         ) : strain ? (
           <>
-            {/* Pemilik & Vault */}
+            {/* Owner & Vault */}
             <div className="flex flex-col gap-1 text-xs">
               <div className="flex justify-between items-baseline">
-                <span className="text-slate-400 lowercase">pemilik</span>
+                <span className="text-slate-400 lowercase">owner</span>
                 <span className="font-mono text-cyan-300 font-medium">
                   {strain.owner_id}
                 </span>
               </div>
               {strain.vault_subaccount && (
                 <div className="flex justify-between items-baseline text-[11px]">
-                  <span className="text-slate-500 lowercase">sub-akun vault</span>
+                  <span className="text-slate-500 lowercase">vault subaccount</span>
                   <span className="font-mono text-slate-400 truncate max-w-[220px]">
                     {strain.vault_subaccount}
                   </span>
@@ -104,13 +104,13 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               )}
             </div>
 
-            {/* Vitalitas Bar */}
+            {/* Vitality bar */}
             <div className="flex flex-col gap-1 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400 lowercase">{labels.vitality}</span>
                 <span className="font-mono font-bold text-slate-100">
-                  {strain.vitality.toLocaleString("id-ID")}{" "}
-                  <span className="text-slate-500 font-normal">/ {VITALITY_MAX.toLocaleString("id-ID")}</span>
+                  {strain.vitality.toLocaleString("en-US")}{" "}
+                  <span className="text-slate-500 font-normal">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
                 </span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-slate-950 border border-slate-800 overflow-hidden my-1">
@@ -147,20 +147,20 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Saldo ATP & Generasi */}
+            {/* ATP balance & generation */}
             <div className="flex justify-between items-center text-xs px-1 text-slate-400">
               <span className="lowercase">
-                saldo {labels.atp}:{" "}
+                {labels.atp} balance:{" "}
                 <span className="font-mono font-bold text-amber-400">
                   {strain.atp_balance}
                 </span>
               </span>
               <span className="lowercase font-mono text-slate-500">
-                generasi #{strain.generation}
+                generation #{strain.generation}
               </span>
             </div>
 
-            {/* Tombol Aksi Beri Makan */}
+            {/* Feed action button */}
             <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800/80">
               <button
                 type="button"

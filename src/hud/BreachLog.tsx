@@ -12,7 +12,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs }) => {
     <aside
       className="flex flex-col gap-1.5 max-w-sm w-full select-none"
       role="region"
-      aria-label="umpan ambang reaktor"
+      aria-label="the reactor threshold feed"
     >
       <div className="flex items-center justify-between px-2 text-[10px] text-slate-400 font-mono lowercase">
         <button
@@ -40,7 +40,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs }) => {
         >
           {logs.length === 0 ? (
             <div className="px-3 py-2 text-xs text-slate-400 rounded-xl bg-slate-950/80 border border-slate-800/80 lowercase">
-              belum ada peristiwa ambang tercatat
+              no threshold events recorded yet
             </div>
           ) : (
             logs.slice(0, 4).map((item) => (
@@ -53,7 +53,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs }) => {
                     {item.actor}
                   </span>
                   <span className="font-mono text-slate-400 text-[9px]">
-                    {item.latencyMs} ms {item.meetsSla ? "sla lolos" : "sla lewat"}
+                    {item.latencyMs} ms {item.meetsSla ? "sla pass" : "sla miss"}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-300 lowercase leading-snug">

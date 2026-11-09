@@ -1,11 +1,11 @@
 /**
- * Test Suite Unit untuk Paket Kerja Arya `UI-117..119` (FE-04 `node --test`).
- * Menguji:
- * - UI-117: NutrientBurstBadge view-model, perhitungan diskon, kedaluwarsa epoch, dan cap 30%.
- * - UI-118: ZoneBanner klasifikasi suhu (Hypothermia <600, Goldilocks 600..610, Fever >610 mK),
- *           kebijakan I-01 (3.50% burn) & I-04 (2.00% rebate), dan Dual-Skin ADR-31.
- * - UI-119: ThresholdBreachLog ("Siapa Menabrak Ambang"), pemformatan delta suhu, dan SLA <2000 ms.
- * - Motionmaxxing easing curves (FE-26): batas matematis f(0)=0 dan f(1)=1.
+ * Unit Test Suite for the `UI-117..119` work package (FE-04 `node --test`).
+ * Tests:
+ * - UI-117: the NutrientBurstBadge view-model, the discount computation, the epoch expiry, and the 30% cap.
+ * - UI-118: the ZoneBanner temperature classification (Hypothermia <600, Goldilocks 600..610, Fever >610 mK),
+ *           the I-01 policy (3.50% burn) & I-04 (2.00% rebate), and the Dual-Skin ADR-31.
+ * - UI-119: the ThresholdBreachLog ("who crossed the threshold"), the temperature delta formatting, and the SLA <2000 ms.
+ * - Motionmaxxing easing curves (FE-26): the mathematical boundaries f(0)=0 and f(1)=1.
  */
 
 import { describe, it } from "vitest";
@@ -24,7 +24,7 @@ import { buildBreachLogItemViewModel } from "../src/components/ThresholdBreachLo
 import { ease } from "../src/motion.ts";
 
 describe("UI-117: Global Nutrient Burst Badge (EN-102)", () => {
-  it("menampilkan diskon aktif -20.00% s.d. -30.00% sebelum untilEpoch", () => {
+  it("shows an active discount of -20.00% to -30.00% before untilEpoch", () => {
     const vm = buildBurstBadgeViewModel(
       {
         isActive: true,
@@ -74,7 +74,7 @@ describe("UI-118: Macro Zone Banner & Thermostat Spectrum (ECON-111 & ADR-31)", 
     assert.equal(classifyZone(611), "Fever");
   });
 
-  it("menghasilkan view-model yang akurat untuk mode Bio-Lab 3D maupun FinTech (ADR-31)", () => {
+  it("produces an accurate view-model for both the Bio-Lab 3D and FinTech modes (ADR-31)", () => {
     const feverFintech = buildZoneBannerViewModel({ crucibleTemp: 635, currentEpoch: 4 }, "fintech");
     assert.equal(feverFintech.zone, "Fever");
     assert.equal(feverFintech.invariantCode, "I-01");
@@ -89,12 +89,14 @@ describe("UI-118: Macro Zone Banner & Thermostat Spectrum (ECON-111 & ADR-31)", 
 
     const goldPolicy = describeZonePolicy("Goldilocks", "biolab");
     assert.equal(goldPolicy.invariantCode, "EN-105");
-    assert.equal(computeThermalGaugeRatio(600), 0.5);
+    // On the dynamic 0..2x-FEVER scale (0..1220 mK), 600 mK sits just below the midpoint
+    assert.ok(Math.abs(computeThermalGaugeRatio(600) - 600 / 1220) < 1e-9);
+    assert.equal(computeThermalGaugeRatio(1220), 1);
   });
 });
 
-describe("UI-119: Threshold Breach Telemetry Log ('Siapa Menabrak Ambang')", () => {
-  it("memformat event zone_changed dan memverifikasi SLA render < 2000 ms (DoD)", () => {
+describe("UI-119: Threshold Breach Telemetry Log ('who crossed the threshold')", () => {
+  it("formats the zone_changed event and verifies the render SLA < 2000 ms (DoD)", () => {
     const vm = buildBreachLogItemViewModel({
       id: "evt-101",
       kind: "zone_changed",

@@ -103,17 +103,17 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
         </div>
       </header>
 
-      {/* Kontrol Cepat Uji Simulasi (Khusus Mode Demo untuk Demo Juri) */}
+      {/* Quick simulation-test controls (demo mode only, for judge demos) */}
       {mode === "demo" && (
         <div className="flex items-center justify-center gap-2 pointer-events-auto my-auto opacity-80 hover:opacity-100 transition-opacity flex-wrap">
           <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-950/75 border border-slate-800 text-[11px] backdrop-blur-md flex-wrap justify-center">
-            <span className="text-slate-400 px-2 lowercase">simulasi cawan:</span>
+            <span className="text-slate-400 px-2 lowercase">dish simulation:</span>
             <button
               type="button"
               onClick={() => onShiftZone?.("Hypothermia")}
               className="px-3 py-1.5 rounded-full text-cyan-300 hover:bg-cyan-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[36px]"
             >
-              hipotermia (575)
+              hypothermia (575)
             </button>
             <button
               type="button"
@@ -127,20 +127,20 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
               onClick={() => onShiftZone?.("Fever")}
               className="px-3 py-1.5 rounded-full text-orange-300 hover:bg-orange-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-orange-400 focus:outline-none min-h-[36px]"
             >
-              demam (632)
+              fever (632)
             </button>
             <button
               type="button"
               onClick={onTriggerBurst}
               className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-semibold cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none min-h-[36px]"
             >
-              lisis / burst!
+              lysis / burst!
             </button>
           </div>
         </div>
       )}
 
-      {/* Bilah Bawah: Log Ambang & Alat Ukur Suhu */}
+      {/* Bottom bar: the threshold log & the temperature gauge */}
       <footer className="flex flex-wrap items-end justify-between gap-3 sm:gap-4 mt-auto">
         <div className="pointer-events-auto">
           <BreachLog logs={logs} />
@@ -151,7 +151,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
         </div>
       </footer>
 
-      {/* Modal Rincian Strain Saat Sel Diklik */}
+      {/* The strain detail modal when a cell is clicked */}
       <div className="pointer-events-auto">
         <StrainDetailModal
           strain={selectedStrain}

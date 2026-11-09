@@ -1,10 +1,10 @@
 /**
- * Token Gerak & Kurva Easing Eksak dari motionmaxxing (FE-26).
- * Menghindari transisi CSS seragam ("AI slop"); setiap peristiwa memiliki fisika tersendiri.
+ * Motion tokens & exact easing curves from motionmaxxing (FE-26).
+ * Avoids uniform CSS transitions ("AI slop"); every event has its own physics.
  */
 
 export const ease = {
-  /** Pendaratan halus eksponensial (k = 3.41) untuk transisi panel & kamera */
+  /** A smooth exponential landing (k = 3.41) for panel & camera transitions */
   softLand(t: number): number {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
@@ -12,7 +12,7 @@ export const ease = {
     return (1 - Math.exp(-k * t)) / (1 - Math.exp(-k));
   },
 
-  /** Snap cepat lalu mengunci presisi (w = 0.942, τ = 0.118) untuk jarum termometer */
+  /** A fast snap then a precision lock (w = 0.942, τ = 0.118) for the thermometer needle */
   snapSettle(t: number): number {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
@@ -23,7 +23,7 @@ export const ease = {
     return w * settle + (1 - w) * ramp;
   },
 
-  /** Pegas teredam (c = 2.67, ω = 4.36) khusus untuk kemunculan Nutrient Burst Badge */
+  /** A damped spring (c = 2.67, ω = 4.36) dedicated to the Nutrient Burst Badge appearance */
   popOver(t: number): number {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
@@ -32,14 +32,14 @@ export const ease = {
     return 1 - Math.exp(-c * t) * (Math.cos(omega * t) + (c / omega) * Math.sin(omega * t));
   },
 
-  /** Kurva S halus untuk rotasi orbital & napas membran sel */
+  /** A smooth S-curve for the orbital rotation & the cell membrane breathing */
   softInOut(t: number): number {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
     return t * t * (3 - 2 * t);
   },
 
-  /** Akselerasi keluar saat partikel spora tersedot ke dalam inti sel */
+  /** An exit acceleration when spore particles get sucked into the cell core */
   accelExit(t: number): number {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
@@ -56,7 +56,7 @@ export const dur = {
 } as const;
 
 /**
- * Deteksi preferensi aksesibilitas pengguna (FE-28 / UI-132).
+ * Detects the user's accessibility preference (FE-28 / UI-132).
  */
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -66,7 +66,7 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * Interpolasi nilai numerik berbasis requestAnimationFrame menggunakan kurva motionmaxxing.
+ * The requestAnimationFrame-based numeric interpolation using the motionmaxxing curves.
  */
 export function tweenValue(
   from: number,

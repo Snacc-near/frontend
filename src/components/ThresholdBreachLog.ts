@@ -1,8 +1,8 @@
 /**
- * UI-119: Log "Siapa Menabrak Ambang" (Threshold Breach Telemetry Rail).
- * Menampilkan garis waktu bercabang (pola DS-07) untuk event NEP-297:
- * `zone_changed`, `nutrient_burst_released`, `strain_liquidated`, dan `feast_result`.
- * Memverifikasi syarat DoD: latensi render < 2000 ms (< 2 detik) + klik item untuk replay 3D.
+ * UI-119: the "who crossed the threshold" log (the Threshold Breach Telemetry Rail).
+ * A branched timeline (the DS-07 pattern) for the NEP-297 events:
+ * `zone_changed`, `nutrient_burst_released`, `strain_liquidated`, and `feast_result`.
+ * Verifies the DoD: a render latency < 2000 ms (< 2 seconds) + click an item for the 3D replay.
  */
 
 import type { ThresholdBreachEvent } from "../types.ts";
@@ -20,7 +20,7 @@ export interface BreachLogItemViewModel {
 }
 
 /**
- * Pure builder untuk item log ambang batas agar diuji secara deterministik oleh `node --test`.
+ * A pure builder for the threshold log items so `node --test` can verify them deterministically.
  */
 export function buildBreachLogItemViewModel(evt: ThresholdBreachEvent): BreachLogItemViewModel {
   const latencyMs = Math.max(1, evt.renderedAtMs - evt.emittedAtMs);
@@ -56,7 +56,7 @@ export function buildBreachLogItemViewModel(evt: ThresholdBreachEvent): BreachLo
 }
 
 /**
- * Controller DOM untuk garis waktu "Siapa Menabrak Ambang" (UI-119).
+ * The DOM controller for the "who crossed the threshold" timeline (UI-119).
  */
 export class ThresholdBreachLogController {
   private readonly root: HTMLElement;

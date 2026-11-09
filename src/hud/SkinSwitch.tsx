@@ -11,7 +11,7 @@ export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
     <div
       className="inline-flex items-center p-1 rounded-full bg-slate-950/80 border border-slate-700/50 backdrop-blur-md"
       role="group"
-      aria-label="pilihan terminologi adr-31"
+      aria-label="the ADR-31 terminology choice"
     >
       <button
         type="button"

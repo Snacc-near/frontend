@@ -1,12 +1,11 @@
 /**
- * Tipe data lokal untuk kontrak SNACC dan backend indexer-api.
+ * Local data types for the SNACC contract and the backend indexer-api.
  *
- * Catatan arsitektur:
- * Tipe lokal ini meniru persis definisi kanonik dari `sdk/src/events.ts` dan
- * `backend/src/macro.ts`. Dibuat lokal di frontend agar paket mandiri tanpa
- * memodifikasi repo `sdk` yang bersifat private dan belum di-build, sekaligus
- * memastikan penanganan nilai u128 on-chain aman dari kehilangan presisi float64
- * (disimpan sebagai string atau bigint, bukan Number biasa).
+ * Architecture note:
+ * These local types mirror the canonical definitions of `sdk/src/events.ts` and
+ * `backend/src/macro.ts` exactly. They are defined locally in the frontend so the package is
+ * self-contained without modifying the `sdk` repo, while keeping on-chain u128 values safe
+ * from float64 precision loss (stored as strings or bigints, not plain Numbers).
  */
 
 import type { MacroZone } from "../config/zones.ts";

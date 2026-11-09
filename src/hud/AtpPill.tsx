@@ -20,7 +20,7 @@ export const AtpPill: React.FC<AtpPillProps> = ({ atpBalance, skin }) => {
       <div className="flex flex-col text-xs">
         <span className="text-slate-300 text-[10px] lowercase">{labels.atp}</span>
         <span className="font-mono text-amber-300 font-bold">
-          {atpBalance.toLocaleString("id-ID")}{" "}
+          {atpBalance.toLocaleString("en-US")}{" "}
           <span className="text-slate-400 font-normal">atp</span>
         </span>
       </div>

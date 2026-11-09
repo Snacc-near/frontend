@@ -40,30 +40,30 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
         </span>
       </div>
 
-      {/* Skala termometer horizontal dengan penanda batas ambang (UI-118) */}
+      {/* Horizontal thermometer scale with the threshold markers (UI-118) */}
       <div className="relative w-full h-3 my-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden">
-        {/* Indikator zona Hypothermia (<600 mK) */}
+        {/* Hypothermia zone indicator (<600 mK) */}
         <div
           className="absolute top-0 bottom-0 left-0 bg-cyan-500/30"
           style={{ width: `${hypoPct}%` }}
-          title={`batas hipotermia: < ${HYPOTHERMIA_THRESHOLD_MK} mk`}
+          title={`hypothermia threshold: < ${HYPOTHERMIA_THRESHOLD_MK} mk`}
         />
 
-        {/* Indikator zona Goldilocks (600..610 mK) */}
+        {/* Goldilocks zone indicator (600..610 mK) */}
         <div
           className="absolute top-0 bottom-0 bg-emerald-500/35"
           style={{ left: `${hypoPct}%`, width: `${feverPct - hypoPct}%` }}
-          title={`rentang goldilocks: ${HYPOTHERMIA_THRESHOLD_MK}..${FEVER_THRESHOLD_MK} mk`}
+          title={`goldilocks range: ${HYPOTHERMIA_THRESHOLD_MK}..${FEVER_THRESHOLD_MK} mk`}
         />
 
-        {/* Indikator zona Fever (>610 mK) */}
+        {/* Fever zone indicator (>610 mK) */}
         <div
           className="absolute top-0 bottom-0 right-0 bg-orange-500/35"
           style={{ left: `${feverPct}%` }}
-          title={`batas demam: > ${FEVER_THRESHOLD_MK} mk`}
+          title={`fever threshold: > ${FEVER_THRESHOLD_MK} mk`}
         />
 
-        {/* Jarum penunjuk suhu saat ini */}
+        {/* The current temperature needle */}
         <div
           className="absolute top-0 bottom-0 w-2 bg-white shadow-[0_0_8px_#fff] rounded-full transition-all duration-500 -ml-1"
           style={{ left: `${ratio * 100}%` }}

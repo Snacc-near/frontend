@@ -7,21 +7,21 @@ import {
   SKIN_LABELS,
 } from "../src/config/constants.ts";
 
-describe("Konstanta Permainan & Dual-Skin ADR-31", () => {
-  it("membatasi DPR maksimum ke 2 untuk performa baterai & GPU", () => {
+describe("Game Constants & the Dual-Skin ADR-31", () => {
+  it("caps the maximum DPR at 2 for battery & GPU performance", () => {
     expect(MAX_DPR).toBe(2);
   });
 
-  it("menargetkan 60 FPS untuk pergerakan sel organik yang mulus", () => {
+  it("targets 60 FPS for smooth organic cell movement", () => {
     expect(TARGET_FPS).toBe(60);
   });
 
-  it("memiliki batasan diskon Nutrient Burst 20% s.d. 30%", () => {
+  it("bounds the Nutrient Burst discount between a 200 bps base and a 2000 bps max", () => {
     expect(BASE_BURST_BPS).toBe(200);
     expect(MAX_BURST_BPS).toBe(2000);
   });
 
-  it("memiliki padanan istilah 1:1 antara Bio-Lab dan FinTech tanpa kata pemasaran", () => {
+  it("has 1:1 term mapping between Bio-Lab and FinTech with no marketing words", () => {
     const biolabKeys = Object.keys(SKIN_LABELS.biolab);
     const fintechKeys = Object.keys(SKIN_LABELS.fintech);
 
@@ -30,7 +30,7 @@ describe("Konstanta Permainan & Dual-Skin ADR-31", () => {
     for (const k of biolabKeys) {
       expect(SKIN_LABELS.biolab[k]).toBeTruthy();
       expect(SKIN_LABELS.fintech[k]).toBeTruthy();
-      // Seluruh salinan diawali huruf kecil
+      // All copy starts lowercase
       expect(SKIN_LABELS.biolab[k]![0]).toBe(SKIN_LABELS.biolab[k]![0]?.toLowerCase());
       expect(SKIN_LABELS.fintech[k]![0]).toBe(SKIN_LABELS.fintech[k]![0]?.toLowerCase());
     }

@@ -1,6 +1,6 @@
 /**
- * Synth Audio Prosedural Ringan (Gaya FE-34 ZzFX) via Web Audio API.
- * Tanpa file audio eksternal (patuh FE-01 CSP same-origin).
+ * Lightweight Procedural Synth Audio (the FE-34 ZzFX style) via the Web Audio API.
+ * No external audio files (honors the FE-01 same-origin CSP).
  */
 
 class BioSoundEngine {
@@ -21,7 +21,7 @@ class BioSoundEngine {
     return this.ctx;
   }
 
-  /** Suara detak organik saat sel memakan molekul spora di ruang 3D */
+  /** The organic heartbeat sound when a cell eats a spore molecule in 3D space */
   public playSporeAbsorb(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -39,7 +39,7 @@ class BioSoundEngine {
     osc.stop(now + 0.16);
   }
 
-  /** Gelombang kejut harmonik saat Nutrient Burst (UI-117) meledak dari lisis sel */
+  /** The harmonic shockwave when a Nutrient Burst (UI-117) explodes from a cell lysis */
   public playNutrientBurst(): void {
     const ctx = this.ensureContext();
     if (!ctx) return;
@@ -61,7 +61,7 @@ class BioSoundEngine {
     }
   }
 
-  /** Nada transisi termostat saat menabrak ambang zona (UI-118 / UI-119) */
+  /** The thermostat transition tone when a zone threshold is crossed (UI-118 / UI-119) */
   public playZoneShift(toZone: "Hypothermia" | "Goldilocks" | "Fever"): void {
     const ctx = this.ensureContext();
     if (!ctx) return;

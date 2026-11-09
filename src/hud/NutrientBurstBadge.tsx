@@ -20,7 +20,7 @@ export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, s
           : "bg-slate-950/80 border-slate-800 text-slate-300"
       }`}
       role="status"
-      aria-label={`${labels.burst}: ${isActive ? `diskon ${burst.activeBurstBps / 100}%` : "siaga"}`}
+      aria-label={`${labels.burst}: ${isActive ? `a ${(burst.activeBurstBps / 100).toFixed(0)}% discount` : "standby"}`}
     >
       <span
         className={`w-2.5 h-2.5 rounded-full ${
@@ -37,11 +37,11 @@ export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, s
               -{(burst.activeBurstBps / 100).toFixed(2)}%
             </span>
             <span className="text-[10px] text-emerald-300 font-mono">
-              sampai epoch {burst.untilEpoch}
+              until epoch {burst.untilEpoch}
             </span>
           </>
         ) : (
-          <span className="text-[10px] text-slate-400 lowercase">siaga</span>
+          <span className="text-[10px] text-slate-400 lowercase">standby</span>
         )}
       </div>
     </div>

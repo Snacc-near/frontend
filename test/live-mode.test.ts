@@ -5,7 +5,7 @@ import type { CrucibleEvent } from "../src/data/types.ts";
 
 describe("Tahap 2: Live Mode & Game World Integration", () => {
   describe("LivingCell Hit-Testing & Highlighting", () => {
-    it("mendeteksi klik tepat pada sel dan mengabaikan klik di luar batas", () => {
+    it("detects an exact click on a cell and ignores clicks outside its bounds", () => {
       const cell = new LivingCell({
         id: 7,
         label: "strain #7",
@@ -22,7 +22,7 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
       expect(cell.containsPoint(300, 300)).toBe(false);
     });
 
-    it("mengaktifkan pulsa bioluminescent saat sel diberi makan", () => {
+    it("activates the bioluminescent pulse when a cell is fed", () => {
       const cell = new LivingCell({
         id: 3,
         label: "strain #3",
@@ -34,13 +34,13 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
       cell.triggerFedPulse();
       expect(cell.fedPulse).toBe(1.0);
 
-      // Setelah pembaruan waktu (dt = 0.2), pulsa berkurang
+      // After a time update (dt = 0.2), the pulse decays
       cell.update(0.2, 400, 300, 200, 150);
       expect(cell.fedPulse).toBeLessThan(1.0);
       expect(cell.fedPulse).toBeGreaterThan(0);
     });
 
-    it("mendukung penanda penyorotan akun NEAR pemilik", () => {
+    it("supports the owner-account NEAR highlight marker", () => {
       const cell = new LivingCell({
         id: 12,
         label: "strain #12",
@@ -56,7 +56,7 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
   });
 
   describe("Event Mapping & Korelasi Pelaku", () => {
-    it("mencocokkan receipt_id pada zone_changed untuk menemukan akun penabrak ambang", () => {
+    it("matches the receipt_id on zone_changed to find the account that crossed the threshold", () => {
       const allEvents: CrucibleEvent[] = [
         {
           kind: "zone_changed",
@@ -76,7 +76,7 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
       expect(actor).toBe("bob.testnet (strain #42)");
     });
 
-    it("mengembalikan 'penyebab tidak tercatat' secara ketat jika tidak ada korelasi receipt_id", () => {
+    it("strictly returns 'cause not recorded' when no receipt_id correlation exists", () => {
       const allEvents: CrucibleEvent[] = [
         {
           kind: "zone_changed",
@@ -87,10 +87,10 @@ describe("Tahap 2: Live Mode & Game World Integration", () => {
 
       const strainsMap = new Map<number, string>();
       const actor = resolveEventActor(allEvents[0]!, allEvents, strainsMap);
-      expect(actor).toBe("penyebab tidak tercatat");
+      expect(actor).toBe("cause not recorded");
     });
 
-    it("menghasilkan kunci deduplikasi yang unik untuk setiap event", () => {
+    it("produces a unique dedupe key for every event", () => {
       const ev1: CrucibleEvent = {
         kind: "nutrient_burst_released",
         receipt_id: "rcpt-burst-1",

@@ -1,7 +1,7 @@
 /**
- * Klien HTTP untuk API backend SNACC (INT-101..104).
- * Membaca URL dari `VITE_API_BASE` (misalnya dari `.env.local`).
- * Aturan integritas: tidak mengarang data saat backend offline / 501.
+ * The HTTP client for the SNACC backend API (INT-101..104).
+ * The URL comes from `VITE_API_BASE` (e.g. from `.env.local`).
+ * Integrity rule: never fabricate data while the backend is offline / 501.
  */
 
 import type { MacroTelemetry, CrucibleEvent, StrainSummary, StrainDetail } from "./types.ts";

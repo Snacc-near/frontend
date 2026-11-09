@@ -1,6 +1,6 @@
 /**
- * Sistem efek visual arena cawan petri (UI-117 Nutrient Burst & Screen Shake).
- * Mendukung prefers-reduced-motion untuk mematikan getar dan partikel berlebih.
+ * The petri-dish arena visual effects system (UI-117 Nutrient Burst & Screen Shake).
+ * Honors prefers-reduced-motion to disable the shake and excessive particles.
  */
 
 export interface Shockwave {
@@ -43,7 +43,7 @@ export class EffectsManager {
   }
 
   /**
-   * Pemicu getaran layar sesaat saat lisis/burst terjadi.
+   * Trigger a brief screen shake when a lysis/burst happens.
    */
   public triggerShake(intensity = 8): void {
     if (this.reducedMotion) return;
@@ -51,7 +51,7 @@ export class EffectsManager {
   }
 
   /**
-   * Pemicu cincin gelombang kejut Nutrient Burst.
+   * Trigger a Nutrient Burst shockwave ring.
    */
   public triggerShockwave(x: number, y: number, color = "#10b981", maxRadius = 260): void {
     this.shockwaves.push({
@@ -66,7 +66,7 @@ export class EffectsManager {
   }
 
   /**
-   * Pemicu semburan partikel nutrisi ke medium cawan.
+   * Trigger a nutrient particle burst into the dish medium.
    */
   public triggerNutrientBurst(x: number, y: number, count = 28, color = "#34d399"): void {
     this.triggerShake(10);

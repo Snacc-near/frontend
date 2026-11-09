@@ -1,7 +1,7 @@
 /**
- * UI-118: Banner Zona Makro & Spektrum Termostat CrucibleTemp.
- * Menampilkan posisi suhu ekonomi real-time (<600 mK Hypothermia, 600..610 mK Goldilocks, >610 mK Fever),
- * aturan moneter bank sentral algoritmik (I-01 Burn 3.50% vs I-04 Rebate 2.00%), serta ADR-31 Dual-Skin.
+ * UI-118: The macro zone banner & the CrucibleTemp thermostat spectrum.
+ * Shows the real-time economic temperature position (<600 mK Hypothermia, 600..610 mK Goldilocks, >610 mK Fever),
+ * the algorithmic central-bank monetary rules (I-01 Burn 3.50% vs I-04 Rebate 2.00%), and the ADR-31 Dual-Skin.
  */
 
 import type {
@@ -30,7 +30,7 @@ export interface ZoneBannerViewModel {
 }
 
 /**
- * Pure view-model builder untuk UI-118 (diuji langsung di `node --test`).
+ * The pure view-model builder for UI-118 (tested directly by `node --test`).
  */
 export function buildZoneBannerViewModel(
   macro: Pick<MacroTelemetryState, "crucibleTemp" | "currentEpoch">,
@@ -54,7 +54,7 @@ export function buildZoneBannerViewModel(
 }
 
 /**
- * Controller DOM untuk instrumen termostat zona makro UI-118.
+ * The DOM controller for the UI-118 macro zone thermostat instrument.
  */
 export class ZoneBannerController {
   private readonly root: HTMLElement;
@@ -74,7 +74,7 @@ export class ZoneBannerController {
     this.root.setAttribute("data-testid", "zone-banner");
     this.root.setAttribute("data-zone", "Goldilocks");
 
-    // Baris atas: pil zona + angka besar tanpa kartu kotak (aturan DS-00 & M5)
+    // Top row: the zone pill + the big number, no box cards (the DS-00 & M5 rules)
     const headerRow = document.createElement("div");
     headerRow.className = "zone-instrument__header";
 
@@ -101,7 +101,7 @@ export class ZoneBannerController {
     readoutGroup.append(this.tempValueEl, this.epochValueEl);
     headerRow.append(pillGroup, readoutGroup);
 
-    // Spektrum termal horisontal dengan penanda ambang 600 mK & 610 mK
+    // The horizontal thermal spectrum with the 600 mK & 610 mK threshold markers
     const trackWrap = document.createElement("div");
     trackWrap.className = "thermal-spectrum";
 
@@ -122,7 +122,7 @@ export class ZoneBannerController {
     trackBar.append(this.markerEl);
     trackWrap.append(trackBar, tickHypo, tickFever);
 
-    // Teks kebijakan langsung di atas adegan (tanpa kotak paragraf M5)
+    // The policy copy directly above the scene (no M5 paragraph boxes)
     const copyWrap = document.createElement("div");
     copyWrap.className = "zone-instrument__copy";
 
@@ -149,7 +149,7 @@ export class ZoneBannerController {
     this.headlineEl.textContent = vm.headline;
     this.policyEl.textContent = vm.policyRule;
 
-    // Posisi jarum via CSS custom property (aman untuk CSP style-src 'self' lewat kelas step)
+    // The needle position via a CSS custom property (CSP style-src 'self' safe, via a step class)
     const bucket = Math.min(20, Math.max(0, Math.round(vm.gaugePercent / 5) * 5));
     this.markerEl.setAttribute("data-pos", String(bucket));
 

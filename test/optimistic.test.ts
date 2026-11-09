@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { OptimisticManager } from "../src/data/optimistic.ts";
 
-describe("UI-123..126: Pengelola Status Optimis (Pending, Confirm, Revert)", () => {
-  it("menginisialisasi dengan status idle dan nilai dasar", () => {
+describe("UI-123..126: The Optimistic State Manager (Pending, Confirm, Revert)", () => {
+  it("initializes with an idle status and the base value", () => {
     const mgr = new OptimisticManager(8000);
     const state = mgr.getState();
     expect(state.baseVitality).toBe(8000);
@@ -11,7 +11,7 @@ describe("UI-123..126: Pengelola Status Optimis (Pending, Confirm, Revert)", () 
     expect(state.pendingDelta).toBe(0);
   });
 
-  it("menaikkan vitalitas seketika dengan status pending saat feed", () => {
+  it("raises vitality instantly with a pending status on feed", () => {
     const mgr = new OptimisticManager(8000);
     mgr.applyFeed(250);
     const state = mgr.getState();
@@ -21,7 +21,7 @@ describe("UI-123..126: Pengelola Status Optimis (Pending, Confirm, Revert)", () 
     expect(state.status).toBe("pending");
   });
 
-  it("mengonfirmasi perubahan vitalitas dan memperbarui baseVitality", () => {
+  it("confirms the vitality change and updates baseVitality", () => {
     const mgr = new OptimisticManager(8000);
     mgr.applyFeed(250);
     mgr.confirm();
@@ -32,12 +32,12 @@ describe("UI-123..126: Pengelola Status Optimis (Pending, Confirm, Revert)", () 
     expect(state.pendingDelta).toBe(0);
   });
 
-  it("mengembalikan nilai vitalitas (rollback) saat transaksi gagal / di-revert", () => {
+  it("restores the vitality (rollback) when the transaction fails / reverts", () => {
     const mgr = new OptimisticManager(8000);
     mgr.applyFeed(300);
     expect(mgr.getState().currentVitality).toBe(8300);
 
-    mgr.revert("gagal on-chain");
+    mgr.revert("on-chain failure");
     const state = mgr.getState();
     expect(state.baseVitality).toBe(8000);
     expect(state.currentVitality).toBe(8000);

@@ -5,49 +5,49 @@ import { SKIN_LABELS } from "../src/config/constants.ts";
 import { ZONE_THEMES } from "../src/config/zones.ts";
 import { OptimisticManager } from "../src/data/optimistic.ts";
 
-describe("Tahap 3: UI-123..126 Polish & Verification", () => {
-  describe("UI-123: Layout Responsif Cawan Petri", () => {
-    it("menyesuaikan skala elips cawan secara proporsional pada layar HP potret (360x640)", () => {
+describe("Stage 3: UI-123..126 Polish & Verification", () => {
+  describe("UI-123: Responsive Petri Dish Layout", () => {
+    it("scales the dish ellipse proportionally on a portrait phone screen (360x640)", () => {
       const dish = new PetriDish();
       dish.resize(360, 640);
 
       expect(dish.centerX).toBe(180);
       expect(dish.centerY).toBe(320);
       expect(dish.radiusX).toBeLessThanOrEqual(360 * 0.44);
-      // Pada potret, radiusY proporsional terhadap radiusX agar tidak menjadi lonjong berlebihan
+      // In portrait, radiusY stays proportional to radiusX so the dish does not become overly elongated
       expect(dish.radiusY).toBeLessThan(dish.radiusX);
     });
 
-    it("menyesuaikan skala elips cawan secara proporsional pada desktop lanskap (1920x1080)", () => {
+    it("scales the elliptical dish proportionally on landscape desktop (1920x1080)", () => {
       const dish = new PetriDish();
       dish.resize(1920, 1080);
 
       expect(dish.centerX).toBe(960);
       expect(dish.centerY).toBe(540);
-      expect(dish.radiusX).toBe(460); // mentok pada batas maksimal radiusX 460
-      expect(dish.radiusY).toBe(310); // mentok pada batas maksimal radiusY 310
+      expect(dish.radiusX).toBe(460); // caps at the max radiusX of 460
+      expect(dish.radiusY).toBe(310); // caps at the max radiusY of 310
     });
   });
 
-  describe("UI-124: Mode Gelap Bioluminescent & Kamus ADR-31", () => {
-    it("memiliki pemetaan label yang lengkap dan tepat untuk kedua skin (Bio-Lab dan FinTech)", () => {
+  describe("UI-124: Bioluminescent Dark Mode & the ADR-31 Glossary", () => {
+    it("has a complete and exact label mapping for both skins (Bio-Lab and FinTech)", () => {
       const biolab = SKIN_LABELS.biolab;
       const fintech = SKIN_LABELS.fintech;
 
-      expect(biolab.vitality).toBe("vitalitas");
-      expect(fintech.vitality).toBe("runway solvabilitas");
+      expect(biolab.vitality).toBe("vitality");
+      expect(fintech.vitality).toBe("solvency runway");
 
-      expect(biolab.atp).toBe("energi atp");
-      expect(fintech.atp).toBe("energi internal atp");
+      expect(biolab.atp).toBe("atp energy");
+      expect(fintech.atp).toBe("internal atp energy");
 
-      expect(biolab.burst).toBe("semburan nutrisi lisis");
-      expect(fintech.burst).toBe("diskon likuidasi");
+      expect(biolab.burst).toBe("lysis nutrient burst");
+      expect(fintech.burst).toBe("liquidation discount");
 
-      expect(biolab.optimisticPending).toBe("menunggu konfirmasi...");
-      expect(fintech.optimisticPending).toBe("menunggu konfirmasi...");
+      expect(biolab.optimisticPending).toBe("waiting for confirmation...");
+      expect(fintech.optimisticPending).toBe("waiting for confirmation...");
     });
 
-    it("memiliki tema warna dan deskripsi tekstual zona yang lengkap (tidak hanya mengandalkan warna)", () => {
+    it("has complete color themes and textual zone descriptions (never color-only)", () => {
       for (const zoneKey of ["Goldilocks", "Fever", "Hypothermia"] as const) {
         const theme = ZONE_THEMES[zoneKey];
         expect(theme.label).toBeDefined();
@@ -59,12 +59,12 @@ describe("Tahap 3: UI-123..126 Polish & Verification", () => {
   });
 
   describe("UI-125: Aksesibilitas & Prefers-Reduced-Motion", () => {
-    it("EffectsManager menginisialisasi peredam getar dan partikel dengan aman", () => {
+    it("initializes the shake damper and particles of EffectsManager safely", () => {
       const effects = new EffectsManager();
       expect(effects.shockwaves).toEqual([]);
       expect(effects.particles).toEqual([]);
 
-      // Pemicu getaran dan partikel
+      // The shake and particle triggers
       effects.triggerShake(8);
       effects.triggerNutrientBurst(100, 100, 10, "#34d399");
 
@@ -79,19 +79,19 @@ describe("Tahap 3: UI-123..126 Polish & Verification", () => {
   });
 
   describe("UI-126: State Optimis (Pending, Confirmed, Reverted)", () => {
-    it("melakukan transisi state optimis dengan kenaikan vitalitas seketika", () => {
+    it("transitions the optimistic state with an instant vitality increase", () => {
       const opt = new OptimisticManager(8000);
       expect(opt.getState().status).toBe("idle");
       expect(opt.getState().currentVitality).toBe(8000);
 
-      // Terapkan aksi makan optimis
+      // Apply the optimistic feed action
       opt.applyFeed(300);
       const pendingState = opt.getState();
       expect(pendingState.status).toBe("pending");
       expect(pendingState.currentVitality).toBe(8300);
       expect(pendingState.baseVitality).toBe(8000);
 
-      // Konfirmasi berhasil
+      // Confirm succeeds
       opt.confirm();
       const confirmedState = opt.getState();
       expect(confirmedState.status).toBe("confirmed");
@@ -99,7 +99,7 @@ describe("Tahap 3: UI-123..126 Polish & Verification", () => {
       expect(confirmedState.baseVitality).toBe(8300);
     });
 
-    it("mengembalikan nilai vitalitas awal jika transaksi optimis gagal atau di-revert", () => {
+    it("restores the original vitality when the optimistic transaction fails or reverts", () => {
       const opt = new OptimisticManager(7500);
       opt.applyFeed(400);
       expect(opt.getState().currentVitality).toBe(7900);

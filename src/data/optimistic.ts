@@ -1,7 +1,7 @@
 /**
- * Pengelola status optimis untuk aksi pemain (UI-123..126).
- * Vitalitas langsung naik dengan tampilan garis belang "menunggu",
- * kemudian terkonfirmasi dari chain atau dikembalikan jika transaksi gagal.
+ * The optimistic state manager for player actions (UI-123..126).
+ * Vitality rises immediately with a striped "waiting" bar,
+ * then is confirmed from the chain or rolled back when the transaction fails.
  */
 
 import { VITALITY_MAX } from "../config/constants.ts";
@@ -64,14 +64,14 @@ export class OptimisticManager {
     };
     this.notify();
 
-    // Bila tidak ada konfirmasi dalam waktu timeout, kembalikan ke nilai awal
+    // When no confirmation arrives within the timeout, roll back to the base value
     this.timeoutId = setTimeout(() => {
-      this.revert("waktu tunggu konfirmasi habis");
+      this.revert("confirmation wait timed out");
     }, timeoutMs);
   }
 
   /**
-   * Konfirmasi bahwa aksi berhasil tercatat on-chain.
+   * Confirm that the action was recorded on-chain.
    */
   public confirm(): void {
     if (this.timeoutId) {
@@ -87,8 +87,8 @@ export class OptimisticManager {
     };
     this.notify();
 
-    // Reset status ke idle setelah beberapa saat
-    setTimeout(() => {
+    // Reset the status to idle after a moment
+    this.timeoutId = setTimeout(() => {
       if (this.state.status === "confirmed") {
         this.state = { ...this.state, status: "idle" };
         this.notify();
@@ -97,7 +97,7 @@ export class OptimisticManager {
   }
 
   /**
-   * Kembalikan vitalitas ke nilai awal jika gagal.
+   * Roll the vitality back to the base value on failure.
    */
   public revert(_reason?: string): void {
     if (this.timeoutId) {
@@ -113,7 +113,7 @@ export class OptimisticManager {
     };
     this.notify();
 
-    // Reset status ke idle setelah beberapa saat
+    // Reset the status to idle after a moment
     setTimeout(() => {
       if (this.state.status === "reverted") {
         this.state = { ...this.state, status: "idle" };
@@ -123,7 +123,7 @@ export class OptimisticManager {
   }
 
   /**
-   * Sinkronisasi nilai dasar dari API on-chain jika tidak sedang pending.
+   * Sync the base value from the on-chain API when not pending.
    */
   public syncFromChain(vitality: number): void {
     if (this.state.status === "pending") return;

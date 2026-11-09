@@ -1,6 +1,6 @@
 /**
- * Poller data on-chain dan pemroses event log (UI-117..119).
- * Polling ≤ 1000 ms, deduplikasi event, korelasi receipt_id, dan audit SLA < 2 dtk.
+ * The on-chain data poller and event-log processor (UI-117..119).
+ * Polling at <= 1000 ms, event dedupe, receipt_id correlation, and a < 2 s SLA audit.
  */
 
 import { EVENT_POLL_INTERVAL_MS, SLA_LATENCY_MAX_MS, MAX_BURST_BPS } from "../config/constants.ts";
@@ -8,23 +8,23 @@ import { fetchEvents, fetchMacro, fetchStrains } from "./api.ts";
 import type { CrucibleEvent, BreachLogItem, NutrientBurstState, MacroTelemetry, StrainSummary } from "./types.ts";
 
 /**
- * Menghasilkan kunci unik deduplikasi untuk setiap event.
+ * Build the unique dedupe key for each event.
  */
 export function buildEventDedupeKey(event: CrucibleEvent, index: number): string {
   if (event.receipt_id) {
     return `${event.receipt_id}:${event.kind}:${index}`;
   }
-  // Fallback bila receipt_id tidak ada: hash kasar dari data
+  // Fallback when receipt_id is missing: a rough hash of the data
   const rawStr = JSON.stringify(event.raw ?? {});
   return `block_${event.block_height ?? 0}:${event.kind}:${index}:${rawStr}`;
 }
 
 /**
- * Mencari pelaku (actor) dari event.
- * Untuk `zone_changed` yang tidak memuat pelaku langsung:
- * Cari event lain dalam kumpulan event yang memiliki `receipt_id` yang sama,
- * ambil `strain_id`, lalu petakan ke `owner_id` dari daftar strains.
- * Jika tidak ditemukan, kembalikan "penyebab tidak tercatat" (tanpa menebak).
+ * Resolve the actor of an event.
+ * For `zone_changed`, which carries no direct actor:
+ * look for another event in the set with the same `receipt_id`,
+ * take its `strain_id`, then map it to the `owner_id` from the strains list.
+ * When nothing is found, return "cause not recorded" (no guessing).
  */
 export function resolveEventActor(
   targetEvent: CrucibleEvent,
@@ -33,7 +33,7 @@ export function resolveEventActor(
 ): string {
   const raw = targetEvent.raw ?? {};
 
-  // Jika event memiliki pelaku eksplisit
+  // If the event carries an explicit actor
   if (typeof raw.actor === "string" && raw.actor.trim().length > 0) {
     return raw.actor;
   }
@@ -47,7 +47,7 @@ export function resolveEventActor(
     return raw.adopter;
   }
 
-  // Jika ada strain_id langsung pada event
+  // If the event carries a direct strain_id
   if (typeof raw.strain_id === "number") {
     const owner = strains.get(raw.strain_id);
     if (owner) return `${owner} (strain #${raw.strain_id})`;
@@ -59,7 +59,7 @@ export function resolveEventActor(
     return `strain #${raw.target_id}`;
   }
 
-  // Korelasi via receipt_id untuk zone_changed atau event tanpa strain_id
+  // Correlate via receipt_id for zone_changed or events without a strain_id
   if (targetEvent.receipt_id) {
     const matching = allEvents.find(
       (ev) =>
@@ -76,34 +76,34 @@ export function resolveEventActor(
     }
   }
 
-  return "penyebab tidak tercatat";
+  return "cause not recorded";
 }
 
 /**
- * Memformat ringkasan teks event untuk log ambang.
+ * Format the event summary text for the threshold log.
  */
 export function formatEventSummary(event: CrucibleEvent, actor: string): string {
   const raw = event.raw ?? {};
   switch (event.kind) {
     case "zone_changed": {
-      const fromZone = String(raw.from_zone ?? "awal");
-      const toZone = String(raw.to_zone ?? "baru");
+      const fromZone = String(raw.from_zone ?? "initial");
+      const toZone = String(raw.to_zone ?? "new");
       const temp = raw.crucible_temp ?? 0;
-      return `${actor} memicu pergeseran zona dari ${fromZone} ke ${toZone} (${temp} mK)`;
+      return `${actor} triggered a zone shift from ${fromZone} to ${toZone} (${temp} mK)`;
     }
     case "nutrient_burst_released": {
       const released = String(raw.released_vita ?? "0");
       const bps = Number(raw.burst_bps ?? 0);
       const untilEpoch = raw.until_epoch ?? 0;
-      return `lisis sel melepas ${released} nutrisi · diskon -${(bps / 100).toFixed(2)}% sampai epoch ${untilEpoch}`;
+      return `cell lysis released ${released} nutrients · discount -${(bps / 100).toFixed(2)}% until epoch ${untilEpoch}`;
     }
     case "strain_liquidated": {
       const targetId = raw.target_id ?? 0;
-      return `sel #${targetId} dilisis karena kelaparan`;
+      return `cell #${targetId} lysed from starvation`;
     }
     case "fed": {
       const strainId = raw.strain_id ?? 0;
-      return `sel #${strainId} diberi makan nutrisi`;
+      return `cell #${strainId} was fed nutrients`;
     }
     default:
       return `${event.kind.replace(/_/g, " ")}`;

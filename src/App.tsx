@@ -48,7 +48,7 @@ export const App: React.FC = () => {
       id: "init-1",
       kind: "nutrient_burst_released",
       actor: "strain #3",
-      summary: "lisis sel melepas 7200 nutrisi · diskon -20,00% sampai epoch 2",
+      summary: "cell lysis released 7200 nutrients · discount -20.00% until epoch 2",
       crucibleTemp: 591,
       tempDeltaMk: 0,
       timestampMs: Date.now() - 2400,
@@ -60,7 +60,7 @@ export const App: React.FC = () => {
       id: "init-2",
       kind: "zone_changed",
       actor: "alkemis.testnet",
-      summary: "alkemis.testnet memicu pergeseran zona dari hipotermia ke goldilocks (605 mK)",
+      summary: "alkemis.testnet triggered a zone shift from hypothermia to goldilocks (605 mK)",
       crucibleTemp: 605,
       tempDeltaMk: 14,
       timestampMs: Date.now() - 1100,
@@ -70,7 +70,7 @@ export const App: React.FC = () => {
     },
   ]);
 
-  // Hitung jumlah strain yang cocok dengan filter akun
+  // Count the strains matching the account filter
   const matchedStrainsCount = useMemo(() => {
     const q = userAccount.trim().toLowerCase();
     if (!q) return 0;
@@ -113,13 +113,13 @@ export const App: React.FC = () => {
               nukleus: 1,
               lisosom: 1,
             },
-            status: "aktif",
+            status: "Active",
             effective_vitality: optimisticManagerRef.current.getState().currentVitality,
           });
           return;
         }
 
-        // Mode Live: Ambil data on-chain dari /api/strains/:id
+        // Live mode: fetch the on-chain data from /api/strains/:id
         setIsLoadingStrain(true);
         try {
           const detail = await fetchStrain(cellId);
@@ -141,7 +141,7 @@ export const App: React.FC = () => {
               atp_balance: "100",
               generation: 1,
               organel: { mitokondria: 2, nukleus: 1, lisosom: 1 },
-              status: "aktif",
+              status: "Active",
               effective_vitality: 8000,
             });
           }
@@ -255,7 +255,7 @@ export const App: React.FC = () => {
     optimisticManagerRef.current.applyFeed(220);
     setAtpBalance((prev) => Math.max(0, prev - 10));
 
-    // Pemicu pendaran & kenaikan suhu sedikit
+    // Trigger the glow & a slight temperature rise
     setCrucibleTempMk((prev) => {
       const next = Math.min(680, prev + 2);
       const nextZone = classifyZone(next);
@@ -266,7 +266,7 @@ export const App: React.FC = () => {
       return next;
     });
 
-    // Simulasi konfirmasi setelah 1.2 detik
+    // Simulate the confirmation after 1.2 s
     setTimeout(() => {
       optimisticManagerRef.current.confirm();
     }, 1200);
@@ -287,7 +287,7 @@ export const App: React.FC = () => {
         id: `sim-burst-${Date.now()}`,
         kind: "nutrient_burst_released",
         actor: "strain #3 (simulasi)",
-        summary: "lisis sel memicu gelombang semburan nutrisi ke cawan",
+        summary: "cell lysis triggers a nutrient burst wave into the dish",
         crucibleTemp: crucibleTempMk,
         timestampMs: Date.now(),
         renderedAtMs: Date.now(),
@@ -310,7 +310,7 @@ export const App: React.FC = () => {
         id: `sim-zone-${Date.now()}`,
         kind: "zone_changed",
         actor: "operator demo",
-        summary: `perubahan ambang suhu buatan ke ${newZone.toLowerCase()} (${tempTarget} mK)`,
+        summary: `manual temperature dial change to ${newZone.toLowerCase()} (${tempTarget} mK)`,
         crucibleTemp: tempTarget,
         timestampMs: Date.now(),
         renderedAtMs: Date.now(),
@@ -323,12 +323,12 @@ export const App: React.FC = () => {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-slate-950 font-sans">
-      {/* Kanvas Game Penuh Layar */}
+      {/* Full-screen game canvas */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 block w-full h-full cursor-crosshair touch-none"
         role="img"
-        aria-label="arena cawan petri berisi sel hidup snacc"
+        aria-label="snacc petri dish arena with living cells"
       />
 
       {/* Lapisan HUD DOM Terbuka */}

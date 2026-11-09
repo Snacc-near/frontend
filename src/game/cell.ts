@@ -1,7 +1,7 @@
 /**
- * Entitas sel hidup organik (The Living Strain).
- * Bernapas dan berdenyut secara prosedural, memiliki organel internal (mitokondria, nukleus, lisosom),
- * serta memproyeksikan bayangan lembut di dasar cawan petri.
+ * The organic living-cell entity (The Living Strain).
+ * It breathes and pulses procedurally, has internal organelles (mitochondria, nucleus, lysosome),
+ * and projects a soft shadow onto the petri dish floor.
  */
 
 import type { MacroZone } from "../config/zones.ts";
@@ -88,12 +88,12 @@ export class LivingCell {
       this.x += this.vx;
       this.y += this.vy;
     } else {
-      // Gerakan mengambang perlahan untuk sel lain di arena
+      // Slow floating movement for the other cells in the arena
       this.x += Math.sin(Date.now() * 0.001 + this.phaseOffset) * 0.3;
       this.y += Math.cos(Date.now() * 0.0008 + this.phaseOffset) * 0.25;
     }
 
-    // Batasan di dalam elips cawan petri (radius aman 0.82)
+    // The safe boundary inside the petri dish ellipse (a 0.82 safety radius)
     const normX = (this.x - dishCenterX) / (dishRadiusX * 0.82);
     const normY = (this.y - dishCenterY) / (dishRadiusY * 0.82);
     const distSq = normX * normX + normY * normY;
@@ -121,7 +121,7 @@ export class LivingCell {
 
     ctx.save();
 
-    // 1. Bayangan lembut di bawah sel pada kaca cawan
+    // 1. A soft shadow under the cell on the dish glass
     ctx.beginPath();
     ctx.ellipse(this.x, this.y + r * 0.24, r * 1.08, r * 0.45, 0, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
@@ -129,7 +129,7 @@ export class LivingCell {
     ctx.fill();
     ctx.filter = "none";
 
-    // 2. Lingkaran penyorotan khusus akun pemain (bila ter-highlight)
+    // 2. The player-account highlight ring (when highlighted)
     if (this.isHighlighted || this.isPlayer) {
       ctx.save();
       ctx.beginPath();
@@ -155,7 +155,7 @@ export class LivingCell {
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // 4. Membran sel organik (gelombang harmonik prosedural)
+    // 4. The organic cell membrane (procedural harmonic waves)
     const pointsCount = 36;
     ctx.beginPath();
     for (let i = 0; i <= pointsCount; i++) {
@@ -171,7 +171,7 @@ export class LivingCell {
     }
     ctx.closePath();
 
-    // Gradien sitoplasma sel
+    // The cell cytoplasm gradient
     const cytoGrad = ctx.createRadialGradient(
       this.x - r * 0.2,
       this.y - r * 0.2,
@@ -188,12 +188,12 @@ export class LivingCell {
     ctx.fillStyle = cytoGrad;
     ctx.fill();
 
-    // Garis tepi membran
+    // The membrane edge stroke
     ctx.strokeStyle = cellColor;
     ctx.lineWidth = this.isHighlighted ? 2.8 : 2.2;
     ctx.stroke();
 
-    // 5. Nukleus sel (inti tengah)
+    // 5. The cell nucleus (the center core)
     const nucRadius = r * 0.32;
     const nucX = this.x + Math.sin(timeSec * 1.2 + this.phaseOffset) * 2;
     const nucY = this.y + Math.cos(timeSec * 1.1 + this.phaseOffset) * 2;
@@ -206,7 +206,7 @@ export class LivingCell {
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    // Pendaran inti
+    // The core glow
     ctx.beginPath();
     ctx.arc(nucX, nucY, nucRadius * 0.45, 0, Math.PI * 2);
     ctx.fillStyle = "#fff";
@@ -214,7 +214,7 @@ export class LivingCell {
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // 6. Organel (mitokondria kecil & lisosom)
+    // 6. Organelles (small mitochondria & lysosomes)
     for (let m = 0; m < Math.min(this.mitokondria, 4); m++) {
       const mAngle = (m / 4) * Math.PI * 2 + timeSec * 0.6;
       const mDist = r * 0.62;
@@ -227,12 +227,12 @@ export class LivingCell {
       ctx.fill();
     }
 
-    // 7. Label identitas sel kecil di bawah sel
+    // 7. The small cell identity label under the cell
     ctx.font = "11px 'DM Sans', -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.fillStyle = this.isHighlighted ? "#7dd3fc" : "rgba(241, 245, 249, 0.85)";
     ctx.fillText(
-      this.isHighlighted ? `${this.label} (milikmu)` : this.label,
+      this.isHighlighted ? `${this.label} (yours)` : this.label,
       this.x,
       this.y + r + 16,
     );

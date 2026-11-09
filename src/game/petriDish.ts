@@ -1,7 +1,7 @@
 /**
- * Arena cawan petri malam hari (The Living Petri Dish).
- * Menggambar cawan elips dengan pendaran cairan sesuai zona aktif,
- * bayangan lembut tepi kaca, dan vinyet gelap di sekeliling arena.
+ * The night-time petri dish arena (The Living Petri Dish).
+ * Draws an elliptical dish with a liquid glow per active zone,
+ * a soft glass-edge shadow, and a dark vignette around the arena.
  */
 
 import type { MacroZone } from "../config/zones.ts";
@@ -18,7 +18,7 @@ export class PetriDish {
     this.centerX = width / 2;
     this.centerY = height / 2;
 
-    // Skala responsif cawan elips untuk potret (HP) dan lanskap (desktop)
+    // Responsive elliptical dish scale for portrait (phones) and landscape (desktop)
     if (width < height) {
       this.radiusX = Math.min(width * 0.43, 360);
       this.radiusY = this.radiusX * 0.78;
@@ -33,11 +33,11 @@ export class PetriDish {
 
     ctx.save();
 
-    // 1. Latar gelap pekat malam hari
+    // 1. A deep dark night-time backdrop
     ctx.fillStyle = "#030712";
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Vinyet gelap di tepi layar
+    // 2. A dark vignette at the screen edges
     const outerVignette = ctx.createRadialGradient(
       this.centerX,
       this.centerY,
@@ -51,7 +51,7 @@ export class PetriDish {
     ctx.fillStyle = outerVignette;
     ctx.fillRect(0, 0, width, height);
 
-    // 3. Pendaran cairan di dalam cawan sesuai zona
+    // 3. The liquid glow inside the dish per zone
     const liquidBreath = 1 + Math.sin(timeSec * 0.8) * 0.04;
     const liquidGrad = ctx.createRadialGradient(
       this.centerX,
@@ -71,8 +71,8 @@ export class PetriDish {
     ctx.fillStyle = liquidGrad;
     ctx.fill();
 
-    // 4. Bibir kaca cawan petri (kaca ganda elips)
-    // Cincin luar kaca
+    // 4. The petri dish glass rim (a double-ellipse glass)
+    // The outer glass ring
     ctx.beginPath();
     ctx.ellipse(this.centerX, this.centerY, this.radiusX + 10, this.radiusY + 8, 0, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(147, 197, 253, 0.08)";

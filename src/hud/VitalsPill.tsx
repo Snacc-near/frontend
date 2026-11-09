@@ -30,12 +30,12 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
         <div className="flex items-center justify-between gap-3 text-xs">
           <span className="text-slate-300 lowercase">{labels.vitality}</span>
           <span className="font-mono text-slate-100 font-bold">
-            {optimistic.currentVitality.toLocaleString("id-ID")}{" "}
-            <span className="text-slate-400 font-normal">/ {VITALITY_MAX.toLocaleString("id-ID")}</span>
+            {optimistic.currentVitality.toLocaleString("en-US")}{" "}
+            <span className="text-slate-400 font-normal">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
           </span>
         </div>
 
-        {/* Progress bar dengan garis belang animasi saat pending (UI-126) */}
+        {/* Progress bar with a striped animation while pending (UI-126) */}
         <div
           className="w-36 h-2 mt-1 rounded-full bg-slate-900 border border-slate-800 overflow-hidden relative"
           role="progressbar"

@@ -1,23 +1,23 @@
 /**
- * Snacc M6 Biolab 3D Console — Model Data & Kamus Angka Resmi (§13a).
- * Mematuhi aturan kejujuran: angka diambil persis dari state kontrak & Kamus Angka.
+ * Snacc M6 Biolab 3D Console — data model & the official number dictionary (§13a).
+ * Honesty rule: the numbers are copied verbatim from the contract state & the number dictionary.
  */
 
 export const KAMUS_ANGKA = {
   HYPOTHERMIA_THRESHOLD_MK: 600,
-  FEVER_THRESHOLD_MK: 610, // ECON-111: Superseded 1400 -> 610 mK agar termostat aktif
-  FEVER_BURN_BPS: 350, // I-01: 3.50% fee burn saat Fever (>610 mK)
-  HYPO_REBATE_BPS: 200, // I-04: 2.00% rebate subsidi saat Hypothermia (<600 mK)
-  MAX_EPOCH_TREASURY_DRAIN_BPS: 500, // I-04: Plafon 5.00% treasury per epoch
+  FEVER_THRESHOLD_MK: 610, // ECON-111: supersedes 1400 -> 610 mK so the thermostat is active
+  FEVER_BURN_BPS: 350, // I-01: the 3.50% fee burn during Fever (>610 mK)
+  HYPO_REBATE_BPS: 200, // I-04: the 2.00% subsidy rebate during Hypothermia (<600 mK)
+  MAX_EPOCH_TREASURY_DRAIN_BPS: 500, // I-04: the 5.00% treasury cap per epoch
   BASE_BURST_BPS: 200, // EN-102: base burst 2.00% (contract BASE_BURST_BPS)
   MAX_BURST_BPS: 2000, // EN-102: burst cap 20.00% (contract MAX_BURST_BPS)
-  VOLUME_SCALE: 5, // §13a: Skala volume termostat
-  MAX_COLONY_SIZE: 5, // EN-124: Pagar populasi koloni
-  MAX_GENERATION: 8, // EN-124: Pagar generasi
-  VITALITY_INITIAL: 8500, // F1: Vitalitas awal inkubasi
+  VOLUME_SCALE: 5, // §13a: the thermostat volume scale
+  MAX_COLONY_SIZE: 5, // EN-124: the colony population fence
+  MAX_GENERATION: 8, // EN-124: the generation fence
+  VITALITY_INITIAL: 8500, // F1: the incubation initial vitality
   VITALITY_MAX: 10000,
-  ORGANELLE_BONUS_BPS_PER_LEVEL: 1000, // EN-119: +10% per level (Mitokondria ATP, Nukleus output, Lisosom -BMR)
-  RENDER_LATENCY_SLA_MS: 2000, // DoD UI-117..119: Event tampil < 2 detik
+  ORGANELLE_BONUS_BPS_PER_LEVEL: 1000, // EN-119: +10% per level (Mitochondria ATP, Nucleus output, Lysosome -BMR)
+  RENDER_LATENCY_SLA_MS: 2000, // DoD UI-117..119: events rendered in < 2 seconds
 } as const;
 
 export type MacroZone = "Hypothermia" | "Goldilocks" | "Fever";
@@ -48,7 +48,7 @@ export interface StrainTelemetry {
 
 export interface NutrientBurstState {
   isActive: boolean;
-  activeBurstBps: number; // 0 atau 2000..3000
+  activeBurstBps: number; // 0, or 200..2000 per the contract
   untilEpoch: number;
   releasedVita: number;
   triggeringStrainId: number | null;
@@ -94,7 +94,7 @@ export interface ThresholdBreachEvent {
 }
 
 /**
- * Klasifikasi zona suhu CrucibleTemp sesuai Kamus Angka & ECON-111.
+ * Classify the CrucibleTemp temperature into a zone per the number dictionary & ECON-111.
  */
 export function classifyZone(crucibleTemp: number): MacroZone {
   if (crucibleTemp > KAMUS_ANGKA.FEVER_THRESHOLD_MK) return "Fever";
@@ -103,7 +103,7 @@ export function classifyZone(crucibleTemp: number): MacroZone {
 }
 
 /**
- * Hitung diskon Nutrient Burst aktif (bps) sesuai EN-102:
+ * Compute the active Nutrient Burst discount (bps) per EN-102:
  * If currentEpoch < untilEpoch, the discount is active at clamp(burstBps, 0, MAX_BURST_BPS).
  * When currentEpoch >= untilEpoch, the burst expires automatically (0 bps).
  */
@@ -117,31 +117,32 @@ export function computeActiveBurstBps(
 }
 
 /**
- * Hitung sisa epoch aktif untuk Nutrient Burst.
+ * The number of active epochs left for the Nutrient Burst.
  */
 export function computeBurstEpochsRemaining(untilEpoch: number, currentEpoch: number): number {
   return Math.max(0, untilEpoch - currentEpoch);
 }
 
 /**
- * Format basis points ke persentase 2 desimal (misal 2000 -> "20.00%").
+ * Format basis points as a 2-decimal percentage (e.g. 2000 -> "20.00%").
  */
 export function formatBps(bps: number): string {
   return `${(bps / 100).toFixed(2)}%`;
 }
 
 /**
- * Hitung posisi jarum termometer dalam skala 0..1 untuk rentang visual 350..850 mK.
+ * The thermometer needle position on a 0..1 scale, dynamic: 0 .. 2x the Fever threshold,
+ * so live readings (e.g. ~1040 mK) stay readable instead of pinning at 100%.
  */
 export function computeThermalGaugeRatio(crucibleTemp: number): number {
-  const minMk = 350;
-  const maxMk = 850;
+  const minMk = 0;
+  const maxMk = KAMUS_ANGKA.FEVER_THRESHOLD_MK * 2;
   const clamped = Math.min(Math.max(crucibleTemp, minMk), maxMk);
   return (clamped - minMk) / (maxMk - minMk);
 }
 
 /**
- * Deskripsi kebijakan moneter bank sentral untuk masing-masing mode skin (ADR-31).
+ * The central-bank monetary policy description per skin mode (ADR-31).
  */
 export function describeZonePolicy(
   zone: MacroZone,

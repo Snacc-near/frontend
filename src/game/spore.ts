@@ -1,6 +1,6 @@
 /**
- * Entitas spora nutrisi di dalam cawan petri.
- * Berpendar lembut seperti lentera kuning malam hari dengan bayangan lembut.
+ * The nutrient spore entities inside the petri dish.
+ * They glow softly like yellow lanterns at night with a soft shadow.
  */
 
 export interface SporeData {
@@ -34,7 +34,7 @@ export class SporeManager {
     this.spores = [];
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * 0.78; // tersebar di dalam radius cawan
+      const r = Math.sqrt(Math.random()) * 0.78; // scattered inside the dish radius
       const x = centerX + Math.cos(angle) * dishRadiusX * r;
       const y = centerY + Math.sin(angle) * dishRadiusY * r;
 
@@ -72,13 +72,13 @@ export class SporeManager {
       const lanternColor =
         sp.kind === "ignis" ? "#f97316" : sp.kind === "snacc" ? "#fbbf24" : "#34d399";
 
-      // 1. Bayangan lembut di bawah spora pada kaca cawan
+      // 1. A soft shadow under the spore on the dish glass
       ctx.beginPath();
       ctx.ellipse(sp.x, sp.y + 9, sp.radius * 1.1, sp.radius * 0.5, 0, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
       ctx.fill();
 
-      // 2. Pendaran luar lentera (halo glow)
+      // 2. The lantern halo glow
       const glowGrad = ctx.createRadialGradient(
         sp.x,
         sp.y,
@@ -96,7 +96,7 @@ export class SporeManager {
       ctx.fillStyle = glowGrad;
       ctx.fill();
 
-      // 3. Inti lentera spora
+      // 3. The spore lantern core
       ctx.beginPath();
       ctx.arc(sp.x, sp.y, sp.radius, 0, Math.PI * 2);
       ctx.fillStyle = "#fffbeb";

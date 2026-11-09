@@ -1,7 +1,7 @@
 /**
- * Game Engine Cawan Petri (Canvas 2D / 60 FPS / DPR Max 2).
- * Berjalan sepenuhnya di luar state React untuk performa mulus tanpa jank.
- * Berhenti saat tab tersembunyi (visibilitychange) untuk menghemat sumber daya.
+ * The Petri Dish Game Engine (Canvas 2D / 60 FPS / DPR Max 2).
+ * Runs entirely outside React state for smooth, jank-free performance.
+ * Pauses when the tab is hidden (visibilitychange) to save resources.
  */
 
 import { MAX_DPR } from "../config/constants.ts";
@@ -45,7 +45,7 @@ export class GameEngine {
   constructor(canvas: HTMLCanvasElement, callbacks: GameEngineCallbacks = {}) {
     this.canvas = canvas;
     const ctx = canvas.getContext("2d", { alpha: false });
-    if (!ctx) throw new Error("Gagal memperoleh context 2D canvas");
+    if (!ctx) throw new Error("Failed to acquire the 2D canvas context");
     this.ctx = ctx;
     this.callbacks = callbacks;
 
@@ -53,7 +53,7 @@ export class GameEngine {
     this.effects = new EffectsManager();
     this.sporeManager = new SporeManager(16);
 
-    // Inisialisasi sel pemain di mode demo (Strain #1)
+    // Initialize the player cell in demo mode (Strain #1)
     this.playerCell = new LivingCell({
       id: 1,
       label: "strain #1",
@@ -72,7 +72,7 @@ export class GameEngine {
   public setMode(mode: GameMode): void {
     this.mode = mode;
     if (mode === "live") {
-      // Di mode live, posisi sel diatur stabil di cawan
+      // In live mode, the cell position is pinned steady in the dish
       this.keysDown.clear();
       this.pointerDown = false;
     }
@@ -91,7 +91,7 @@ export class GameEngine {
   }
 
   /**
-   * Pemicu efek visual Nutrient Burst di dalam cawan.
+   * Trigger the Nutrient Burst visual effect inside the dish.
    */
   public triggerNutrientBurst(x?: number, y?: number): void {
     const burstX = x ?? this.dish.centerX + (Math.random() - 0.5) * 160;
@@ -100,7 +100,7 @@ export class GameEngine {
   }
 
   /**
-   * Pemicu lisis pada strain spesifik on-chain.
+   * Trigger the lysis of a specific on-chain strain.
    */
   public triggerNutrientBurstOnStrain(strainId: number): void {
     const target =
@@ -116,7 +116,7 @@ export class GameEngine {
   }
 
   /**
-   * Pemicu efek visual sel diberi makan on-chain.
+   * Trigger the on-chain cell-fed visual effect.
    */
   public triggerCellFed(strainId: number): void {
     const target =
@@ -130,7 +130,7 @@ export class GameEngine {
   }
 
   /**
-   * Menyorot sel milik akun NEAR tertentu.
+   * Highlight the cells owned by a specific NEAR account.
    */
   public highlightAccount(account: string): void {
     const norm = account.trim().toLowerCase();
@@ -141,7 +141,7 @@ export class GameEngine {
   }
 
   /**
-   * Memperbarui daftar sel dari data Live on-chain (/api/strains).
+   * Update the cell list from the on-chain Live data (/api/strains).
    */
   public setLiveStrains(
     strains: { id: number; owner: string; vitality?: number }[],
@@ -149,7 +149,7 @@ export class GameEngine {
   ): void {
     const normFilter = highlightOwner?.trim().toLowerCase();
 
-    // Petakan strain on-chain ke sel hidup di cawan petri
+    // Map the on-chain strains to living cells in the petri dish
     this.otherCells = strains.map((s, idx) => {
       const total = Math.max(strains.length, 1);
       const angle = (idx / total) * Math.PI * 2;
@@ -205,7 +205,7 @@ export class GameEngine {
   };
 
   private update(dt: number): void {
-    // 1. Proses input pergerakan sel pemain hanya di mode demo
+    // 1. Process the player cell's movement input in demo mode only
     if (this.mode === "demo") {
       let moveX = 0;
       let moveY = 0;
@@ -225,7 +225,7 @@ export class GameEngine {
       }
     }
 
-    // 2. Update entitas sel
+    // 2. Update the cell entities
     if (this.mode === "demo") {
       this.playerCell.update(dt, this.dish.radiusX, this.dish.radiusY, this.dish.centerX, this.dish.centerY);
     }
@@ -233,7 +233,7 @@ export class GameEngine {
       cell.update(dt, this.dish.radiusX, this.dish.radiusY, this.dish.centerX, this.dish.centerY);
     }
 
-    // 3. Update spora & deteksi tabrakan (pemanenan) di mode demo
+    // 3. Update the spores & detect collisions (the harvesting) in demo mode
     this.sporeManager.update(this.timeSec);
 
     if (this.mode === "demo") {
@@ -242,11 +242,11 @@ export class GameEngine {
         const sp = spores[i]!;
         const dist = Math.hypot(this.playerCell.x - sp.x, this.playerCell.y - sp.y);
         if (dist < this.playerCell.baseRadius + sp.radius + 6) {
-          // Panen spora!
+          // Harvest the spore!
           this.effects.triggerShockwave(sp.x, sp.y, "#fbbf24", 75);
           this.callbacks.onSporeCollected?.(sp.valueAtp, sp.bonusTempMk);
 
-          // Respawn spora di posisi acak baru
+          // Respawn a spore at a new random position
           spores.splice(i, 1);
           const angle = Math.random() * Math.PI * 2;
           const r = Math.sqrt(Math.random()) * 0.76;
@@ -267,24 +267,24 @@ export class GameEngine {
     const { offsetX, offsetY } = this.effects.update(0);
 
     this.ctx.save();
-    // Terapkan getaran layar bila ada burst/lisis
+    // Apply the screen shake when a burst/lysis occurs
     this.ctx.translate(offsetX, offsetY);
 
-    // 1. Gambar cawan petri malam hari & vinyet
+    // 1. Draw the night-time petri dish & the vignette
     this.dish.render(this.ctx, this.width, this.height, this.timeSec);
 
-    // 2. Gambar spora melayang
+    // 2. Draw the floating spores
     this.sporeManager.render(this.ctx, this.timeSec);
 
     // 3. Gambar efek gelombang & partikel
     this.effects.render(this.ctx);
 
-    // 4. Gambar sel lain di arena
+    // 4. Draw the other cells in the arena
     for (const cell of this.otherCells) {
       cell.render(this.ctx, this.timeSec);
     }
 
-    // 5. Gambar sel utama pemain di mode demo
+    // 5. Draw the player's main cell in demo mode
     if (this.mode === "demo") {
       this.playerCell.render(this.ctx, this.timeSec);
     }
@@ -293,7 +293,7 @@ export class GameEngine {
   }
 
   private handlePointerClick(clickX: number, clickY: number): void {
-    // Periksa apakah pointer mengklik salah satu sel di cawan
+    // Check whether the pointer clicked one of the cells in the dish
     for (const cell of this.otherCells) {
       if (cell.containsPoint(clickX, clickY)) {
         this.callbacks.onCellClick?.(cell.id);
@@ -372,7 +372,7 @@ export class GameEngine {
       const duration = performance.now() - pointerStartTime;
       const dist = Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY);
 
-      // Bila durasi sentuhan < 350 ms dan geser < 8 px, anggap klik sel
+      // When the touch lasts < 350 ms and moves < 8 px, treat it as a cell click
       if (duration < 350 && dist < 8) {
         this.handlePointerClick(e.clientX, e.clientY);
       }

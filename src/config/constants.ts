@@ -1,6 +1,6 @@
 /**
- * Konstanta permainan, parameter tampilan, dan kamus label dua skin (ADR-31).
- * Anti-slop: tanpa kartu dashboard, tanpa huruf kapital berlebih, tanpa teks pemasaran.
+ * Game constants, display parameters, and the dual-skin label dictionary (ADR-31).
+ * Anti-slop: no dashboard cards, no excessive capitalization, no marketing copy.
  */
 
 export const MAX_DPR = 2;
@@ -19,44 +19,44 @@ export const INITIAL_ATP = 50;
 export type SkinMode = "biolab" | "fintech";
 
 /**
- * Peta label ADR-31 (Bio-Lab vs FinTech Institutional).
- * Semua salinan berbahasa Indonesia sederhana dengan huruf kecil di awal.
+ * The ADR-31 label map (Bio-Lab vs FinTech Institutional).
+ * All copy is plain English, starting lowercase.
  */
 export const SKIN_LABELS: Record<SkinMode, Record<string, string>> = {
   biolab: {
-    strain: "sel hidup",
-    vitality: "vitalitas",
-    atp: "energi atp",
-    spores: "spora lentera",
-    dish: "cawan petri",
-    zone: "zona suhu",
-    fever: "demam",
-    goldilocks: "keseimbangan",
-    hypothermia: "hipotermia",
-    burst: "semburan nutrisi lisis",
-    feedAction: "suntik makanan",
-    feedDisabled: "transaksi on-chain di luar cakupan demo",
-    optimisticPending: "menunggu konfirmasi...",
-    optimisticReverted: "konfirmasi gagal, saldo dikembalikan",
-    demoTag: "prototipe tampilan, data simulasi",
-    unattributedReason: "penyebab tidak tercatat",
+    strain: "living cell",
+    vitality: "vitality",
+    atp: "atp energy",
+    spores: "glowing spores",
+    dish: "petri dish",
+    zone: "temperature zone",
+    fever: "fever",
+    goldilocks: "balance",
+    hypothermia: "hypothermia",
+    burst: "lysis nutrient burst",
+    feedAction: "inject nutrients",
+    feedDisabled: "on-chain transactions are outside the demo scope",
+    optimisticPending: "waiting for confirmation...",
+    optimisticReverted: "confirmation failed, balance rolled back",
+    demoTag: "display prototype, simulated data",
+    unattributedReason: "cause not recorded",
   },
   fintech: {
-    strain: "anak perusahaan nft",
-    vitality: "runway solvabilitas",
-    atp: "energi internal atp",
-    spores: "kupon katalis",
-    dish: "reaktor likuiditas",
-    zone: "status moneter",
-    fever: "pembakaran kontra-siklus",
-    goldilocks: "keseimbangan pasar",
-    hypothermia: "stimulus rabat",
-    burst: "diskon likuidasi",
-    feedAction: "suntik likuiditas",
-    feedDisabled: "transaksi on-chain di luar cakupan demo",
-    optimisticPending: "menunggu konfirmasi...",
-    optimisticReverted: "konfirmasi gagal, saldo dikembalikan",
-    demoTag: "prototipe tampilan, data simulasi",
-    unattributedReason: "penyebab tidak tercatat",
+    strain: "nft subsidiary",
+    vitality: "solvency runway",
+    atp: "internal atp energy",
+    spores: "catalyst coupons",
+    dish: "liquidity reactor",
+    zone: "monetary status",
+    fever: "counter-cyclical burn",
+    goldilocks: "market balance",
+    hypothermia: "stimulus rebate",
+    burst: "liquidation discount",
+    feedAction: "inject liquidity",
+    feedDisabled: "on-chain transactions are outside the demo scope",
+    optimisticPending: "waiting for confirmation...",
+    optimisticReverted: "confirmation failed, balance rolled back",
+    demoTag: "display prototype, simulated data",
+    unattributedReason: "cause not recorded",
   },
 };

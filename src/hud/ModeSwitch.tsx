@@ -17,7 +17,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
       <div
         className="inline-flex items-center p-1 rounded-full bg-slate-950/80 border border-slate-700/50 backdrop-blur-md"
         role="group"
-        aria-label="mode arena permainan"
+        aria-label="the game arena mode"
       >
         <button
           type="button"
