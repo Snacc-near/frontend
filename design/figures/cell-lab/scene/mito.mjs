@@ -51,13 +51,10 @@ export function hero() {
   pl.push(S(k.extrude(F.toWorldRing(plinthBackLoc), 0, 5, P, { convex: false, bevel: 0.8 }), { tone: "hi", className: "tan", crease: "lo" }));
   add(-1100, pl.join(""));
   const fl = [];
-  // floor (matrix) slab, one disc in its own item after the walls (front half drawn in the same item)
-  const floorBackLoc = ringRun(INN, (u, v) => v < wall.vcut).map(([u, v]) => [u * 0.98, v * 0.98]);
-  const floorFrontLoc = ringRun(INN, (u, v) => v >= wall.vcut).map(([u, v]) => [u * 0.98, v * 0.98]);
-  noteShape(A.extruded(F.toWorldRing(floorBackLoc), 5, 2, { name: "hero.floor.back" }));
-  fl.push(S(k.extrude(F.toWorldRing(floorBackLoc), 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
-  noteShape(A.extruded(F.toWorldRing(floorFrontLoc), 5, 2, { name: "hero.floor.front" }));
-  fl.push(S(k.extrude(F.toWorldRing(floorFrontLoc), 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
+  // floor (matrix) slab: one disc, inset 2% so it clears the wall inner faces (depth cycle)
+  const floorLoc = INN.map(([u, v]) => [u * 0.98, v * 0.98]);
+  noteShape(A.extruded(F.toWorldRing(floorLoc), 5, 2, { name: "hero.floor" }));
+  fl.push(S(k.extrude(F.toWorldRing(floorLoc), 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
   // floor grid dots + seam lines (matrix granules)
   const grid = [];
   for (let u = -66; u <= 66; u += 6) for (let v = -24; v <= 26; v += 6) { const i2 = (u / 72) ** 2 + (v / 29.5) ** 2; if (i2 < 0.82) grid.push(at(F.W3(u, v, 7))); }
