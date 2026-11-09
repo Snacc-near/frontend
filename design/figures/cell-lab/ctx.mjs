@@ -4,7 +4,7 @@ import * as G from "./kit/lathe.mjs";
 import * as A from "./kit/audit.mjs";
 import * as O from "./organic.mjs";
 
-export const W = 1100, H = 660;
+export const W = 1100, H = 610;
 
 // ---- world layout (z up; screen right = x-y, toward viewer = x+y) ----
 export const PLATE = { x: -176, y: -112, w: 362, d: 196, r: 16 };
@@ -26,7 +26,7 @@ const pts = [
   [150, -73, 72],
   [70, 10, 60],
 ];
-export const P = k.fitProjection(pts, W, H, { pad: 26, azimuth: 45, elevation: 30 });
+export const P = k.fitProjection(pts, W, H, { pad: 14, azimuth: 45, elevation: 30 });
 P.azimuth = 45;
 
 export const at = (pt) => k.iso(pt, P);

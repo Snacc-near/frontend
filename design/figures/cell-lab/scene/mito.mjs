@@ -7,7 +7,7 @@ import { makeMech } from "../mech.mjs";
 export const GEO = {
   MC: F.MC,
   wheel: { u: -27, v: 0, z: 33, R: 15, n: 8, rv: 2.8, labels: ["CIT", "ISO", "AKG", "SCA", "SUC", "FUM", "MAL", "OAA"] },
-  turb: { u: 59, v: -2, z0: 9, n: 10, zf1: 24 },
+  turb: { u: 58, v: -2, z0: 9, n: 10, zf1: 24 },
   tank: { u0: 4, u1: 49, v: -19, z: 27, r: 3.6 },
   complexes: [{ name: "I", u: 5, w: 10 }, { name: "III", u: 21, w: 10 }, { name: "IV", u: 37, w: 10 }],
   ridge: { u0: 2, u1: 50, v0: -13, v1: -3, z0: 7, h: 5 },
@@ -158,19 +158,19 @@ export function hero() {
   const tb = GEO.turb;
   const tbl = [];
   const tc = F.Wxy(tb.u, tb.v);
-  tbl.push(S(k.cylinder(tc[0], tc[1], 12.5, 7, 2.2, P, 40, 0.4), { tone: "hi", className: "tan" }));
-  tbl.push(S(k.cylinder(tc[0], tc[1], 10.5, 9.2, 1.0, P, 40, 0.2), { tone: "hi", className: "steel" }));
-  tbl.push(Ln(k.ring(tc[0], tc[1], 11.4, 9.2, P, 40), { tone: "faint" }));
+  tbl.push(S(k.cylinder(tc[0], tc[1], 13.8, 7, 2.2, P, 44, 0.4), { tone: "hi", className: "tan" }));
+  tbl.push(S(k.cylinder(tc[0], tc[1], 12.0, 9.2, 1.0, P, 44, 0.2), { tone: "hi", className: "steel" }));
+  tbl.push(Ln(k.ring(tc[0], tc[1], 13.0, 9.2, P, 44), { tone: "faint" }));
   // stator bolts
-  tbl.push(Dm(Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * Math.PI * 2; return at([tc[0] + Math.cos(a) * 11.6, tc[1] + Math.sin(a) * 11.6, 9.2]); }), { size: 0.5, tone: "hi" }));
+  tbl.push(Dm(Array.from({ length: 12 }, (_, i) => { const a = (i / 12) * Math.PI * 2; return at([tc[0] + Math.cos(a) * 13.0, tc[1] + Math.sin(a) * 13.0, 9.2]); }), { size: 0.5, tone: "hi" }));
   // stator pillars (b-subunits): two posts + yoke carrying the F1 head
   add(F.depthKey(tb.v, 0), tbl.join(""));
   add(F.depthKey(tb.v, 5), `<g data-dyn="rotor">${MECH.rotor(0, 0)}</g>`);
   // yoke over the rotor: two stator posts either side and a crossbar carrying the F1 head
   const yk = [];
-  yk.push(F.cylW(tb.u - 9.5, tb.v + 4, 1.1, 9.4, 12.6, { className: "steel", steps: 12 }));
-  yk.push(F.cylW(tb.u + 9.5, tb.v + 4, 1.1, 9.4, 12.6, { className: "steel", steps: 12 }));
-  yk.push(F.boxL(tb.u - 10.6, tb.v + 2.8, 21.2, 2.4, 20.6, 1.6, { r: 0.5, bevel: 0.2, className: "steel" }));
+  yk.push(F.cylW(tb.u - 11.2, tb.v + 4, 1.1, 9.4, 12.6, { className: "steel", steps: 12 }));
+  yk.push(F.cylW(tb.u + 11.2, tb.v + 4, 1.1, 9.4, 12.6, { className: "steel", steps: 12 }));
+  yk.push(F.boxL(tb.u - 12.4, tb.v + 2.8, 24.8, 2.4, 20.6, 1.6, { r: 0.5, bevel: 0.2, className: "steel" }));
   add(F.depthKey(tb.v + 4, 12), yk.join(""));
   add(F.depthKey(tb.v + 1, 25), `<g data-dyn="f1">${MECH.f1head(0)}</g>`);
 

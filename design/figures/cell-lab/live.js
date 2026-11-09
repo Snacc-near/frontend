@@ -202,7 +202,7 @@ function idlePose(now) {
 function chip(title, step, note) {
   const g = dyn.chip || (dyn.chip = (() => { const e = document.createElementNS("http://www.w3.org/2000/svg", "g"); e.setAttribute("class", "chip"); e.setAttribute("data-dyn", "chip"); svg.appendChild(e); return e; })());
   if (!title) { g.setAttribute("opacity", "0"); return; }
-  const w = Math.max(400, Math.min(620, step.length * 5.9 + 48)), h = 48, x = VW / 2 - w / 2 + 40, y = VH - 64;
+  const w = Math.max(330, Math.min(500, step.length * 5.2 + 44)), h = 48, x = 14, y = VH - 60;
   g.setAttribute("opacity", "1");
   g.innerHTML = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/><rect x="${x}" y="${y}" width="6" height="${h}" rx="3" style="fill:#f8aa06;stroke:#161412"/><text class="t" x="${x + 16}" y="${y + 16}">${title}</text><text class="s" x="${x + 16}" y="${y + 30}">${step}</text><text class="n" x="${x + 16}" y="${y + 41}">${note || ""}</text>`;
 }

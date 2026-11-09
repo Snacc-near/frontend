@@ -108,7 +108,7 @@ export function glass() {
   // glass collar ring (the bell's own foot ring, steel) sits in front layer around the base
   const foot = [];
   {
-    const z0 = JAR.base, z1 = JAR.base + 3.4, ro = R0 + 2.4, ri = R0 - 1.4;
+    const z0 = JAR.base, z1 = JAR.base + 1.8, ro = R0 + 2.0, ri = R0 - 1.2;
     const E = (r, z, from, to) => O.ellipse3([CX, CY, z], [1, 0, 0], [0, 1, 0], r, r, P, { from, to, steps: 64 });
     // visible near half: angles facing the viewer (toward +x+y): from -45deg to 135deg
     const A0 = -Math.PI / 4, A1 = (3 * Math.PI) / 4;

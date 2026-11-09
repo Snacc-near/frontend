@@ -19,6 +19,7 @@ export function makeMech(k, P, GEO) {
   const cyl = (u, v, r, z, h, o = {}) => { const p = W3(u, v, 0); return S(k.cylinder(p[0], p[1], r, z, h, P, o.steps || 24, o.bevel ?? 0.2), { tone: o.tone || "hi", className: o.cls || "", crease: o.crease || "faint" }); };
   const depthV = (v) => v;
   const TAU = Math.PI * 2;
+  const TS = 1.16;
 
   /** Ferris wheel (Krebs cycle): axis along v. ang in radians. carrying: array of booleans per gondola (NADH cell on board). */
   function wheel(ang, carrying = [], glow = -1) {
@@ -70,15 +71,15 @@ export function makeMech(k, P, GEO) {
     const t = GEO.turb; const { u, v, z0 } = t;
     const out = [];
     const c = W3(u, v, 0);
-    out.push(S(k.cylinder(c[0], c[1], 9.6, z0, 2.6, P, 36, 0.3), { tone: "hi", className: "steel" }));
+    out.push(S(k.cylinder(c[0], c[1], 9.6 * TS, z0, 2.6, P, 36, 0.3), { tone: "hi", className: "steel" }));
     const N = t.n;
     const blades = [];
     for (let i = 0; i < N; i++) {
       const a = ang + (i / N) * TAU;
-      const cu = u + Math.cos(a) * 7.4, cv = v + Math.sin(a) * 7.4;
+      const cu = u + Math.cos(a) * 7.4 * TS, cv = v + Math.sin(a) * 7.4 * TS;
       // paddle: tangential length 3.6, radial thickness 1.5, rotated with a
       const ca = Math.cos(a), sa = Math.sin(a);
-      const half = [1.7, 0.75];
+      const half = [1.7 * TS, 0.75 * TS];
       const ring = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => {
         const lu = cu + (-sa) * half[0] * sx * 0 + (ca * half[1] * sy) + (-sa * half[0] * sx);
         const lv = cv + (ca * half[0] * sx) + (sa * half[1] * sy);
@@ -89,13 +90,13 @@ export function makeMech(k, P, GEO) {
     blades.sort((a, b) => a.key - b.key);
     for (const b of blades) out.push(S(k.extrude(b.ring, z0 + 2.6, 5.2, P, { bevel: 0.2 }), { tone: "hi", className: b.mark ? "mari" : "bone" }));
     // hoop (cap ring) as a thin outline ring
-    const hoop = Array.from({ length: 48 }, (_, i) => A(W3(u + Math.cos((i / 48) * TAU) * 9.6, v + Math.sin((i / 48) * TAU) * 9.6, z0 + 7.8)));
+    const hoop = Array.from({ length: 48 }, (_, i) => A(W3(u + Math.cos((i / 48) * TAU) * 9.6 * TS, v + Math.sin((i / 48) * TAU) * 9.6 * TS, z0 + 7.8)));
     out.push(`<path class="ink" style="stroke-width:.8px" d="${pts(hoop, true)}"/>`);
     // motion arcs
     if (speed > 0.05) {
       for (let j = 0; j < 3; j++) {
         const a0 = ang * 1.0 + j * (TAU / 3), span = 0.9 * speed;
-        const arc = Array.from({ length: 12 }, (_, i) => { const a = a0 - (i / 11) * span; return A(W3(u + Math.cos(a) * 10.6, v + Math.sin(a) * 10.6, z0 + 8.2)); });
+        const arc = Array.from({ length: 12 }, (_, i) => { const a = a0 - (i / 11) * span; return A(W3(u + Math.cos(a) * 10.6 * TS, v + Math.sin(a) * 10.6 * TS, z0 + 8.2)); });
         out.push(`<path d="${pts(arc)}" fill="none" style="stroke:#f8aa06;stroke-width:1.8px;stroke-linecap:round;opacity:${f1(0.35 + 0.5 * speed)}"/>`);
       }
     }
@@ -111,16 +112,16 @@ export function makeMech(k, P, GEO) {
     const out = [];
     const c = W3(u, v, 0);
     // gear (ratchet) disc below the head with teeth
-    out.push(S(k.cylinder(c[0], c[1], 6.2, zf1 - 2.2, 1.8, P, 30, 0.2), { tone: "hi", className: "steel" }));
+    out.push(S(k.cylinder(c[0], c[1], 6.2 * TS, zf1 - 2.2, 1.8, P, 30, 0.2), { tone: "hi", className: "steel" }));
     const base = phase * (TAU / 3);
-    for (let i = 0; i < 12; i++) { const a = base + (i / 12) * TAU; const p = A(W3(u + Math.cos(a) * 6.2, v + Math.sin(a) * 6.2, zf1 - 0.4)); out.push(`<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r=".5" class="inkf"/>`); }
+    for (let i = 0; i < 12; i++) { const a = base + (i / 12) * TAU; const p = A(W3(u + Math.cos(a) * 6.2 * TS, v + Math.sin(a) * 6.2 * TS, zf1 - 0.4)); out.push(`<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r=".5" class="inkf"/>`); }
     // lobes
-    const lobes = [0, 1, 2].map((i) => { const a = base + (i / 3) * TAU + 0.5; const lu = u + Math.cos(a) * 3.9, lv = v + Math.sin(a) * 3.9; const p = W3(lu, lv, 0); return { lu, lv, key: p[0] + p[1], x: p[0], y: p[1] }; }).sort((a, b) => a.key - b.key);
+    const lobes = [0, 1, 2].map((i) => { const a = base + (i / 3) * TAU + 0.5; const lu = u + Math.cos(a) * 3.9 * TS, lv = v + Math.sin(a) * 3.9 * TS; const p = W3(lu, lv, 0); return { lu, lv, key: p[0] + p[1], x: p[0], y: p[1] }; }).sort((a, b) => a.key - b.key);
     const shaftTop = W3(u, v, 0);
     out.push(S(k.cylinder(shaftTop[0], shaftTop[1], 1.6, zf1, 4, P, 14, 0), { tone: "hi", className: "tan" }));
-    for (const l of lobes) out.push(S(k.cylinder(l.x, l.y, 3.5, zf1 + 0.2, 8.4, P, 22, 0.4), { tone: "hi", className: "warm" }));
-    out.push(S(k.cylinder(shaftTop[0], shaftTop[1], 3.2, zf1 + 8.6, 1.4, P, 20, 0.2), { tone: "hi", className: "mari" }));
-    const mk = A(W3(u + Math.cos(base + 0.5) * 2.1, v + Math.sin(base + 0.5) * 2.1, zf1 + 10.0));
+    for (const l of lobes) out.push(S(k.cylinder(l.x, l.y, 3.5 * TS, zf1 + 0.2, 9.4, P, 22, 0.4), { tone: "hi", className: "warm" }));
+    out.push(S(k.cylinder(shaftTop[0], shaftTop[1], 3.2 * TS, zf1 + 9.6, 1.4, P, 20, 0.2), { tone: "hi", className: "mari" }));
+    const mk = A(W3(u + Math.cos(base + 0.5) * 2.1, v + Math.sin(base + 0.5) * 2.1, zf1 + 11.0));
     out.push(`<circle cx="${f1(mk[0])}" cy="${f1(mk[1])}" r=".8" class="inkf"/>`);
     return out.join("");
   }

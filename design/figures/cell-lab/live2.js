@@ -72,7 +72,7 @@ const ANIMS = {
       glow(dyn.wheel, t > 0.28 && t < 0.78); glow(dyn.rotor, t > 0.5); glow(dyn.f1, t > 0.5); glow(dyn.car, t > 0.35 && t < 0.78); glow(dyn.gate, t < 0.18); glow(dyn.split, t > 0.17 && t < 0.3); glow(dyn["tank-level"], t > 0.4 && t < 0.9);
       lift("mito1", sstep(0, 0.1, t) * (1 - sstep(0.9, 1, t)));
       const to = orgS("mito1"), lead = dyn["lens-leader"]; const a = sstep(0, 0.08, t) * (1 - sstep(0.92, 1, t));
-      lead.setAttribute("opacity", f1(a)); lead.innerHTML = gline([to, [lerp(to[0], 690, 0.5), to[1] + 60], [690, 560]], 1.1, "#f8aa06", "stroke-dasharray:2.6 2.6") + `<circle cx="${f1(to[0])}" cy="${f1(to[1])}" r="${f1(6 + Math.sin(t * 20))}" fill="none" style="stroke:#f8aa06;stroke-width:1.8px"/>`;
+      lead.setAttribute("opacity", f1(a)); lead.innerHTML = gline([to, [lerp(to[0], Aw(W3(-78, 0, 18))[0], 0.5), to[1] + 70], Aw(W3(-78, 0, 18))], 1.1, "#f8aa06", "stroke-dasharray:2.6 2.6") + `<circle cx="${f1(to[0])}" cy="${f1(to[1])}" r="${f1(6 + Math.sin(t * 20))}" fill="none" style="stroke:#f8aa06;stroke-width:1.8px"/>`;
       receipt(sstep(0.9, 1, t));
     },
     end() { ["wheel", "rotor", "f1", "car", "gate", "split", "tank-level"].forEach((n) => glow(dyn[n], false)); lift("mito1", 0); dyn["lens-leader"].setAttribute("opacity", "0"); },
@@ -83,7 +83,7 @@ const ANIMS = {
       const hopper = Aw([-150, 55, 24]), portS = Aw([FEED_PORT[0], FEED_PORT[1], 14]);
       const wall = cpx(-45, -26, 0), inside = cpx(-24, -12, 3);
       let s = "";
-      const pel = (p) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="3.4" class="ink" style="fill:#f8aa06;stroke-width:.9px"/><circle cx="${f1(p[0] - 1)}" cy="${f1(p[1] - 1)}" r="1" fill="#fff" stroke="none"/>`;
+      const pel = (p) => `<circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="8" fill="#f8aa06" fill-opacity=".28" stroke="none"/><circle cx="${f1(p[0])}" cy="${f1(p[1])}" r="5" class="ink" style="fill:#f8aa06;stroke-width:1.1px"/><circle cx="${f1(p[0] - 1.6)}" cy="${f1(p[1] - 1.6)}" r="1.5" fill="#fff" stroke="none"/><text x="${f1(p[0])}" y="${f1(p[1] + 1.6)}" text-anchor="middle" style="font:700 4.4px ui-monospace,monospace;fill:#161412">S</text>`;
       const a = win(t, 0.05, 0.42);
       let tk = "";
       for (let i = 0; i < 3; i++) { const q = win(t, 0.05 + i * 0.07, 0.42 + i * 0.05); if (q > 0 && q < 1) { const pp = along(FEED_R, q); tk += pel(Aw(pp)); } }
@@ -93,7 +93,7 @@ const ANIMS = {
       if (q3 > 0 && q3 < 1) tk += pel(arcS(wall, inside, 4, q3));
       if (q3 >= 1) for (let i = 0; i < 3; i++) { const w2 = win(t, 0.8, 1); tk += pel([inside[0] + Math.cos(i * 2.2) * 12 * w2, inside[1] + Math.sin(i * 2.2) * 9 * w2]); }
       // signal receptor (Y) + vesicle fusing + flipping gate door at the membrane
-      s += `<g transform="translate(${f1(wall[0])} ${f1(wall[1])})"><path d="M-5 -9L0 -3L5 -9M0 -3L0 3" class="ink" style="stroke:#161412;stroke-width:1.3px"/>` +
+      s += `<g transform="translate(${f1(wall[0])} ${f1(wall[1])}) scale(1.7)"><path d="M-5 -9L0 -3L5 -9M0 -3L0 3" class="ink" style="stroke:#161412;stroke-width:1.3px"/>` +
         `<rect x="-6" y="-2" width="12" height="4" rx="1" class="ink" style="fill:#fef8ed;stroke-width:.9px"/><g transform="rotate(${f1(flip * 180)})"><rect x="-1" y="-6.5" width="2" height="13" rx="1" class="ink" style="fill:#f8aa06;stroke-width:.9px"/></g></g>`;
       const ve = win(t, 0.3, 0.6); if (ve > 0 && ve < 1) s += dot(arcS(cpx(-30, -34, 6), wall, 8, ve), 3.2, "#fff8e6");
       fx(s + tk);
@@ -282,7 +282,7 @@ function finish(action) {
 function tourOff() { if (tourIdx >= 0) { TOUR[tourIdx][3](); tourIdx = -1; if (!run) chip(null); } }
 function tourTick(now) {
   if (run || calm) return;
-  const k2 = Math.floor((now - t0) / 4200) % TOUR.length;
+  const k2 = (((Math.floor((now - t0) / 4200)) % TOUR.length) + TOUR.length) % TOUR.length;
   if (k2 !== tourIdx) { if (tourIdx >= 0) TOUR[tourIdx][3](); tourIdx = k2; TOUR[k2][2](); }
   const [n, d] = TOUR[tourIdx];
   chip("Idle tour · " + n, d, "pick an action to watch it work");

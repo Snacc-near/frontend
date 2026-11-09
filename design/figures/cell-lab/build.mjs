@@ -89,8 +89,8 @@ const PAGE_CSS = `
 .embed .iso-svg{overflow:visible}
 .is-lit{filter:drop-shadow(0 0 2px #f8aa06) drop-shadow(0 0 5px rgba(248,170,6,.55))}
 .chip rect{fill:#fffdf6;stroke:#161412;stroke-width:1px}
-.chip .t{font:700 11.5px ui-monospace,Menlo,monospace;fill:#161412;letter-spacing:.04em}
-.chip .s{font:500 9.5px ui-monospace,Menlo,monospace;fill:#5e5340}
+.chip .t{font:700 10.8px ui-monospace,Menlo,monospace;fill:#161412;letter-spacing:.04em}
+.chip .s{font:500 8.6px ui-monospace,Menlo,monospace;fill:#5e5340}
 .chip .n{font:500 8.5px ui-monospace,Menlo,monospace;fill:#9a8f78}
 .status-dim{opacity:.62}
 .status-grey{filter:grayscale(1);opacity:.7}

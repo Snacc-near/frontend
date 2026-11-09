@@ -214,6 +214,19 @@ export function rig() {
     add(dep(-160, 0, 20) + 0.7, `<g class="bone">${t}</g>` + fl, "attest-tube");
   }
 
+  // ================= cable runs with connectors =================
+  {
+    const cable = (pts, r, key, name) => {
+      const route = G.fillet(pts, 4, 6, { P, tube: r });
+      const t = tubePieces(route, r, P, { maxLength: 20 }).map((q) => tubeSvg(q, { tone: "mid" })).join("");
+      const conn = (p, q) => { const d = G.unit3(G.sub3(q, p)); return S(G.disc(-1.4, 1.6, 2.1, G.frameAlong(p, d), P, { steps: 16 }), { tone: "hi", className: "steel" }); };
+      add(key, `<g class="dark">${t}</g>` + conn(route[0], route[3] || route[1]) + conn(route[route.length - 1], route[route.length - 4] || route[route.length - 2]), name);
+    };
+    cable([[50, -101, 2.6], [50, -90, 1.4], [110, -90, 1.4], [132, -80, 1.4], [134, -73, 4]], 0.9, dep(90, -90, 0) + 0.2, "cable-panel-dial");
+    cable([[-24, 66, 9], [-12, 66, 1.4], [-6, 76, 1.4], [8, 78, 4]], 0.9, dep(-6, 70, 0) + 0.2, "cable-printer");
+    cable([[-120, 20, 2], [-130, 30, 1.2], [-142, 40, 1.2], [-150, 52, 5]], 0.9, dep(-140, 40, 0) + 0.2, "cable-hopper");
+  }
+
   // ================= ATP glass tube =================
   {
     const t = tubePieces(ATP_ROUTE, 2.4, P, { maxLength: 24 }).map((q) => tubeSvg(q, { tone: "hi" })).join("");
