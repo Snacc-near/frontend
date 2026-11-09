@@ -5,7 +5,7 @@
  * No external models or textures; all geometry is primitive.
  */
 
-import * as THREE from "three";
+import { CapsuleGeometry, Color, CylinderGeometry, DirectionalLight, Fog, Group, HemisphereLight, Material, MathUtils, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, OrthographicCamera, PointLight, Raycaster, Scene, SphereGeometry, TorusGeometry, Vector2, Vector3, WebGLRenderer } from "three";
 import type { MacroZone } from "../config/zones.ts";
 import { ZONE_THEMES } from "../config/zones.ts";
 
@@ -57,12 +57,12 @@ function zoneGlowColor(zone: MacroZone): number {
 
 export class ColonyPlate3D {
   private canvas: HTMLCanvasElement;
-  private renderer: THREE.WebGLRenderer;
-  private scene: THREE.Scene;
-  private camera: THREE.OrthographicCamera;
-  private plateGroup: THREE.Group;
-  private mediumMesh: THREE.Mesh;
-  private cellGroups = new Map<number, THREE.Group>();
+  private renderer: WebGLRenderer;
+  private scene: Scene;
+  private camera: OrthographicCamera;
+  private plateGroup: Group;
+  private mediumMesh: Mesh;
+  private cellGroups = new Map<number, Group>();
   private cellData = new Map<number, PlateCellInput>();
   private callbacks: ColonyPlateCallbacks;
   private zone: MacroZone = "Goldilocks";
@@ -72,12 +72,12 @@ export class ColonyPlate3D {
   private timeSec = 0;
   private lastTime = 0;
   private reducedMotion: boolean;
-  private raycaster = new THREE.Raycaster();
+  private raycaster = new Raycaster();
   private pointerDownAt = 0;
   private dragging = false;
   private lastPointerX = 0;
   private lastPointerY = 0;
-  private cameraTarget = new THREE.Vector3(0, 0, 0);
+  private cameraTarget = new Vector3(0, 0, 0);
   private resizeObserver: ResizeObserver | null = null;
   private width = 800;
   private height = 600;
@@ -90,33 +90,33 @@ export class ColonyPlate3D {
       typeof window.matchMedia === "function" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false });
     this.renderer.setClearColor(0x030712, 1);
 
-    this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(0x030712, 24, 46);
+    this.scene = new Scene();
+    this.scene.fog = new Fog(0x030712, 24, 46);
 
     const aspect = 4 / 3;
-    this.camera = new THREE.OrthographicCamera(-10 * aspect, 10 * aspect, 10, -10, 0.1, 100);
+    this.camera = new OrthographicCamera(-10 * aspect, 10 * aspect, 10, -10, 0.1, 100);
     this.camera.position.set(14, 14, 14);
     this.camera.lookAt(0, 0, 0);
 
-    const ambient = new THREE.HemisphereLight(0xbae6fd, 0x052e16, 1.1);
+    const ambient = new HemisphereLight(0xbae6fd, 0x052e16, 1.1);
     this.scene.add(ambient);
-    const key = new THREE.DirectionalLight(0xfff7d6, 1.4);
+    const key = new DirectionalLight(0xfff7d6, 1.4);
     key.position.set(6, 12, 4);
     this.scene.add(key);
-    const rim = new THREE.PointLight(0x67e8f9, 30, 30);
+    const rim = new PointLight(0x67e8f9, 30, 30);
     rim.position.set(-5, 4, -6);
     this.scene.add(rim);
 
-    this.plateGroup = new THREE.Group();
+    this.plateGroup = new Group();
     this.scene.add(this.plateGroup);
     this.buildPlate();
 
-    this.mediumMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(5.4, 5.4, 0.35, 48),
-      new THREE.MeshStandardMaterial({ color: 0x052e2b, roughness: 0.35, emissive: 0x10b981, emissiveIntensity: 0.25 }),
+    this.mediumMesh = new Mesh(
+      new CylinderGeometry(5.4, 5.4, 0.35, 48),
+      new MeshStandardMaterial({ color: 0x052e2b, roughness: 0.35, emissive: 0x10b981, emissiveIntensity: 0.25 }),
     );
     this.mediumMesh.position.y = 0.55;
     this.plateGroup.add(this.mediumMesh);
@@ -127,18 +127,18 @@ export class ColonyPlate3D {
   }
 
   private buildPlate(): void {
-    const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.55 });
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.25, metalness: 0.35 });
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(6.2, 5.8, 0.9, 48), baseMat);
+    const baseMat = new MeshStandardMaterial({ color: 0x1e293b, roughness: 0.55 });
+    const rimMat = new MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.25, metalness: 0.35 });
+    const base = new Mesh(new CylinderGeometry(6.2, 5.8, 0.9, 48), baseMat);
     base.position.y = 0.45;
     this.plateGroup.add(base);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(6.0, 0.28, 12, 64), rimMat);
+    const rim = new Mesh(new TorusGeometry(6.0, 0.28, 12, 64), rimMat);
     rim.rotation.x = Math.PI / 2;
     rim.position.y = 0.95;
     this.plateGroup.add(rim);
-    const glass = new THREE.Mesh(
-      new THREE.CylinderGeometry(5.7, 5.7, 0.5, 48, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.16, roughness: 0.1 }),
+    const glass = new Mesh(
+      new CylinderGeometry(5.7, 5.7, 0.5, 48, 1, true),
+      new MeshStandardMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.16, roughness: 0.1 }),
     );
     glass.position.y = 0.85;
     this.plateGroup.add(glass);
@@ -146,11 +146,11 @@ export class ColonyPlate3D {
 
   private applyZone(): void {
     const theme = ZONE_THEMES[this.zone];
-    const mat = this.mediumMesh.material as THREE.MeshStandardMaterial;
+    const mat = this.mediumMesh.material as MeshStandardMaterial;
     mat.color.setHex(zoneMediumColor(this.zone));
     mat.emissive.setHex(zoneGlowColor(this.zone));
-    const glow = new THREE.Color(theme.color);
-    (this.plateGroup.children[1] as THREE.Mesh).material = new THREE.MeshStandardMaterial({
+    const glow = new Color(theme.color);
+    (this.plateGroup.children[1] as Mesh).material = new MeshStandardMaterial({
       color: glow.getHex(),
       roughness: 0.3,
       emissive: glow.getHex(),
@@ -167,10 +167,10 @@ export class ColonyPlate3D {
     this.selectedId = id;
     for (const [cellId, group] of this.cellGroups) {
       const data = this.cellData.get(cellId);
-      const ring = group.getObjectByName("select-ring") as THREE.Mesh | undefined;
+      const ring = group.getObjectByName("select-ring") as Mesh | undefined;
       if (ring) {
         ring.visible = cellId === id;
-        const mat = ring.material as THREE.MeshBasicMaterial;
+        const mat = ring.material as MeshBasicMaterial;
         mat.color.setHex(statusColor(data?.status ?? "Active", Boolean(data?.highlighted)));
       }
     }
@@ -194,13 +194,13 @@ export class ColonyPlate3D {
       if (!existing) {
         this.cellGroups.set(cell.id, this.buildCell(cell));
       } else {
-        const membrane = existing.getObjectByName("membrane") as THREE.Mesh | undefined;
+        const membrane = existing.getObjectByName("membrane") as Mesh | undefined;
         const ratio = cell.vitalityRatio ?? 0.5;
         const radius = 0.55 + ratio * 0.85;
         existing.position.set(this.cellX(cell.index, cells.length), 1.05 + ratio * 0.15, this.cellZ(cell.index, cells.length));
         if (membrane) {
           membrane.scale.setScalar(radius);
-          const mat = membrane.material as THREE.MeshStandardMaterial;
+          const mat = membrane.material as MeshStandardMaterial;
           mat.color.setHex(statusColor(cell.status, Boolean(cell.highlighted)));
           const dead = cell.status === "Liquidated" || cell.status === "SplicedBurned";
           mat.transparent = dead;
@@ -208,7 +208,7 @@ export class ColonyPlate3D {
           mat.emissiveIntensity = dead ? 0.08 : 0.45;
           mat.emissive.setHex(statusColor(cell.status, Boolean(cell.highlighted)));
         }
-        const nucleus = existing.getObjectByName("nucleus") as THREE.Mesh | undefined;
+        const nucleus = existing.getObjectByName("nucleus") as Mesh | undefined;
         if (nucleus) {
           nucleus.visible = cell.status !== "Liquidated" && cell.status !== "SplicedBurned";
           nucleus.scale.setScalar(0.5 + ratio * 0.4);
@@ -232,16 +232,16 @@ export class ColonyPlate3D {
     return Math.sin(angle) * 2.6;
   }
 
-  private buildCell(cell: PlateCellInput): THREE.Group {
-    const group = new THREE.Group();
+  private buildCell(cell: PlateCellInput): Group {
+    const group = new Group();
     const ratio = cell.vitalityRatio ?? 0.5;
     const radius = 0.55 + ratio * 0.85;
     const color = statusColor(cell.status, Boolean(cell.highlighted));
     const dead = cell.status === "Liquidated" || cell.status === "SplicedBurned";
 
-    const membrane = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 24, 18),
-      new THREE.MeshStandardMaterial({
+    const membrane = new Mesh(
+      new SphereGeometry(1, 24, 18),
+      new MeshStandardMaterial({
         color,
         roughness: 0.35,
         transparent: true,
@@ -254,9 +254,9 @@ export class ColonyPlate3D {
     membrane.scale.setScalar(radius);
     group.add(membrane);
 
-    const nucleus = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 18, 14),
-      new THREE.MeshStandardMaterial({ color: 0x7e22ce, roughness: 0.25, emissive: 0xe879f9, emissiveIntensity: 0.5 }),
+    const nucleus = new Mesh(
+      new SphereGeometry(0.5, 18, 14),
+      new MeshStandardMaterial({ color: 0x7e22ce, roughness: 0.25, emissive: 0xe879f9, emissiveIntensity: 0.5 }),
     );
     nucleus.name = "nucleus";
     nucleus.position.set(0.1, radius * 0.72, 0.08);
@@ -264,10 +264,10 @@ export class ColonyPlate3D {
     nucleus.visible = !dead;
     group.add(nucleus);
 
-    const mitoGeo = new THREE.CapsuleGeometry(0.12, 0.35, 4, 8);
-    const mitoMat = new THREE.MeshStandardMaterial({ color: 0xfb923c, roughness: 0.4, emissive: 0xfb923c, emissiveIntensity: 0.6 });
+    const mitoGeo = new CapsuleGeometry(0.12, 0.35, 4, 8);
+    const mitoMat = new MeshStandardMaterial({ color: 0xfb923c, roughness: 0.4, emissive: 0xfb923c, emissiveIntensity: 0.6 });
     for (let i = 0; i < 3; i++) {
-      const mito = new THREE.Mesh(mitoGeo, mitoMat);
+      const mito = new Mesh(mitoGeo, mitoMat);
       mito.name = "organelle";
       const angle = (i / 3) * Math.PI * 2;
       const ox = Math.cos(angle) * radius * 0.5;
@@ -277,9 +277,9 @@ export class ColonyPlate3D {
       group.add(mito);
     }
     for (let i = 0; i < 2; i++) {
-      const lys = new THREE.Mesh(
-        new THREE.SphereGeometry(0.14, 10, 8),
-        new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.35, emissive: 0xf472b6, emissiveIntensity: 0.55 }),
+      const lys = new Mesh(
+        new SphereGeometry(0.14, 10, 8),
+        new MeshStandardMaterial({ color: 0xf472b6, roughness: 0.35, emissive: 0xf472b6, emissiveIntensity: 0.55 }),
       );
       lys.name = "organelle";
       const angle = (i / 2) * Math.PI * 2 + 1.2;
@@ -289,9 +289,9 @@ export class ColonyPlate3D {
       group.add(lys);
     }
 
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(radius * 1.5, 0.04, 8, 32),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }),
+    const ring = new Mesh(
+      new TorusGeometry(radius * 1.5, 0.04, 8, 32),
+      new MeshBasicMaterial({ color, transparent: true, opacity: 0.9 }),
     );
     ring.name = "select-ring";
     ring.rotation.x = Math.PI / 2;
@@ -305,11 +305,11 @@ export class ColonyPlate3D {
     return group;
   }
 
-  private disposeGroup(group: THREE.Group): void {
+  private disposeGroup(group: Group): void {
     group.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof Mesh) {
         child.geometry.dispose();
-        const mat = child.material as THREE.Material | THREE.Material[];
+        const mat = child.material as Material | Material[];
         if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
         else mat.dispose();
       }
@@ -341,20 +341,20 @@ export class ColonyPlate3D {
     const t = this.timeSec;
     let i = 0;
     for (const [, group] of this.cellGroups) {
-      const membrane = group.getObjectByName("membrane") as THREE.Mesh | undefined;
+      const membrane = group.getObjectByName("membrane") as Mesh | undefined;
       if (membrane && !this.reducedMotion) {
         const base = membrane.scale.x;
         const data = group.userData.cellId as number | undefined;
         const ratio = data !== undefined ? (this.cellData.get(data)?.vitalityRatio ?? 0.5) : 0.5;
         const target = (0.55 + ratio * 0.85) * (1 + Math.sin(t * 1.6 + i) * 0.05);
-        membrane.scale.setScalar(THREE.MathUtils.lerp(base, target, 0.08));
+        membrane.scale.setScalar(MathUtils.lerp(base, target, 0.08));
         group.rotation.y = t * 0.12 + i;
       }
       i++;
     }
-    const glow = (this.mediumMesh.material as THREE.MeshStandardMaterial).emissiveIntensity;
+    const glow = (this.mediumMesh.material as MeshStandardMaterial).emissiveIntensity;
     if (!this.reducedMotion) {
-      (this.mediumMesh.material as THREE.MeshStandardMaterial).emissiveIntensity = glow + Math.sin(t * 0.9) * 0.002;
+      (this.mediumMesh.material as MeshStandardMaterial).emissiveIntensity = glow + Math.sin(t * 0.9) * 0.002;
     }
     this.camera.lookAt(this.cameraTarget);
   }
@@ -362,20 +362,20 @@ export class ColonyPlate3D {
   private handlePointerTap(clientX: number, clientY: number): void {
     const rect = this.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    const ndc = new THREE.Vector2(
+    const ndc = new Vector2(
       ((clientX - rect.left) / rect.width) * 2 - 1,
       -((clientY - rect.top) / rect.height) * 2 + 1,
     );
     this.raycaster.setFromCamera(ndc, this.camera);
-    const meshes: THREE.Object3D[] = [];
+    const meshes: Object3D[] = [];
     for (const [, group] of this.cellGroups) {
       group.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.name === "membrane") meshes.push(group);
+        if (child instanceof Mesh && child.name === "membrane") meshes.push(group);
       });
     }
     const hits = this.raycaster.intersectObjects(meshes, true);
     if (hits.length > 0) {
-      let obj: THREE.Object3D | null = hits[0].object;
+      let obj: Object3D | null = hits[0].object;
       while (obj && obj.userData.cellId === undefined) obj = obj.parent;
       if (obj && typeof obj.userData.cellId === "number") {
         this.callbacks.onCellSelect(obj.userData.cellId);
@@ -428,8 +428,8 @@ export class ColonyPlate3D {
       this.lastPointerX = e.clientX;
       this.lastPointerY = e.clientY;
       if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) {
-        this.cameraTarget.x = THREE.MathUtils.clamp(this.cameraTarget.x - dx * 0.02, -3, 3);
-        this.cameraTarget.z = THREE.MathUtils.clamp(this.cameraTarget.z - dy * 0.02, -3, 3);
+        this.cameraTarget.x = MathUtils.clamp(this.cameraTarget.x - dx * 0.02, -3, 3);
+        this.cameraTarget.z = MathUtils.clamp(this.cameraTarget.z - dy * 0.02, -3, 3);
       }
     });
     this.canvas.addEventListener("pointerup", (e) => {
@@ -440,7 +440,7 @@ export class ColonyPlate3D {
     });
     this.canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
-      const zoom = THREE.MathUtils.clamp(this.camera.zoom + (e.deltaY < 0 ? 0.08 : -0.08), 0.55, 2.2);
+      const zoom = MathUtils.clamp(this.camera.zoom + (e.deltaY < 0 ? 0.08 : -0.08), 0.55, 2.2);
       this.camera.zoom = zoom;
       this.camera.updateProjectionMatrix();
     }, { passive: false });

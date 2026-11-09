@@ -45,24 +45,43 @@ export const ColonyPlate: React.FC<ColonyPlateProps> = ({
   useEffect(() => {
     if (webglOk !== true) return;
     let disposed = false;
+    let idleId: number | null = null;
     let engine: { setCells: (c: PlateCellInput[]) => void; setZone: (z: MacroZone) => void; setSelected: (id: number | null) => void; start: () => void; dispose: () => void } | null = null;
-    import("../game/colony3d.ts").then(({ ColonyPlate3D }) => {
-      if (disposed || !canvasRef.current) return;
-      try {
-        engine = new ColonyPlate3D(canvasRef.current, {
-          onCellSelect: (id) => callbacksRef.current(id),
-        });
-      } catch {
+    const load = () => {
+      if (disposed) return;
+      import("../game/colony3d.ts").then(({ ColonyPlate3D }) => {
+        if (disposed || !canvasRef.current) return;
+        try {
+          engine = new ColonyPlate3D(canvasRef.current, {
+            onCellSelect: (id) => callbacksRef.current(id),
+          });
+        } catch {
+          setWebglOk(false);
+          return;
+        }
+        engineRef.current = engine;
+        engine.start();
+      }).catch(() => {
         setWebglOk(false);
-        return;
+      });
+    };
+    // Defer the heavy three.js chunk until after first paint + load so the
+    // initial page load stays fast; the canvas is blank until then.
+    const schedule = () => {
+      if (typeof window.requestIdleCallback === "function") {
+        idleId = window.requestIdleCallback(load);
+      } else {
+        idleId = window.setTimeout(load, 150);
       }
-      engineRef.current = engine;
-      engine.start();
-    }).catch(() => {
-      setWebglOk(false);
-    });
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
     return () => {
       disposed = true;
+      if (idleId !== null) {
+        if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idleId);
+        window.clearTimeout(idleId);
+      }
       engine?.dispose();
       engineRef.current = null;
     };

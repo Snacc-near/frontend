@@ -34,13 +34,17 @@ export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources }) => 
     { key: "elixir", label: "elixir", value: resources.elixir, Icon: IconElixir, tint: "text-pink-300" },
   ];
   return (
-    <div className="pointer-events-auto flex flex-wrap items-center gap-1.5" role="region" aria-label="resources">
+    <div
+      className="pointer-events-auto flex flex-wrap items-center gap-1.5 max-sm:max-w-[calc(100vw-1.25rem)] max-sm:flex-nowrap max-sm:justify-end max-sm:overflow-x-auto max-sm:pb-0.5"
+      role="region"
+      aria-label="resources"
+    >
       {mode === "demo" ? (
-        <span className="rounded-full bg-amber-950/80 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-amber-200">
+        <span className="rounded-full bg-amber-950/80 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-amber-200 max-sm:hidden">
           demo · simulated
         </span>
       ) : (
-        <span className="rounded-full bg-emerald-950/80 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-emerald-200">
+        <span className="rounded-full bg-emerald-950/80 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-emerald-200 max-sm:hidden">
           live · testnet
         </span>
       )}
@@ -152,14 +156,14 @@ export const ActionDock: React.FC<ActionDockProps> = ({ dock, onDock }) => (
         onClick={() => onDock(button.key)}
         title={button.hint}
         data-testid={`dock-${button.key}`}
-        className={`flex min-h-[52px] min-w-[72px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold lowercase focus-visible:ring-2 focus-visible:ring-cyan-300 focus:outline-none ${
+        className={`flex min-h-[52px] min-w-[72px] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold lowercase focus-visible:ring-2 focus-visible:ring-cyan-300 focus:outline-none max-sm:min-w-0 max-sm:px-1 max-sm:text-[10px] ${
           button.disabled
             ? "cursor-not-allowed bg-slate-900/80 text-slate-500"
             : "bg-emerald-500/90 text-slate-950 motion-safe:active:scale-95"
         }`}
       >
         <span>{button.label}</span>
-        <span className="max-w-full truncate text-[9px] font-normal opacity-80">{button.hint}</span>
+        <span className="max-w-full truncate text-[9px] font-normal opacity-80 max-sm:hidden">{button.hint}</span>
       </button>
     ))}
   </nav>
