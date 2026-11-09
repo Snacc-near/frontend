@@ -12,12 +12,12 @@ export const GEO = {
   complexes: [{ name: "I", u: 5, w: 10 }, { name: "III", u: 21, w: 10 }, { name: "IV", u: 37, w: 10 }],
   ridge: { u0: 2, u1: 50, v0: -13, v1: -3, z0: 7, h: 5 },
   car: { u0: 4.2, u1: 51, v: 6.5, zCable: 33 },
-  gate: { u: -69, v: 0 },
+  gate: { u: -66, v: 0 },
   split: { u: -62, v: -5, w: 12, d: 10, h: 9 },
   chimney: { u: -38, v: -18.5, h: 20 },
   rack: { u: -8, v: -5, w: 9, d: 8 },
   o2: { u: 38, v: 15 },
-  beaker: { u: 51, v: 12 },
+  beaker: { u: 51, v: 16 },
   dial: { x: 150, y: -73 },
   wall: { top: 40, rim: 13, z0: 5, vcut: 5 },
 };
@@ -32,26 +32,46 @@ export function hero() {
   const add = (key, svg) => { const name = "hero." + items.length; items.push({ key, svg, name }); flushItem(HR, key, name); };
   const { wall } = GEO;
 
-  // ---- plinth + matrix floor ----
-  const plinthRing = F.toWorldRing(F.beanLocal(86, 43, 96));
+  // ---- plinth + matrix floor, split into back / front halves so the walls sit between them ----
+  // (one full ring interlocked with every wall piece the audit could not order)
+  const plinthLoc = F.beanLocal(86, 43, 96);
+  const plinthRing = F.toWorldRing(plinthLoc);
+  const ringRun = (loc, pred) => {
+    const n = loc.length; const flags = loc.map((pt) => pred(pt[0], pt[1]));
+    let start = flags.findIndex((f, i) => f && !flags[(i + n - 1) % n]);
+    if (start < 0) start = 0;
+    const out = []; for (let i = 0; i < n && out.length < n; i++) { const j = (start + i) % n; if (flags[j]) out.push(loc[j]); else if (out.length) break; }
+    return out;
+  };
+  const plinthBackLoc = ringRun(plinthLoc, (u, v) => v < wall.vcut);
+  const plinthFrontLoc = ringRun(plinthLoc, (u, v) => v >= wall.vcut);
   const pl = [];
   pl.push(`<path class="shadow-flat" transform="translate(-14 12)" d="${O.pathOf(plinthRing.map(([x, y]) => at([x, y, 0])), true)}"/>`);
-  noteShape(A.extruded(plinthRing, 0, 5, { name: "hero.plinth", ground: true }));
-  pl.push(S(k.extrude(plinthRing, 0, 5, P, { convex: false, bevel: 0.8 }), { tone: "hi", className: "tan", crease: "lo" }));
-  // floor (matrix) slab
-  const floorRing = F.toWorldRing(INN);
-  noteShape(A.extruded(floorRing, 5, 2, { name: "hero.floor" }));
-  pl.push(S(k.extrude(floorRing, 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
+  noteShape(A.extruded(F.toWorldRing(plinthBackLoc), 0, 5, { name: "hero.plinth.back", ground: true }));
+  pl.push(S(k.extrude(F.toWorldRing(plinthBackLoc), 0, 5, P, { convex: false, bevel: 0.8 }), { tone: "hi", className: "tan", crease: "lo" }));
+  add(-1100, pl.join(""));
+  const fl = [];
+  // floor (matrix) slab, one disc in its own item after the walls (front half drawn in the same item)
+  const floorBackLoc = ringRun(INN, (u, v) => v < wall.vcut).map(([u, v]) => [u * 0.98, v * 0.98]);
+  const floorFrontLoc = ringRun(INN, (u, v) => v >= wall.vcut).map(([u, v]) => [u * 0.98, v * 0.98]);
+  noteShape(A.extruded(F.toWorldRing(floorBackLoc), 5, 2, { name: "hero.floor.back" }));
+  fl.push(S(k.extrude(F.toWorldRing(floorBackLoc), 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
+  noteShape(A.extruded(F.toWorldRing(floorFrontLoc), 5, 2, { name: "hero.floor.front" }));
+  fl.push(S(k.extrude(F.toWorldRing(floorFrontLoc), 5, 2, P, { convex: false, bevel: 0 }), { tone: "hi", className: "warm", crease: "none" }));
   // floor grid dots + seam lines (matrix granules)
   const grid = [];
   for (let u = -66; u <= 66; u += 6) for (let v = -24; v <= 26; v += 6) { const i2 = (u / 72) ** 2 + (v / 29.5) ** 2; if (i2 < 0.82) grid.push(at(F.W3(u, v, 7))); }
-  pl.push(Dm(grid, { size: 0.45, tone: "lo" }));
-  // plinth screws + level lamps + label plate on the front apron
+  fl.push(Dm(grid, { size: 0.45, tone: "lo" }));
+  add(-840, fl.join(""));
+  const lab = planeM(F.W3(-38, 36.5, 5.2), F.Uvec.map((x) => x), [F.Vvec[0], F.Vvec[1], 0]);
+  // front plinth half + front apron screws (drawn after the front wall, whose base it overlaps)
+  const pf = [];
+  noteShape(A.extruded(F.toWorldRing(plinthFrontLoc), 0, 5, { name: "hero.plinth.front", ground: true }));
+  pf.push(S(k.extrude(F.toWorldRing(plinthFrontLoc), 0, 5, P, { convex: false, bevel: 0.8 }), { tone: "hi", className: "tan", crease: "lo" }));
   const apron = [];
   for (const [u, v] of [[-60, 38], [-30, 41], [0, 42], [30, 41], [60, 38], [-72, 22], [72, 22]]) apron.push(at(F.W3(u, v, 5)));
-  pl.push(Dm(apron, { size: 0.65, tone: "hi" }));
-  const lab = planeM(F.W3(-38, 36.5, 5.2), F.Uvec.map((x) => x), [F.Vvec[0], F.Vvec[1], 0]);
-  add(-1000, pl.join(""));
+  pf.push(Dm(apron, { size: 0.65, tone: "hi" }));
+  add(10000, pf.join(""));
 
   // ---- tall back wall, split into back / left / right pieces so the inner items sit between them ----
   // (one full ring interlocked with everything the audit could not order)
@@ -261,15 +281,19 @@ export function hero() {
   for (const dz of [5, 10, 15]) chS.push(Ln(k.sideArc(F.Wxy(ch.u, ch.v)[0], F.Wxy(ch.u, ch.v)[1], 2.6, 7 + dz, P, 14), { tone: "faint" }));
   add(F.depthKey(ch.v, 0), chS.join(""));
 
-  // ---- membrane transporter gate (flipping flap) ----
+  // ---- membrane transporter gate (flipping flap), split at the front cut so each post rides with its wall ----
   const g = GEO.gate;
   const gs = [];
-  // the gate is set into the membrane: posts and crossbar seated in the wall pieces
+  // back post + back crossbar part seated in the left wall piece
   gs.push(F.boxL(g.u - 4, g.v - 8, 2.4, 3, 7, 12, { r: 0.4, bevel: 0.2, className: "steel", meta: { seated: true, cut: wallShapes["hero.wall.left"] } }));
-  gs.push(F.boxL(g.u - 4, g.v + 5, 2.4, 3, 7, 12, { r: 0.4, bevel: 0.2, className: "steel", meta: { seated: true, cut: wallShapes["hero.wall.front"] } }));
-  gs.push(F.boxL(g.u - 4.6, g.v - 8, 3.6, 16, 19, 2, { r: 0.5, bevel: 0.3, className: "tan", meta: { seated: true, cut: wallShapes["hero.wall.left"] } }));
+  gs.push(F.boxL(g.u - 4.6, g.v - 8, 3.6, 12, 19, 2, { r: 0.5, bevel: 0.3, className: "tan", meta: { seated: true, cut: wallShapes["hero.wall.left"] } }));
   gs.push(`<g data-dyn="gate"></g>`);
   add(F.depthKey(g.v, 0), gs.join(""));
+  // front post + front crossbar part seated in the front wall piece (drawn after it)
+  const gf = [];
+  gf.push(F.boxL(g.u - 4, g.v + 5, 2.4, 3, 13, 6, { r: 0.4, bevel: 0.2, className: "steel", meta: { seated: true, cut: wallShapes["hero.wall.front"] } }));
+  gf.push(F.boxL(g.u - 4.6, g.v + 5, 3.6, 3, 19, 2, { r: 0.5, bevel: 0.3, className: "tan", meta: { seated: true, cut: wallShapes["hero.wall.front"] } }));
+  add(10001, gf.join(""));
 
   // ---- glycolysis splitter ----
   const sp = GEO.split;
@@ -286,9 +310,11 @@ export function hero() {
   // ---- cable car line (pylons + cable); carriage is dynamic ----
   const c = GEO.car;
   const cb = [];
-  for (const u of [c.u0, c.u1]) {
-    cb.push(F.boxL(u - 1.2, c.v - 1.2, 2.4, 2.4, 8.2, c.zCable - 8.2, { r: 0.5, bevel: 0.2, className: "steel" }));
-    cb.push(F.boxL(u - 2.6, c.v - 2.6, 5.2, 5.2, 7, 1.2, { r: 0.5, bevel: 0.2, className: "tan" }));
+  for (const [i, u] of [c.u0, c.u1].entries()) {
+    // the u1 pylon stands on the turbine base top (z 9.2): its floor plate is buried in that base, so start the leg there
+    const zBase = i === 1 ? 9.4 : 8.2;
+    cb.push(F.boxL(u - 1.2, c.v - 1.2, 2.4, 2.4, zBase, c.zCable - zBase, { r: 0.5, bevel: 0.2, className: "steel" }));
+    if (i === 0) cb.push(F.boxL(u - 2.6, c.v - 2.6, 5.2, 5.2, 7, 1.2, { r: 0.5, bevel: 0.2, className: "tan" }));
     cb.push(F.boxL(u - 2.2, c.v - 1.2, 4.4, 2.4, c.zCable, 1.4, { r: 0.4, bevel: 0.15, className: "steel" }));
   }
   const a0 = at(F.W3(c.u0, c.v, c.zCable + 0.7)), a1 = at(F.W3(c.u1, c.v, c.zCable + 0.7));
@@ -309,8 +335,8 @@ export function hero() {
   const bs = [];
   {
     const p = F.Wxy(bk.u, bk.v);
-    noteShape(A.cylinder(p[0], p[1], 4.2, 7, 0.6, { name: "hero.beaker.base", seated: true, cut: turbBaseShape }));
-    bs.push(S(k.cylinder(p[0], p[1], 4.2, 7, 0.6, P, 20, 0.1), { tone: "hi", className: "tan" }));
+    noteShape(A.cylinder(p[0], p[1], 3.0, 7, 0.6, { name: "hero.beaker.base", seated: true, cut: turbBaseShape }));
+    bs.push(S(k.cylinder(p[0], p[1], 3.0, 7, 0.6, P, 20, 0.1), { tone: "hi", className: "tan" }));
     const gl = G.frameAlong([p[0], p[1], 7.6], [0, 0, 1]);
     bs.push(`<path d="${O.pathOf([at([p[0] - 3.4, p[1] + 3.4, 8]), at([p[0] - 3.4, p[1] + 3.4, 17])].concat([]))}" class="ink3" style="stroke-width:.5px;opacity:0"/>`);
     bs.push(`<g data-dyn="beaker"></g>`);
