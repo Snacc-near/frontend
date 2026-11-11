@@ -6,6 +6,7 @@ import { INITIAL_ATP, SKIN_LABELS } from "./config/constants.ts";
 import type {
   AppetiteViewModel,
   BreachLogItem,
+  MacroTelemetry,
   NutrientBurstState,
   StrainDetail,
   StrainSummary,
@@ -25,6 +26,8 @@ import { ThermalGauge } from "./hud/ThermalGauge.tsx";
 import { BreachLog } from "./hud/BreachLog.tsx";
 import { SwapPanel } from "./hud/SwapPanel.tsx";
 import { NpcPanel } from "./hud/NpcPanel.tsx";
+import { SocialLeaderboardModal } from "./hud/SocialLeaderboardModal.tsx";
+import { ThesisDashboardModal } from "./hud/ThesisDashboardModal.tsx";
 import { NPC_PROFILES } from "./data/npc.ts";
 import { ActionDock, ProductionQueuePanel, ResourceBar, type DockButton } from "./hud/GameHud.tsx";
 import { CellLab } from "./hud/CellLab.tsx";
@@ -90,6 +93,7 @@ export const App: React.FC = () => {
   const [skin, setSkin] = useState<SkinMode>("biolab");
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [zone, setZone] = useState<MacroZone>("Goldilocks");
+  const [macro, setMacro] = useState<MacroTelemetry | null>(null);
   const [crucibleTempMk, setCrucibleTempMk] = useState<number | null>(null);
   const [reducedMotion] = useState<boolean>(() => prefersReducedMotion());
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
@@ -109,6 +113,8 @@ export const App: React.FC = () => {
   const [panelsOpen, setPanelsOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [npcOpen, setNpcOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [thesisOpen, setThesisOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [iris, setIris] = useState<{ phase: "closing" | "opening"; cx: number; cy: number } | null>(null);
@@ -213,11 +219,12 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const poller = new TelemetryPoller({
-      onMacroUpdate: (macro) => {
+      onMacroUpdate: (macroData) => {
         setIsBackendConnected(true);
+        setMacro(macroData);
         if (mode === "live") {
-          setCrucibleTempMk(macro.crucibleTemp);
-          setZone(classifyZone(macro.crucibleTemp));
+          setCrucibleTempMk(macroData.crucibleTemp);
+          setZone(classifyZone(macroData.crucibleTemp));
         }
       },
       onStrainsUpdate: (strains) => {
@@ -654,6 +661,22 @@ export const App: React.FC = () => {
               >
                 swap DEX ↗
               </button>
+              <button
+                type="button"
+                onClick={() => setSocialOpen(true)}
+                aria-label="open social leaderboard"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                social 🏆
+              </button>
+              <button
+                type="button"
+                onClick={() => setThesisOpen(true)}
+                aria-label="open thesis proof dashboard"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                thesis 📜
+              </button>
             </div>
             <span className="label-plate pointer-events-auto lowercase">
               <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · /api data only"}</span>
@@ -746,6 +769,27 @@ export const App: React.FC = () => {
       ) : null}
 
       {swapOpen ? <SwapPanel mode={mode} onClose={() => setSwapOpen(false)} skin={skin} /> : null}
+
+      {socialOpen ? (
+        <SocialLeaderboardModal
+          isOpen={socialOpen}
+          onClose={() => setSocialOpen(false)}
+          appetite={appetite}
+          mode={mode}
+          skin={skin}
+        />
+      ) : null}
+
+      {thesisOpen ? (
+        <ThesisDashboardModal
+          isOpen={thesisOpen}
+          onClose={() => setThesisOpen(false)}
+          macro={macro}
+          appetite={appetite}
+          mode={mode}
+          skin={skin}
+        />
+      ) : null}
 
       {npcOpen ? (
         <NpcPanel
