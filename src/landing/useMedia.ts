@@ -36,6 +36,22 @@ export function useReveal(root: React.RefObject<HTMLElement | null>, deps: unkno
       items.forEach((i) => i.classList.add("is-in"));
       return;
     }
+    const watched = new WeakSet<Element>();
+    const watch = (node: Element) => {
+      if (watched.has(node) || node.classList.contains("is-in")) return;
+      watched.add(node);
+      io.observe(node);
+    };
+    // Content that renders later (live numbers, gallery) is picked up as it appears.
+    const mo = new MutationObserver((records) => {
+      for (const r of records) {
+        r.addedNodes.forEach((n) => {
+          if (!(n instanceof Element)) return;
+          if (n.hasAttribute("data-reveal")) watch(n);
+          n.querySelectorAll("[data-reveal]").forEach(watch);
+        });
+      }
+    });
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -47,8 +63,12 @@ export function useReveal(root: React.RefObject<HTMLElement | null>, deps: unkno
       },
       { rootMargin: "0px 0px -12% 0px", threshold: 0.05 },
     );
-    items.forEach((i) => io.observe(i));
-    return () => io.disconnect();
+    items.forEach(watch);
+    mo.observe(el, { childList: true, subtree: true });
+    return () => {
+      io.disconnect();
+      mo.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }

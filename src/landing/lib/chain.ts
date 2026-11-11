@@ -26,11 +26,17 @@ function b64(json: unknown): string {
 
 async function viewCall<T>(method: string, args: unknown, signal?: AbortSignal): Promise<T | null> {
   for (const url of RPCS) {
+    if (signal?.aborted) return null;
+    // Each endpoint gets 7 s before the next one is tried.
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 7000);
+    const relay = () => ac.abort();
+    signal?.addEventListener("abort", relay);
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal,
+        signal: ac.signal,
         body: JSON.stringify({
           jsonrpc: "2.0",
           id: "snacc-landing",
@@ -49,8 +55,11 @@ async function viewCall<T>(method: string, args: unknown, signal?: AbortSignal):
       const bytes = body.result?.result;
       if (!Array.isArray(bytes)) continue;
       return JSON.parse(new TextDecoder().decode(new Uint8Array(bytes))) as T;
-    } catch (err) {
-      if ((err as { name?: string })?.name === "AbortError") return null;
+    } catch {
+      // timeout or network error: try the next endpoint (unless the caller aborted)
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", relay);
     }
   }
   return null;

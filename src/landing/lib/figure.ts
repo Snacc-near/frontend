@@ -66,7 +66,12 @@ export function loadFigure(): Promise<FigureSource | null> {
  */
 export function prefixIds(svg: string, prefix: string): string {
   if (!prefix) return svg;
+  const ids = new Set(Array.from(svg.matchAll(/\bid="([^"]+)"/g), (m) => m[1]!));
   return svg
+    // id selectors in the figure's own stylesheet (`.inc #door{...}`); hex colours are not ids
+    .replace(/<style\b([^>]*)>([\s\S]*?)<\/style>/g, (_m, attrs: string, css: string) =>
+      `<style${attrs}>${css.replace(/#([A-Za-z][\w-]*)/g, (s, id: string) => (ids.has(id) ? `#${prefix}${id}` : s))}</style>`,
+    )
     .replace(/\bid="([^"]+)"/g, (_m, id: string) => `id="${prefix}${id}"`)
     .replace(/url\(#([^)\s"']+)\)/g, (_m, id: string) => `url(#${prefix}${id})`)
     .replace(/((?:xlink:)?href)="#([^"]+)"/g, (_m, attr: string, id: string) => `${attr}="#${prefix}${id}"`);

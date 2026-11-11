@@ -10,6 +10,10 @@ import { useLive } from "./useLive.ts";
 import { useFinePointer, useReveal, useTheatreMode } from "./useMedia.ts";
 import { useScrollSpy } from "./useScrollSpy.ts";
 import { useMagnetic } from "./useMagnetic.ts";
+import { LiveLab } from "./LiveLab.tsx";
+import { UnderHood } from "./UnderHood.tsx";
+import { Faq, Finale } from "./Finale.tsx";
+import { Spores } from "./Spores.tsx";
 
 export default function Landing() {
   const active = useScrollSpy(CHAPTER_IDS);
@@ -37,11 +41,16 @@ export default function Landing() {
       </a>
       <SiteHeader live={live.status} />
       <ChapterRail active={active} />
+      <Spores count={fine ? 90 : 36} />
 
       <main id="main">
         <div id="story">
           {theatre ? <TheatreStory source={source} live={live} finePointer={fine} /> : <StaticStory source={source} live={live} />}
         </div>
+        <LiveLab live={live} />
+        <UnderHood />
+        <Finale source={source} />
+        <Faq />
       </main>
 
       <SiteFooter />

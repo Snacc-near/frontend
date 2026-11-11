@@ -168,6 +168,13 @@ describe("figure helpers", () => {
     expect(out).not.toMatch(/id="c"/);
   });
 
+  it("rewrites id selectors in the embedded stylesheet but leaves hex colours alone", () => {
+    const src = '<svg><style>.inc #door{fill:#fff}.inc #needle{stroke:#f8aa06}</style><g id="door"/><g id="needle"/></svg>';
+    const out = prefixIds(src, "fz-");
+    expect(out).toContain(".inc #fz-door{fill:#fff}");
+    expect(out).toContain(".inc #fz-needle{stroke:#f8aa06}");
+  });
+
   it("splits the svg wrapper from its body", () => {
     expect(innerSvg('<svg viewBox="0 0 1 1"><g/></svg>')).toEqual({ attrs: ' viewBox="0 0 1 1"', body: "<g/>" });
   });
