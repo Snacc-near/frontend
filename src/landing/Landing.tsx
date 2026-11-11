@@ -1,77 +1,46 @@
 import "./landing.css";
+import { useEffect, useRef, useState } from "react";
 import { ChapterRail } from "./ChapterRail.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 import { SiteHeader } from "./SiteHeader.tsx";
-import { Stage } from "./Stage.tsx";
-import { CHAPTERS, CHAPTER_IDS, LINKS } from "./chapters.ts";
+import { CHAPTER_IDS } from "./chapters.ts";
+import { loadFigure, type FigureSource } from "./lib/figure.ts";
+import { StaticStory, TheatreStory } from "./Story.tsx";
+import { useLive } from "./useLive.ts";
+import { useFinePointer, useReveal, useTheatreMode } from "./useMedia.ts";
 import { useScrollSpy } from "./useScrollSpy.ts";
-
-const [HERO, ...STORY] = CHAPTERS;
+import { useMagnetic } from "./useMagnetic.ts";
 
 export default function Landing() {
   const active = useScrollSpy(CHAPTER_IDS);
+  const theatre = useTheatreMode();
+  const fine = useFinePointer();
+  const live = useLive();
+  const [source, setSource] = useState<FigureSource | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let on = true;
+    void loadFigure().then((s) => on && setSource(s));
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  useReveal(pageRef, [theatre, source]);
+  useMagnetic(pageRef, fine);
 
   return (
-    <div className="ln-page">
+    <div className="ln-page" ref={pageRef} data-mode={theatre ? "theatre" : "static"}>
       <a className="ln-skip" href="#main">
         Skip to content
       </a>
-      <SiteHeader />
+      <SiteHeader live={live.status} />
       <ChapterRail active={active} />
 
       <main id="main">
-        <section id={HERO.id} className="ln-chapter ln-hero" aria-labelledby="ln-hero-title">
-          <div className="ln-chapter__text">
-            <p className="ln-eyebrow">
-              <span>Chapter {HERO.num}</span> · Enter
-            </p>
-            <h1 id="ln-hero-title" className="ln-hero__title">
-              {HERO.headline}
-            </h1>
-            <p className="ln-chapter__line">{HERO.line}</p>
-            <div className="ln-cta">
-              <a className="keycap keycap--primary ln-btn" href={LINKS.app}>
-                Enter the lab
-              </a>
-              <a className="keycap ln-btn" href={`#${STORY[0].id}`}>
-                Scroll
-              </a>
-            </div>
-          </div>
-          <Stage num={HERO.num} fig={HERO.fig}>
-            {/* Temporary static figure; the illustrated incubator replaces it in a later item. */}
-            <div className="ln-stage__chip" aria-hidden="true">
-              <img src="/brand/snacc-app-icon.png" alt="" width={512} height={512} decoding="async" />
-            </div>
-          </Stage>
-        </section>
-
         <div id="story">
-          {STORY.map((c, i) => {
-            const last = i === STORY.length - 1;
-            const titleId = `${c.id}-title`;
-            return (
-              <section key={c.id} id={c.id} className="ln-chapter" aria-labelledby={titleId}>
-                <div className="ln-chapter__text">
-                  <p className="ln-eyebrow">
-                    <span>Chapter {c.num}</span> · {c.fig}
-                  </p>
-                  <h2 id={titleId} className="ln-chapter__title">
-                    {c.headline}
-                  </h2>
-                  <p className="ln-chapter__line">{c.line}</p>
-                  {last ? (
-                    <div className="ln-cta">
-                      <a className="keycap keycap--primary ln-btn" href={LINKS.app}>
-                        Launch app (testnet)
-                      </a>
-                    </div>
-                  ) : null}
-                </div>
-                <Stage num={c.num} fig={c.fig} />
-              </section>
-            );
-          })}
+          {theatre ? <TheatreStory source={source} live={live} finePointer={fine} /> : <StaticStory source={source} live={live} />}
         </div>
       </main>
 
