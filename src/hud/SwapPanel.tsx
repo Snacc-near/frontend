@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useTransition } from "react";
-import type { GameMode } from "../config/constants.ts";
+import type { GameMode, SkinMode } from "../config/constants.ts";
 import { fetchRefPrices, RefPriceModel } from "../swap/refPrice.ts";
 import {
   fetchIntentsQuote,
@@ -12,9 +12,10 @@ import { swapConfig } from "../swap/config.ts";
 interface SwapPanelProps {
   mode: GameMode;
   onClose: () => void;
+  skin?: SkinMode;
 }
 
-export const SwapPanel: React.FC<SwapPanelProps> = ({ mode, onClose }) => {
+export const SwapPanel: React.FC<SwapPanelProps> = ({ mode, onClose, skin = "biolab" }) => {
   const [tab, setTab] = useState<"ref" | "intents">("ref");
 
   // Ref / Rhea state (RES-107)
@@ -141,7 +142,9 @@ export const SwapPanel: React.FC<SwapPanelProps> = ({ mode, onClose }) => {
               DEX
             </span>
             <h2 className="text-sm font-bold tracking-tight lowercase">
-              swap & liquidity terminal
+              {skin === "fintech"
+                ? "secondary liquidity & cross-chain routing"
+                : "swap & liquidity terminal"}
             </h2>
           </div>
           <button

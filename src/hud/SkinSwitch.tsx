@@ -17,18 +17,24 @@ export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
         type="button"
         onClick={() => onChange("biolab")}
         aria-pressed={skin === "biolab"}
-        className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${skin === "biolab" ? "keycap--primary" : ""} focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none`}
+        className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${
+          skin === "biolab" ? "keycap--primary font-semibold" : ""
+        } focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none inline-flex items-center gap-1.5`}
       >
-        bio-lab
+        <span aria-hidden="true">🔬</span>
+        <span>bio-lab</span>
       </button>
 
       <button
         type="button"
         onClick={() => onChange("fintech")}
         aria-pressed={skin === "fintech"}
-        className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${skin === "fintech" ? "keycap--primary" : ""} focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none`}
+        className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${
+          skin === "fintech" ? "keycap--primary font-semibold" : ""
+        } focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none inline-flex items-center gap-1.5`}
       >
-        fintech
+        <span aria-hidden="true">📊</span>
+        <span>fintech</span>
       </button>
     </div>
   );

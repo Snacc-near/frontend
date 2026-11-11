@@ -26,7 +26,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
           type="text"
           value={account}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="e.g.: alice.testnet"
+          placeholder="e.g.: alice.near"
           className="min-h-[40px] w-36 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 font-mono text-xs text-[var(--ink-hi)] placeholder:text-[var(--ink-mute)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none sm:min-h-[44px] sm:w-48"
           spellCheck={false}
           autoComplete="off"
