@@ -1,0 +1,404 @@
+/* Landing page. Reuses the game's tokens (--bg, --panel, --edge, --accent ...), `.keycap` buttons and
+   `.label-plate` pills from index.css; only layout and the black logo chip are new. */
+
+html {
+  scroll-padding-top: 76px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+.ln-page {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink-hi);
+}
+
+.ln-skip {
+  position: absolute;
+  left: 12px;
+  top: -64px;
+  z-index: 60;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--ink-hi);
+  font-weight: 700;
+  transition: top 150ms var(--ease-out);
+}
+
+.ln-skip:focus {
+  top: 12px;
+}
+
+/* ---- logo chip: owner artwork lives on black, so it sits on a black rounded sticker ---- */
+
+.ln-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #000;
+  border-radius: 12px;
+  box-shadow: 0 3px 0 var(--line);
+  padding: 4px 10px;
+  flex: none;
+}
+
+.ln-chip img {
+  display: block;
+  height: 34px;
+  width: auto;
+}
+
+.ln-chip--sm img {
+  height: 28px;
+}
+
+/* ---- header ---- */
+
+.ln-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(239, 239, 236, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--edge);
+}
+
+.ln-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 20px;
+}
+
+.ln-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.ln-nav__link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 6px 2px;
+}
+
+.ln-nav__link:hover {
+  color: var(--ink-hi);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.ln-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 22px;
+  font-size: 16px;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ln-btn--sm {
+  padding: 8px 14px;
+  font-size: 14px;
+}
+
+/* ---- chapters ---- */
+
+.ln-chapter {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 72px);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(56px, 10vh, 120px) 20px;
+  min-height: min(88svh, 820px);
+}
+
+/* alternate sides for rhythm (DOM order stays text first for reading order): 03, 05, 07 put the stage on the left */
+#story > .ln-chapter:nth-child(even) {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+}
+
+#story > .ln-chapter:nth-child(even) .ln-chapter__text {
+  order: 2;
+}
+
+.ln-hero {
+  min-height: calc(100svh - 58px);
+}
+
+.ln-eyebrow {
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.ln-eyebrow span {
+  font-weight: 700;
+  color: var(--accent-dk);
+}
+
+.ln-hero__title,
+.ln-chapter__title {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.ln-hero__title {
+  font-size: clamp(42px, 6.4vw, 88px);
+  line-height: 0.98;
+}
+
+.ln-chapter__title {
+  font-size: clamp(30px, 4.2vw, 52px);
+  line-height: 1.04;
+}
+
+.ln-chapter__line {
+  margin: 18px 0 0;
+  max-width: 44ch;
+  font-size: clamp(16px, 1.5vw, 19px);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.ln-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+/* ---- stage slot (future illustrated figure mounts into [data-stage]) ---- */
+
+.ln-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background-color: var(--panel);
+  background-image: radial-gradient(var(--edge) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  box-shadow: 0 2px 0 var(--edge);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.ln-stage__pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1;
+}
+
+.ln-stage__chip {
+  width: min(46%, 300px);
+  aspect-ratio: 1;
+  background: #000;
+  border-radius: 28px;
+  box-shadow: 0 6px 0 var(--line);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.ln-stage__chip img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- chapter rail ---- */
+
+.ln-rail {
+  position: fixed;
+  z-index: 30;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ln-rail ol {
+  list-style: none;
+  margin: 0;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(251, 251, 249, 0.92);
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  box-shadow: 0 2px 0 var(--edge);
+}
+
+.ln-rail a {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  transition:
+    background-color 150ms var(--ease-out),
+    border-color 150ms var(--ease-out);
+}
+
+.ln-rail a:hover {
+  border-color: var(--line);
+}
+
+.ln-rail a[aria-current="true"] {
+  background: var(--accent);
+  border-color: var(--ink-hi);
+  color: var(--accent-ink);
+}
+
+/* chapter name appears on hover/focus, to the left of the rail */
+.ln-rail__name {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms var(--ease-out);
+}
+
+.ln-rail a:hover .ln-rail__name,
+.ln-rail a:focus-visible .ln-rail__name {
+  opacity: 1;
+}
+
+/* ---- footer ---- */
+
+.ln-footer {
+  border-top: 1px solid var(--edge);
+  background: var(--panel-2);
+}
+
+.ln-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 20px;
+}
+
+.ln-footer__note {
+  flex: 1 1 280px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.ln-footer__links {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ln-footer__links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ---- narrower screens: text above stage, rail becomes a bottom pill ---- */
+
+@media (max-width: 900px) {
+  .ln-chapter,
+  .ln-hero,
+  #story > .ln-chapter:nth-child(even) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    min-height: 0;
+    gap: 28px;
+    padding: 48px 16px;
+  }
+
+  #story > .ln-chapter:nth-child(even) .ln-chapter__text {
+    order: 0;
+  }
+
+  .ln-header__inner {
+    padding: 8px 16px;
+  }
+
+  .ln-rail {
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    right: 50%;
+    transform: translateX(50%);
+  }
+
+  .ln-rail ol {
+    flex-direction: row;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 999px;
+  }
+
+  .ln-rail a {
+    width: 30px;
+    height: 28px;
+    border-radius: 999px;
+  }
+
+  .ln-rail__name {
+    display: none;
+  }
+
+  .ln-footer__inner {
+    padding: 24px 16px 84px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ln-nav {
+    gap: 12px;
+  }
+
+  .ln-nav__link--opt {
+    display: none;
+  }
+
+  .ln-chip img {
+    height: 30px;
+  }
+}
