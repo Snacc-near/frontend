@@ -54,14 +54,14 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "06",
     fig: "enclave",
     headline: "Private AI diet plans, verified on-chain.",
-    line: "Plans are computed inside a TEE on NEAR AI Cloud; the attestation is what the chain checks.",
+    line: "Plans are computed inside a TEE on NEAR AI Cloud; the contract checks their signature before anything changes.",
   },
   {
     id: "ch-07",
     num: "07",
     fig: "doorway",
     headline: "Open the incubator.",
-    line: "Testnet only. Bring a wallet and hatch your first Snacc.",
+    line: "Testnet only. Explore the live colony and the lab demo.",
   },
 ] as const;
 
