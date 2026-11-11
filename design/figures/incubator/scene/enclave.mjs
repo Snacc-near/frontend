@@ -59,10 +59,10 @@ export function enclave() {
   p.push(`<path class="f-top" d="${fpoly(XM, rrect(sy0, sy1, 14, 24, 3, 4))}"/>`);
   p.push(`<g id="stamp" class="stamp-blink"><path id="enclave-stamp" class="f-mari" d="${fpoly(XM, rrect(sy0 + 3, sy0 + 15, 16, 22, 2, 3))}"/>` +
     `<path class="ink" d="${pathOf([at([XM, sy0 + 6, 19.2]), at([XM, sy0 + 8.2, 17.4]), at([XM, sy0 + 12, 21.2])])}" style="stroke-width:1.2px"/></g>`);
-  p.push(`<g transform="${frontM(XM, sy0 + 17, 20.4)}"><text class="txt" x="0" y="0" style="font-size:3.4px;font-weight:700">TEE · ATTESTED</text></g>`);
+  p.push(`<g transform="${frontM(XM, sy0 + 40, 20.4)}"><text class="txt" x="0" y="0" style="font-size:2.9px;font-weight:700">TEE · ATTESTED</text></g>`);
   // drawer seam + pull
   p.push(Ln(pathOf([at([XM, MOD.y + 3, 28]), at([XM, MOD.y + MOD.d - 3, 28])]), { tone: "lo" }));
-  bbBox3("ch-enclave", MOD.x - 4, XM + 2, MOD.y - 4, MOD.y + MOD.d + 4, 0, MOD_H + 10);
+  bbBox3("ch-enclave", MOD.x - 4, XM + 2, MOD.y - 4, MOD.y + MOD.d + 4, 0, MOD_H);
   item("enclave", [slabS(plinth, 0, 12, "enclave.plinth", { ground: true }), slabS(MOD, 12, MOD_H - 28, "enclave.body"), slabS(lid, MOD_H - 16, 16, "enclave.lid")]);
   return { svg: p.join("") };
 }

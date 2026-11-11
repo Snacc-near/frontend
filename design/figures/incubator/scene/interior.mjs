@@ -91,7 +91,7 @@ export function thermo() {
   p.push(Ln(tk.join(""), { tone: "mid" }));
   // needle (marigold pointer on the zone bar)
   p.push(`<path id="thermo-pointer" class="f-mari" d="${fp([[-72, zb + 46], [-77, zb + 43], [-77, zb + 49]])}"/>`);
-  bbBox3("ch-thermo", xp - 6, xp + 4, y0 - 2, y1 + 4, zb - 4, zt + 3);
+  bbBox3("ch-thermo", xp - 4, xp + 4, y0, y1, zb, zt);
   item("thermo", [cylS(xp - 2, (y0 + y1) / 2, 11.4, zb, 3, "thermo.foot", { ground: false }), slabS(plan, zb + 3, zt - zb - 3, "thermo.plate")]);
   return p.join("");
 }

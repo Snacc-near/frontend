@@ -158,6 +158,7 @@ export function door() {
   // warm glow spilling out of the open door onto the bench (marigold; shown by data-door="open")
   const spill = `<path id="door-spill" class="spill" d="${k.planOutline({ x: XF + 6, y: -104, w: 44, d: 208, r: 18 }, 0.9, P, 8)}"/>`;
   bbBox3("ch-door", XF, XF + 14, WIN.y0 - 12, WIN.y1 + 12, WIN.z0 - 8, WIN.z1 + 8);
+  bbBox3("ch-door", XF + 6, XF + 50, -104, 104, 0.9, 0.9);      // the glow on the bench belongs to the door
   return { leaf: `<g id="door" style="transform-origin:${r1(hx)}px ${r1(hy2)}px">${closed.join("")}</g>`, spill };
 }
 

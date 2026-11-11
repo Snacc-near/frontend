@@ -129,7 +129,7 @@ function heroCell(pos, r, id) {
   o.push(mito.svg);
   const rim = circleOnFace(Ph, c, rho);
   bbAdd("ch-cell", rim.map(lv.toParent));
-  bbAdd("ch-cell", [lv.toParent(k.iso([0, 0, 0], Ph)), lv.toParent(k.iso([0, 0, zc + r], Ph))]);
+  bbBall("ch-cell", c, r, Ph, lv.toParent);
   bbAdd("ch-mito", mito.ext);
   return { svg: lv.wrap(o.join(""), ` id="${id}"`), atpIds: mito.atpIds, mito };
 }
