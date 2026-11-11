@@ -1,0 +1,121 @@
+{
+  "viewBox": [
+    0,
+    0,
+    1600,
+    1000
+  ],
+  "root": "cam",
+  "note": "x/y/w/h in viewBox units, computed by build.mjs from the drawn geometry. scale = suggested camera zoom that fits the box with a margin (capped at 60).",
+  "layers": [
+    "layer-back",
+    "layer-mid",
+    "layer-front"
+  ],
+  "hooks": {
+    "door": "#door: set --door (an angle, 0deg closed .. 100deg open) or data-door=\"open\" on the svg root; #door-spill glows when open",
+    "needle": "#needle: rotate about its hub (CSS transform: rotate(var(--needle)))",
+    "thermoFill": "#thermo-fill: scaleY, origin bottom (CSS var --fill is not used while the idle animation runs; set animation:none first)",
+    "thermoPointer": "#thermo-pointer: marigold marker on the zone bar",
+    "capsule": "#capsule (slides in), #stamp (blinks)",
+    "cells": [
+      "#cell-hungry",
+      "#cell-merge-a",
+      "#cell-merge-b"
+    ],
+    "classes": [
+      ".vent-steam",
+      ".atp-speck",
+      ".drop",
+      ".key-lamp"
+    ],
+    "cell": "ch-cell",
+    "mitoAtp": [
+      "ch-mito-atp-0",
+      "ch-mito-atp-1",
+      "ch-mito-atp-2"
+    ]
+  },
+  "anchors": {
+    "ch-incubator": {
+      "x": 158.66,
+      "y": 15.26,
+      "w": 1282.68,
+      "h": 892.51,
+      "cx": 800,
+      "cy": 461.52,
+      "scale": 1.12,
+      "parent": null
+    },
+    "ch-dish": {
+      "x": 531.13,
+      "y": 375.92,
+      "w": 287.48,
+      "h": 183.75,
+      "cx": 674.87,
+      "cy": 467.79,
+      "scale": 3.51,
+      "parent": "ch-incubator"
+    },
+    "ch-colony": {
+      "x": 556.8,
+      "y": 398.93,
+      "w": 237.99,
+      "h": 127.9,
+      "cx": 675.8,
+      "cy": 462.88,
+      "scale": 4.34,
+      "parent": "ch-dish"
+    },
+    "ch-cell": {
+      "x": 651.03,
+      "y": 408.81,
+      "w": 66.74,
+      "h": 66.74,
+      "cx": 684.39,
+      "cy": 442.18,
+      "scale": 9.67,
+      "parent": "ch-colony"
+    },
+    "ch-mito": {
+      "x": 678.52,
+      "y": 444.54,
+      "w": 34.63,
+      "h": 21.18,
+      "cx": 695.83,
+      "cy": 455.13,
+      "scale": 29.81,
+      "parent": "ch-cell"
+    },
+    "ch-thermo": {
+      "x": 847.52,
+      "y": 269.41,
+      "w": 62.43,
+      "h": 242.87,
+      "cx": 878.74,
+      "cy": 390.84,
+      "scale": 2.66,
+      "parent": "ch-incubator"
+    },
+    "ch-enclave": {
+      "x": 879.98,
+      "y": 251.69,
+      "w": 391.36,
+      "h": 455.34,
+      "cx": 1075.66,
+      "cy": 479.35,
+      "scale": 1.42,
+      "parent": "ch-incubator"
+    },
+    "ch-door": {
+      "x": 437.56,
+      "y": 253.75,
+      "w": 562.13,
+      "h": 637.05,
+      "cx": 718.62,
+      "cy": 572.27,
+      "scale": 1.01,
+      "parent": "ch-incubator"
+    }
+  }
+}
