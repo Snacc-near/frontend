@@ -23,6 +23,7 @@ import { SkinSwitch } from "./hud/SkinSwitch.tsx";
 import { AppetitePanel } from "./hud/AppetitePanel.tsx";
 import { ThermalGauge } from "./hud/ThermalGauge.tsx";
 import { BreachLog } from "./hud/BreachLog.tsx";
+import { SwapPanel } from "./hud/SwapPanel.tsx";
 import { ActionDock, ProductionQueuePanel, ResourceBar, type DockButton } from "./hud/GameHud.tsx";
 import { CellLab } from "./hud/CellLab.tsx";
 import {
@@ -104,6 +105,7 @@ export const App: React.FC = () => {
   const [appetiteError, setAppetiteError] = useState(false);
   const [sim, setSim] = useState<SimulationState>(() => createInitialSimulation());
   const [panelsOpen, setPanelsOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [iris, setIris] = useState<{ phase: "closing" | "opening"; cx: number; cy: number } | null>(null);
@@ -624,14 +626,24 @@ export const App: React.FC = () => {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setPanelsOpen((v) => !v)}
-              aria-expanded={panelsOpen}
-              className="keycap pointer-events-auto min-h-[40px] px-4 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
-            >
-              telemetry {panelsOpen ? "hide" : "show"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPanelsOpen((v) => !v)}
+                aria-expanded={panelsOpen}
+                className="keycap pointer-events-auto min-h-[40px] px-4 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                telemetry {panelsOpen ? "hide" : "show"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSwapOpen(true)}
+                aria-label="open swap terminal"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                swap DEX ↗
+              </button>
+            </div>
             <span className="label-plate pointer-events-auto lowercase">
               <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · /api data only"}</span>
             </span>
@@ -719,6 +731,8 @@ export const App: React.FC = () => {
           onUpgrade={handleUpgrade}
         />
       ) : null}
+
+      {swapOpen ? <SwapPanel mode={mode} onClose={() => setSwapOpen(false)} /> : null}
     </main>
   );
 };

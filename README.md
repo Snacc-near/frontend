@@ -126,16 +126,27 @@ npm run dev
 Screenshots under [`docs/img/`](docs/img/) were taken from a production
 build served locally on a static gzip server.
 
+## Swap & Liquidity Terminal (RES-107 & RES-108)
+
+The UI includes an integrated DEX display and swap quote widget (`SwapPanel.tsx`):
+- **Ref / Rhea price indexer (RES-107)**: Fetches public indexer prices for reference assets (wNEAR) and $SNACC. When $SNACC is not yet listed on a liquidity pool, the UI honestly renders `—` with a `not listed yet on dex pool` note and never fabricates prices. External market prices are display only and do not feed any game mechanics. Direct deep link: "open in Rhea Finance".
+- **NEAR Intents / 1Click quote (RES-108)**: Fetches dry-run quotes for cross-chain swaps (`exact_amount_in` → `amount_out`, `min_amount_out`, expiration) across supported assets (NEAR, USDC on NEAR/Ethereum, SOL, BTC). Preview only: no on-chain transactions or wallet keys are used by this UI.
+
+Configuration (`.env`):
+- `VITE_SNACC_TOKEN_ID` — contract id of the $SNACC token.
+- `VITE_REF_INDEXER_URL` — Ref / Rhea indexer API base URL.
+- `VITE_INTENTS_API_URL` — NEAR Intents 1Click API base URL.
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-121 tests across 14 files (`vitest run`) — bridge message validation, keycap
+136 tests across 17 files (`vitest run`) — bridge message validation, keycap
 busy state, live placeholders (`—` vs fabricated values), simulation,
-poller, optimistic vitality, zones, and the isometric plate geometry. All
-green on `origin/main`.
+poller, optimistic vitality, zones, isometric plate geometry, Ref price indexer,
+NEAR Intents cross-chain quotes, and word guards. All green.
 
 ## Lighthouse (static gzip server, production build)
 
