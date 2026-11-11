@@ -10,6 +10,7 @@ import type { ZoneKey } from "./lib/live.ts";
 
 export type WorldEvent =
   | { type: "feed" }
+  | { type: "atp" }
   | { type: "snack" }
   | { type: "merge" }
   | { type: "seal"; on: boolean }
@@ -22,13 +23,17 @@ export type DoorState = "closed" | "ajar" | "open";
 
 type Listener = (e: WorldEvent) => void;
 const listeners = new Set<Listener>();
+/** Sticky state replayed to late subscribers (a figure that mounts after the demo set it). */
+const sticky = new Map<WorldEvent["type"], WorldEvent>();
 
 export const worldBus = {
   emit(e: WorldEvent) {
+    if (e.type === "thermo" || e.type === "seal") sticky.set(e.type, e);
     for (const l of listeners) l(e);
   },
   on(l: Listener) {
     listeners.add(l);
+    for (const e of sticky.values()) l(e);
     return () => {
       listeners.delete(l);
     };
@@ -110,6 +115,7 @@ export class World {
       const nb = n.getBBox();
       const mb = m.getBBox();
       const pb = p.getBBox();
+      if (fb.height <= 0 || mb.height <= 0) return null; // not laid out yet: measure next time
       this.bands = {
         top: fb.y,
         normalTop: nb.y,
@@ -220,6 +226,11 @@ export class World {
     switch (e.type) {
       case "feed":
         this.flag("w-fed", 1400);
+        break;
+      case "atp":
+        this.root.classList.remove("w-atp");
+        void this.root.getBoundingClientRect(); // restart the pulse on repeated clicks
+        this.flag("w-atp", 1300);
         break;
       case "snack":
         this.snack();

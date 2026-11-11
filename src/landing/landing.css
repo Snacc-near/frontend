@@ -289,6 +289,14 @@ html {
   inset: 0;
 }
 
+/* nothing on screen to paint: skip the figure copies entirely */
+.ln-stage[data-off] .ln-world,
+.ln-stage[data-off] .ln-lens,
+.ln-lens:not([data-on]) .ln-lens__host,
+.ln-finale[data-far] .ln-finale__host {
+  visibility: hidden;
+}
+
 .ln-world .inc.iso-svg,
 .ln-lens__host .inc.iso-svg {
   display: block;
@@ -544,6 +552,15 @@ html {
   60% {
     transform: scale(0.94);
   }
+}
+
+.inc #ch-mito-atp {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.inc.w-atp #ch-mito-atp {
+  animation: ln-gulp 1.2s var(--ease-pop);
 }
 
 .inc.w-snacked #cell-hungry {

@@ -21,7 +21,14 @@ export function Finale({ source }: { source: FigureSource | null }) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ioNear = new IntersectionObserver(([e]) => e?.isIntersecting && setNear(true), { rootMargin: "100% 0px 100% 0px" });
+    const ioNear = new IntersectionObserver(
+      (entries) => {
+        const e = entries[entries.length - 1];
+        if (e?.isIntersecting) setNear(true);
+        el.toggleAttribute("data-far", !e?.isIntersecting);
+      },
+      { rootMargin: "100% 0px 100% 0px" },
+    );
     const ioOpen = new IntersectionObserver(([e]) => setOpen(!!e && e.intersectionRatio > 0.35), { threshold: [0, 0.35, 0.6] });
     ioNear.observe(el);
     ioOpen.observe(el);

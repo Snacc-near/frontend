@@ -282,8 +282,11 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
     const ro = new ResizeObserver(measure);
     ro.observe(stage);
     ro.observe(theatre);
-    const io = new IntersectionObserver(([entry]) => {
+    const io = new IntersectionObserver((entries) => {
+      const entry = entries[entries.length - 1];
       st.visible = !!entry?.isIntersecting;
+      // Off screen: stop painting the figure (its idle CSS loops included) and the rAF loop.
+      stage.toggleAttribute("data-off", !st.visible);
       if (st.visible) schedule();
     });
     io.observe(theatre);

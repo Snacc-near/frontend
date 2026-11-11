@@ -64,7 +64,7 @@ export function Ticker({ live }: { live: LiveState }) {
       ]
     : [];
   return (
-    <div className="ln-ticker" role="status" aria-live="polite" data-status={live.status}>
+    <div className="ln-ticker" role="region" aria-label="Live testnet ticker" data-status={live.status}>
       <a className="ln-ticker__state" href={explorerAccount(m?.contractId ?? "snacc-v001.testnet")} target="_blank" rel="noopener noreferrer">
         <span className="ln-dot" aria-hidden="true" />
         {live.status === "live" ? "live · testnet" : live.status === "loading" ? "connecting…" : "offline"}
