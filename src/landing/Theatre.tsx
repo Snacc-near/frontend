@@ -14,6 +14,7 @@ import {
   type Cam,
 } from "./lib/camera.ts";
 import { DEFAULT_ANCHORS, prefixIds, type FigureSource } from "./lib/figure.ts";
+import { Icon } from "./fd.tsx";
 import { LENS_PARTS, SCALE_LEVEL_ANCHORS, STAGE_CUES, frameFor } from "./story.ts";
 import { World, worldBus } from "./world.ts";
 
@@ -42,8 +43,11 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
   const lensHostRef = useRef<HTMLDivElement>(null);
   const lensTagRef = useRef<HTMLSpanElement>(null);
   const leaderRef = useRef<SVGPathElement>(null);
-  const leaderDotRef = useRef<SVGCircleElement>(null);
-  const leaderTagRef = useRef<SVGTextElement>(null);
+  const leaderStartRef = useRef<SVGRectElement>(null);
+  const leaderElbowRef = useRef<SVGRectElement>(null);
+  const leaderDotRef = useRef<SVGRectElement>(null);
+  const leaderTagRef = useRef<HTMLSpanElement>(null);
+  const leaderTagTextRef = useRef<HTMLSpanElement>(null);
   const overlaySvgRef = useRef<SVGSVGElement>(null);
   const keyBarRef = useRef<HTMLSpanElement>(null);
   const keyLabelRef = useRef<HTMLSpanElement>(null);
@@ -89,6 +93,8 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       visible: true,
       px: -1,
       py: -1,
+      lx: -1,
+      ly: -1,
       nx: 0,
       ny: 0,
       snx: 0,
@@ -168,22 +174,34 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       if (keyBarRef.current) keyBarRef.current.style.transform = `scaleX(${(key.bar / 64).toFixed(3)})`;
       stage.style.setProperty("--hero", heroK.toFixed(3));
 
-      // microscope lens (hero only)
-      const lensWanted = finePointer && heroK > 0.6 && st.px >= 0 && overWindow(cur);
+      // microscope lens (hero only): rests over the dish, follows the pointer inside the window,
+      // clamped to the dish and the thermometer so it never magnifies empty glass.
+      const lensWanted = finePointer && heroK > 0.6;
       if (lensWanted !== st.lensOn) {
         st.lensOn = lensWanted;
         lensRef.current?.toggleAttribute("data-on", lensWanted);
       }
+      let lensMoving = false;
       if (lensWanted && lensRef.current && lensHostRef.current && lensCam) {
-        const lx = st.px - LENS_R;
-        const ly = st.py - LENS_R;
+        const [tx, ty] = lensTarget(cur);
+        if (st.lx < 0) {
+          st.lx = tx;
+          st.ly = ty;
+        } else {
+          st.lx += (tx - st.lx) * 0.22;
+          st.ly += (ty - st.ly) * 0.22;
+        }
+        lensMoving = Math.abs(tx - st.lx) + Math.abs(ty - st.ly) > 0.3;
+        const lx = st.lx - LENS_R;
+        const ly = st.ly - LENS_R;
         lensRef.current.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0)`;
         lensHostRef.current.style.transform = `translate3d(${(-lx).toFixed(1)}px, ${(-ly).toFixed(1)}px, 0)`;
-        lensCam.setAttribute("transform", camTransform(zoomAbout(cur, LENS_ZOOM, st.px, st.py)));
-        if (lensTagRef.current) lensTagRef.current.textContent = `×${LENS_ZOOM} · ${partAt(cur, st.px, st.py)}`;
+        lensCam.setAttribute("transform", camTransform(zoomAbout(cur, LENS_ZOOM, st.lx, st.ly)));
+        if (lensTagRef.current) lensTagRef.current.textContent = `×${LENS_ZOOM} · ${partAt(cur, st.lx, st.ly)}`;
       }
 
       const moving =
+        lensMoving ||
         !prev ||
         Math.abs(prev.s - target.s) / target.s > 1e-4 ||
         Math.abs(prev.ox - target.ox) + Math.abs(prev.oy - target.oy) > 0.05 ||
@@ -192,15 +210,34 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       if (moving) schedule();
     };
 
-    const overWindow = (cam: Cam) => {
-      for (const id of ["ch-door", "ch-dish", "ch-enclave"]) {
-        const a = anchors[id];
-        if (!a) continue;
-        const [x0, y0] = project(cam, a.x, a.y);
-        const [x1, y1] = project(cam, a.x + a.w, a.y + a.h);
-        if (st.px >= x0 && st.px <= x1 && st.py >= y0 && st.py <= y1) return true;
+    const screenBox = (cam: Cam, id: string, inset = 0): [number, number, number, number] | null => {
+      const a = anchors[id];
+      if (!a) return null;
+      const [x0, y0] = project(cam, a.x + a.w * inset, a.y + a.h * inset);
+      const [x1, y1] = project(cam, a.x + a.w * (1 - inset), a.y + a.h * (1 - inset));
+      return [x0, y0, x1, y1];
+    };
+
+    /** Lens centre: the dish centre at rest; inside the window, the nearest point of dish or thermometer. */
+    const lensTarget = (cam: Cam): [number, number] => {
+      const dish = screenBox(cam, "ch-dish", 0.14);
+      if (!dish) return [st.w / 2, st.h / 2];
+      const rest: [number, number] = [(dish[0] + dish[2]) / 2, (dish[1] + dish[3]) / 2];
+      const win = screenBox(cam, "ch-door");
+      if (st.px < 0 || !win || st.px < win[0] || st.px > win[2] || st.py < win[1] || st.py > win[3]) return rest;
+      let best = rest;
+      let bestD = Infinity;
+      for (const b of [dish, screenBox(cam, "ch-thermo", 0.08)]) {
+        if (!b) continue;
+        const x = Math.max(b[0], Math.min(b[2], st.px));
+        const y = Math.max(b[1], Math.min(b[3], st.py));
+        const d = Math.hypot(x - st.px, y - st.py);
+        if (d < bestD) {
+          bestD = d;
+          best = [x, y];
+        }
       }
-      return false;
+      return best;
     };
 
     const partAt = (cam: Cam, px: number, py: number) => {
@@ -214,17 +251,28 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       return "glass";
     };
 
+    /** Square handle node centred on (x, y). */
+    const node = (el: SVGRectElement, x: number, y: number, size: number, on: boolean) => {
+      el.setAttribute("x", (x - size / 2).toFixed(1));
+      el.setAttribute("y", (y - size / 2).toFixed(1));
+      el.setAttribute("width", String(size));
+      el.setAttribute("height", String(size));
+      el.style.opacity = on ? "1" : "0";
+    };
+
     const drawLeader = (index: number, focus: number, cam: Cam) => {
       const path = leaderRef.current;
       const dot = leaderDotRef.current;
+      const start = leaderStartRef.current;
+      const elbow = leaderElbowRef.current;
       const tag = leaderTagRef.current;
-      if (!path || !dot || !tag) return;
+      if (!path || !dot || !start || !elbow || !tag) return;
       const cue = STAGE_CUES[index];
       const block = st.blocks[index];
       const card = block?.querySelector<HTMLElement>("[data-card]");
       if (!cue || cue.side === "hero" || !card || focus <= 0) {
         path.style.opacity = "0";
-        dot.style.opacity = "0";
+        for (const n of [dot, start, elbow]) n.style.opacity = "0";
         tag.style.opacity = "0";
         return;
       }
@@ -232,24 +280,27 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       const cr = card.getBoundingClientRect();
       const [ex, ey] = project(cam, targets[index]![0], targets[index]![1]);
       const left = cue.side === "left";
-      const sx = (left ? cr.right + 10 : cr.left - 10) - sr.left;
-      const sy = cr.top - sr.top + 44;
-      const mx = sx + (left ? 36 : -36);
+      // Leaves the card at its title bar, runs out horizontally, then bends to the part.
+      const sx = (left ? cr.right : cr.left) - sr.left;
+      const sy = cr.top - sr.top + 13;
+      const mx = sx + (left ? 44 : -44);
       const d = `M${sx.toFixed(1)} ${sy.toFixed(1)}H${mx.toFixed(1)}L${ex.toFixed(1)} ${ey.toFixed(1)}`;
       const len = Math.abs(mx - sx) + Math.hypot(ex - mx, ey - sy);
       const k = easeInOut(focus);
+      const done = k > 0.9;
       path.setAttribute("d", d);
       path.style.strokeDasharray = `${len.toFixed(1)}`;
       path.style.strokeDashoffset = `${(len * (1 - k)).toFixed(1)}`;
       path.style.opacity = "1";
-      dot.setAttribute("cx", ex.toFixed(1));
-      dot.setAttribute("cy", ey.toFixed(1));
-      dot.style.opacity = k > 0.9 ? "1" : "0";
-      tag.setAttribute("x", (ex + (left ? -12 : 12)).toFixed(1));
-      tag.setAttribute("y", (ey - 14).toFixed(1));
-      tag.setAttribute("text-anchor", left ? "end" : "start");
-      tag.textContent = cue.part;
-      tag.style.opacity = k > 0.9 ? "1" : "0";
+      node(start, sx + (left ? 4 : -4), sy, 7, true);
+      node(elbow, mx, sy, 6, k > 0.2);
+      node(dot, ex, ey, 9, done);
+      if (leaderTagTextRef.current && leaderTagTextRef.current.textContent !== cue.part) leaderTagTextRef.current.textContent = cue.part;
+      // Caption box sits beside the part, on the side away from the card.
+      const tw = tag.offsetWidth;
+      const tx = left ? ex + 14 : ex - 14 - tw;
+      tag.style.transform = `translate3d(${tx.toFixed(1)}px, ${(ey - 11).toFixed(1)}px, 0)`;
+      tag.style.opacity = done ? "1" : "0";
     };
 
     const onScroll = () => schedule();
@@ -319,16 +370,26 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
         <div className="ln-world" ref={hostRef} aria-hidden="true" dangerouslySetInnerHTML={{ __html: mainMarkup }} />
         <svg className="ln-overlay" ref={overlaySvgRef} aria-hidden="true">
           <path ref={leaderRef} className="ln-leader" d="M0 0" />
-          <circle ref={leaderDotRef} className="ln-leader-dot" r="6" cx="-20" cy="-20" />
-          <text ref={leaderTagRef} className="ln-leader-tag" x="-100" y="-100" />
+          <rect ref={leaderStartRef} className="ln-leader-node" x="-20" y="-20" width="7" height="7" />
+          <rect ref={leaderElbowRef} className="ln-leader-node" x="-20" y="-20" width="6" height="6" />
+          <rect ref={leaderDotRef} className="ln-leader-node ln-leader-node--hot" x="-20" y="-20" width="9" height="9" />
         </svg>
+        <span className="fd-cap ln-leader-cap" ref={leaderTagRef} aria-hidden="true">
+          <Icon name="ring" />
+          <span ref={leaderTagTextRef} />
+        </span>
         {finePointer ? (
-          <div className="ln-lens" ref={lensRef} aria-hidden="true">
-            <div className="ln-lens__host" ref={lensHostRef} dangerouslySetInnerHTML={{ __html: lensMarkup }} />
-            <span className="ln-lens__tag" ref={lensTagRef}>
-              ×{LENS_ZOOM}
-            </span>
-          </div>
+          <>
+            <div className="ln-lens" ref={lensRef} aria-hidden="true">
+              <div className="ln-lens__glass">
+                <div className="ln-lens__host" ref={lensHostRef} dangerouslySetInnerHTML={{ __html: lensMarkup }} />
+              </div>
+              <span className="fd-cap ln-lens__tag">
+                <Icon name="eye" />
+                <span ref={lensTagRef}>×{LENS_ZOOM}</span>
+              </span>
+            </div>
+          </>
         ) : null}
         <div className="ln-scalekey" aria-hidden="true">
           <span className="ln-scalekey__bar" ref={keyBarRef} />

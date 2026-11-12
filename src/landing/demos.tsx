@@ -1,27 +1,53 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from "react";
 import { bioSound } from "../sound.ts";
+import { Icon, Sim } from "./fd.tsx";
 import { OFFICIAL, gaugeToTemp, tempToGauge, zoneFromTemp, type ZoneKey } from "./lib/live.ts";
 import { TEE_TX, explorerTx, CONTRACT_ID } from "./lib/chain.ts";
 import { worldBus } from "./world.ts";
 import type { LiveState } from "./useLive.ts";
 
-const Sim = () => <span className="ln-sim">simulation</span>;
+/** Segmented meter (0..1), drawn with a transform only. */
+function Meter({ v, tone = "accent" }: { v: number; tone?: "accent" | "ink" | "frost" | "warm" }) {
+  return (
+    <span className={`fd-meter fd-meter--${tone}`} aria-hidden="true">
+      <span className="fd-meter__fill" style={{ transform: `scaleX(${Math.max(0, Math.min(1, v)).toFixed(3)})` }} />
+    </span>
+  );
+}
+
+/** Bordered state chip. */
+function State({ tone, children }: { tone: "ok" | "warn" | "bad" | "idle" | "accent"; children: React.ReactNode }) {
+  return (
+    <span className={`fd-state fd-state--${tone}`}>
+      <span className="fd-state__dot" aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
+
+function Row({ k, children }: { k: string; children: React.ReactNode }) {
+  return (
+    <div className="fd-kv__row">
+      <dt>{k}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
 
 /* ---------------------------------------------------------------- 02 organism: Feed */
 
 const BITE = 10; // simulated $SNACC per bite
 const BURN = 0.035; // official Feeding Frenzy burn rate
 
-function hungerState(f: number): "Fed" | "Starving" | "Fainted" {
+export function hungerState(f: number): "Fed" | "Starving" | "Fainted" {
   return f <= 0 ? "Fainted" : f <= 20 ? "Starving" : "Fed";
 }
 
 export function FeedDemo() {
   const [full, setFull] = useState(34);
   const [burned, setBurned] = useState(0);
-  const [bites, setBites] = useState<number[]>([]);
+  const [bites, setBites] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
-  const seq = useRef(0);
 
   // It gets hungry again while you watch.
   useEffect(() => {
@@ -37,61 +63,41 @@ export function FeedDemo() {
     };
   }, []);
 
+  // The stomach in the figure follows the fullness.
+  useEffect(() => {
+    worldBus.emit({ type: "full", v: full / 100 });
+  }, [full]);
+
   const feed = () => {
     setFull((f) => Math.min(100, f + 14));
     setBurned((b) => b + BITE * BURN);
-    const n = ++seq.current;
-    setBites((b) => [...b.slice(-3), n]);
-    window.setTimeout(() => setBites((b) => b.filter((x) => x !== n)), 900);
+    setBites((n) => n + 1);
     worldBus.emit({ type: "feed" });
+    worldBus.emit({ type: "atp" });
     bioSound.playFeed();
   };
 
   const state = hungerState(full);
   return (
-    <div className="ln-demo ln-feed" ref={ref}>
-      <div className="ln-feed__row">
-        <svg className="ln-feed__stomach" viewBox="0 0 120 100" aria-hidden="true">
-          <defs>
-            <clipPath id="ln-stomach-clip">
-              <path d="M60 10c28 0 50 16 50 40s-22 42-50 42S10 74 10 50 32 10 60 10Z" />
-            </clipPath>
-          </defs>
-          <path className="ln-feed__body" d="M60 10c28 0 50 16 50 40s-22 42-50 42S10 74 10 50 32 10 60 10Z" />
-          <g clipPath="url(#ln-stomach-clip)">
-            <rect className="ln-feed__level" x="0" y="0" width="120" height="100" style={{ transform: `translateY(${92 - (full / 100) * 82}px)` }} />
-          </g>
-          <path className="ln-feed__outline" d="M60 10c28 0 50 16 50 40s-22 42-50 42S10 74 10 50 32 10 60 10Z" />
-          <circle className="ln-feed__nucleus" cx="78" cy="36" r="9" />
-          {bites.map((b) => (
-            <g key={b} className="ln-feed__crumbs">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <circle key={i} r="3.2" style={{ ["--i" as string]: i, ["--dx" as string]: `${(i - 2) * 9}px` }} />
-              ))}
-            </g>
-          ))}
-        </svg>
-        <dl className="ln-readout">
-          <div>
-            <dt>Fullness</dt>
-            <dd>
-              <span className="ln-meter" style={{ ["--v" as string]: full / 100 }} aria-hidden="true" />
-              {full}%
-            </dd>
-          </div>
-          <div>
-            <dt>state</dt>
-            <dd data-state={state}>{state}</dd>
-          </div>
-          <div>
-            <dt>burned</dt>
-            <dd>{burned.toFixed(2)} $SNACC</dd>
-          </div>
-        </dl>
-      </div>
+    <div className="ln-demo" ref={ref}>
+      <dl className="fd-kv">
+        <Row k="fullness">
+          <Meter v={full / 100} tone={state === "Fed" ? "accent" : "warm"} />
+          <span className="fd-kv__num">{full}%</span>
+        </Row>
+        <Row k="state">
+          <State tone={state === "Fed" ? "ok" : state === "Starving" ? "warn" : "bad"}>{state}</State>
+        </Row>
+        <Row k="bites">
+          <span className="fd-kv__num">{bites}</span>
+        </Row>
+        <Row k="burned">
+          <span className="fd-kv__num">{burned.toFixed(2)} $SNACC</span>
+        </Row>
+      </dl>
       <div className="ln-demo__bar">
-        <button type="button" className="keycap keycap--primary ln-btn ln-btn--sm" onClick={feed}>
-          Feed
+        <button type="button" className="fd-btn fd-btn--primary fd-btn--sm" onClick={feed}>
+          <Icon name="cell" /> Feed
         </button>
         <span className="ln-demo__note">
           one bite = {BITE} $SNACC, {OFFICIAL.frenzyBurnPct} burns in a Feeding Frenzy <Sim />
@@ -104,9 +110,9 @@ export function FeedDemo() {
 /* ---------------------------------------------------------------- 03 metabolism */
 
 const STAGES = [
-  { key: "spores", label: "Spores", note: "Extractors pull raw spores out of the medium." },
-  { key: "enzymes", label: "Enzymes", note: "Fermenters refine spores into enzymes." },
-  { key: "elixirs", label: "Elixirs", note: "Synthesizers brew enzymes into elixirs. Every job costs ATP." },
+  { key: "spores", label: "Spores", role: "Extractor", note: "Extractors pull raw spores out of the medium." },
+  { key: "enzymes", label: "Enzymes", role: "Fermenter", note: "Fermenters refine spores into enzymes." },
+  { key: "elixirs", label: "Elixirs", role: "Synthesizer", note: "Synthesizers brew enzymes into elixirs. Every job costs ATP." },
 ] as const;
 
 export function MetabolismDemo() {
@@ -117,33 +123,24 @@ export function MetabolismDemo() {
     bioSound.playClick();
   };
   return (
-    <div className="ln-demo ln-meta" data-sel={sel}>
-      <svg className="ln-meta__pipe" viewBox="0 0 300 92" aria-hidden="true">
-        <path className="ln-meta__tube" d="M40 46H260" />
-        <path className="ln-meta__flow" d="M40 46H260" />
+    <div className="ln-demo">
+      <div className="fd-tabs" role="group" aria-label="Production stage">
         {STAGES.map((s, i) => (
-          <g key={s.key} transform={`translate(${40 + i * 110} 46)`} className="ln-meta__node" data-on={i === sel ? "" : undefined}>
-            <circle r="22" className="ln-meta__vial" />
-            {i === 0 ? <path d="M-8 4l4-8 4 8 4-8 4 8" className="ln-meta__glyph" /> : null}
-            {i === 1 ? <path d="M-9 0h18M0 -9v18M-6 -6l12 12M6 -6l-12 12" className="ln-meta__glyph" /> : null}
-            {i === 2 ? <path d="M-5 -10h10M-3 -10v6l-7 12a3 3 0 0 0 3 4h14a3 3 0 0 0 3-4l-7-12v-6" className="ln-meta__glyph" /> : null}
-          </g>
-        ))}
-        <g className="ln-meta__atp" transform="translate(260 46)">
-          <circle r="4" cx="32" />
-          <circle r="3" cx="-30" cy="10" />
-          <circle r="3.5" cy="-31" />
-        </g>
-      </svg>
-      <div className="ln-seg" role="group" aria-label="Production stage">
-        {STAGES.map((s, i) => (
-          <button key={s.key} type="button" className="ln-seg__btn" aria-pressed={i === sel} onClick={() => pick(i)}>
-            <span className="ln-seg__n">{i + 1}</span> {s.label}
+          <button key={s.key} type="button" className="fd-tab" aria-pressed={i === sel} onClick={() => pick(i)}>
+            {s.label}
           </button>
         ))}
       </div>
+      <ol className="fd-flow" aria-hidden="true">
+        {STAGES.map((s, i) => (
+          <li key={s.key} className="fd-flow__node" data-on={i === sel ? "" : undefined} data-done={i < sel ? "" : undefined}>
+            <span className="fd-flow__k">{s.role}</span>
+            <span className="fd-flow__v">{s.label.toLowerCase()}</span>
+          </li>
+        ))}
+      </ol>
       <p className="ln-demo__note" aria-live="polite">
-        {STAGES[sel]!.note} <span className="ln-tag">NEP-245</span>
+        {STAGES[sel]!.note} <span className="fd-tag">NEP-245</span>
       </p>
     </div>
   );
@@ -172,64 +169,39 @@ export function ColonyDemo() {
     worldBus.emit({ type: "reset" });
   };
   return (
-    <div className="ln-demo ln-colony" data-snacked={snacked ? "" : undefined} data-merged={merged ? "" : undefined}>
-      <svg className="ln-colony__dish" viewBox="0 0 320 150" aria-hidden="true">
-        <ellipse className="ln-colony__agar" cx="160" cy="78" rx="150" ry="64" />
-        {/* hungry cell */}
-        <g className="ln-colony__hungry" transform="translate(84 76)">
-          <g className="ln-colony__hbody">
-            <ellipse rx="34" ry="26" className="ln-cellbody ln-cellbody--pale" />
-            <path className="ln-colony__crack" d="M-12 -24l6 12-8 8 10 10-4 14" />
-            <circle cx="10" cy="-6" r="6" className="ln-nucleus" />
-          </g>
-          <g className="ln-colony__burst">
-            {Array.from({ length: 10 }, (_, i) => (
-              <circle key={i} r={i === 0 ? 4.5 : 3} style={{ ["--a" as string]: `${i * 36}deg`, ["--d" as string]: i === 0 ? "-1" : "1" }} />
-            ))}
-          </g>
-        </g>
-        {/* merge pair */}
-        <g transform="translate(222 78)">
-          <g className="ln-colony__ma">
-            <ellipse rx="24" ry="19" className="ln-cellbody" />
-            <circle cx="-4" cy="-3" r="5" className="ln-nucleus" />
-          </g>
-          <g className="ln-colony__mb">
-            <ellipse rx="24" ry="19" className="ln-cellbody" />
-            <circle cx="5" cy="2" r="5" className="ln-nucleus" />
-          </g>
-          <ellipse className="ln-colony__fused" rx="40" ry="28" />
-        </g>
-      </svg>
-      <div className="ln-split" aria-live="polite">
-        {snacked ? (
-          <>
-            <span className="ln-split__bar ln-split__bar--bounty" style={{ flexGrow: 1 }}>
-              {OFFICIAL.lysisBountyPct} bounty to the hunter
+    <div className="ln-demo">
+      <dl className="fd-kv" aria-live="polite">
+        <Row k="hungry cell">{snacked ? <State tone="bad">snacked</State> : <State tone="warn">Fainted · open to anyone</State>}</Row>
+        <Row k="split">
+          <span className="fd-split" data-on={snacked ? "" : undefined}>
+            <span className="fd-split__a" style={{ flexGrow: 1 }}>
+              {OFFICIAL.lysisBountyPct}
             </span>
-            <span className="ln-split__bar ln-split__bar--pantry" style={{ flexGrow: 9 }}>
+            <span className="fd-split__b" style={{ flexGrow: 9 }}>
               {OFFICIAL.lysisPantryPct} to The Pantry
             </span>
-          </>
-        ) : merged ? (
-          <span className="ln-split__msg">Merged: roles combine, generation +1, {OFFICIAL.mergeTaxPct} merge tax.</span>
-        ) : (
-          <span className="ln-split__msg">A Fainted Snacc is open to anyone. Two healthy ones can merge.</span>
-        )}
-      </div>
+          </span>
+        </Row>
+        <Row k="merge pair">{merged ? <State tone="ok">merged · generation +1</State> : <State tone="idle">two healthy cells</State>}</Row>
+        <Row k="merge tax">
+          <span className="fd-kv__num">{OFFICIAL.mergeTaxPct}</span>
+        </Row>
+      </dl>
       <div className="ln-demo__bar">
-        <button type="button" className="keycap keycap--primary ln-btn ln-btn--sm" onClick={snack} disabled={snacked}>
-          Snack it
+        <button type="button" className="fd-btn fd-btn--primary fd-btn--sm" onClick={snack} disabled={snacked}>
+          <Icon name="split" /> Snack it
         </button>
-        <button type="button" className="keycap ln-btn ln-btn--sm" onClick={merge} disabled={merged}>
-          Merge
+        <button type="button" className="fd-btn fd-btn--sm" onClick={merge} disabled={merged}>
+          <Icon name="cell" /> Merge
         </button>
         {snacked || merged ? (
-          <button type="button" className="ln-linkbtn" onClick={reset}>
+          <button type="button" className="fd-link" onClick={reset}>
             reset
           </button>
         ) : null}
-        <Sim />
+        <span className="ln-demo__note">
+          {OFFICIAL.lysisBountyPct} bounty to the hunter <Sim />
+        </span>
       </div>
     </div>
   );
@@ -311,54 +283,55 @@ export function AppetiteDemo({ live }: { live: LiveState }) {
           <span className="ln-thermo__band ln-thermo__band--frenzy" style={{ bottom: `${frenzyBottom * 100}%`, top: 0 }} />
           <span className="ln-thermo__band ln-thermo__band--normal" style={{ bottom: `${famineTop * 100}%`, height: `${(frenzyBottom - famineTop) * 100}%` }} />
           <span className="ln-thermo__band ln-thermo__band--famine" style={{ bottom: 0, height: `${famineTop * 100}%` }} />
-          <span className="ln-thermo__fill" style={{ transform: `scaleY(${g})` }} />
-          <span className="ln-thermo__knob" style={{ bottom: `calc(${g * 100}% - 9px)` }} />
-          {liveTemp != null ? (
-            <span className="ln-thermo__live" style={{ bottom: `${tempToGauge(liveTemp) * 100}%` }}>
-              live {liveTemp} mK
+          <span className="ln-thermo__fill" style={{ transform: `scaleY(${g.toFixed(3)})` }} />
+          <span className="ln-thermo__knob" style={{ bottom: `calc(${(g * 100).toFixed(2)}% - 7px)` }} />
+          {liveTemp != null ? <span className="ln-thermo__live" style={{ bottom: `${tempToGauge(liveTemp) * 100}%` }} title={`live ${liveTemp} mK`} /> : null}
+        </div>
+        <dl className="fd-kv ln-appetite__kv">
+          <Row k="CrucibleTemp">
+            <span className="fd-kv__num">{temp.toLocaleString("en-US")} mK</span>
+          </Row>
+          <Row k="zone">
+            <State tone={zone.key === "frenzy" ? "accent" : zone.key === "famine" ? "idle" : "ok"}>{zone.label}</State>
+          </Row>
+          <Row k="rate">
+            <span className="fd-kv__num">{zone.rate}</span>
+          </Row>
+          <Row k="frenzy">
+            <span className="fd-kv__num">
+              &gt; {OFFICIAL.frenzyAboveMk} mK · {OFFICIAL.frenzyBurnPct} burn
             </span>
-          ) : null}
-        </div>
-        <div className="ln-appetite__read">
-          <svg viewBox="0 0 120 64" className="ln-appetite__dish" aria-hidden="true">
-            <ellipse cx="60" cy="34" rx="56" ry="26" className="ln-appetite__rim" />
-            <ellipse cx="60" cy="32" rx="48" ry="20" className="ln-appetite__medium" />
-            <g className="ln-appetite__bubbles">
-              <circle cx="40" cy="30" r="3" />
-              <circle cx="66" cy="26" r="2.4" />
-              <circle cx="82" cy="36" r="3.4" />
-              <circle cx="52" cy="40" r="2" />
-            </g>
-          </svg>
-          <p className="ln-appetite__zone">{zone.label}</p>
-          <p className="ln-appetite__rate">
-            {temp} mK · {zone.rate}
-          </p>
-          <p className="ln-demo__note">
-            below {OFFICIAL.famineBelowMk} mK: {OFFICIAL.famineReliefPct} relief · above {OFFICIAL.frenzyAboveMk} mK: {OFFICIAL.frenzyBurnPct} burn
-          </p>
-        </div>
+          </Row>
+          <Row k="famine">
+            <span className="fd-kv__num">
+              &lt; {OFFICIAL.famineBelowMk} mK · {OFFICIAL.famineReliefPct} relief
+            </span>
+          </Row>
+          <Row k="live">
+            {liveTemp != null ? (
+              <span className="fd-kv__num">
+                {liveTemp.toLocaleString("en-US")} mK{" "}
+                <button
+                  type="button"
+                  className="fd-link"
+                  onClick={() => {
+                    touched.current = false;
+                    setG(tempToGauge(liveTemp));
+                  }}
+                >
+                  snap to live
+                </button>
+              </span>
+            ) : (
+              <State tone="idle">{live.status === "offline" ? "offline" : "reading…"}</State>
+            )}
+          </Row>
+        </dl>
       </div>
       <div className="ln-demo__bar">
         <span className="ln-demo__note">
-          drag the meter <Sim />
-          {liveTemp != null ? (
-            <>
-              {" "}· marker = live CrucibleTemp from {CONTRACT_ID}{" "}
-              <button
-                type="button"
-                className="ln-linkbtn"
-                onClick={() => {
-                  touched.current = false;
-                  setG(tempToGauge(liveTemp));
-                }}
-              >
-                snap to live
-              </button>
-            </>
-          ) : live.status === "offline" ? (
-            " · live reading offline"
-          ) : null}
+          drag the meter: the needle, the thermometer and the medium follow <Sim />
+          {liveTemp != null ? <> · marker = live CrucibleTemp from {CONTRACT_ID}</> : null}
         </span>
       </div>
     </div>
@@ -367,18 +340,36 @@ export function AppetiteDemo({ live }: { live: LiveState }) {
 
 /* ---------------------------------------------------------------- 06 enclave: press and hold */
 
-const HOLD_MS = 1100;
+const HOLD_MS = 1300;
+
+/** Deterministic hex string for the illustrative request hash / signature (FNV-1a, not crypto). */
+export function fakeHex(seed: string, len: number): string {
+  let out = "";
+  let h = 0x811c9dc5;
+  for (let round = 0; out.length < len; round++) {
+    for (const ch of `${seed}:${round}`) {
+      h ^= ch.charCodeAt(0);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    out += h.toString(16).padStart(8, "0");
+  }
+  return out.slice(0, len);
+}
 
 export function EnclaveDemo() {
   const [k, setK] = useState(0);
   const [sealed, setSealed] = useState(false);
+  const [run, setRun] = useState(1);
   const raf = useRef(0);
   const t0 = useRef(0);
 
   const stop = useCallback(() => {
     cancelAnimationFrame(raf.current);
     raf.current = 0;
-    setK((v) => (v >= 1 ? 1 : 0));
+    setK((v) => {
+      if (v < 1) worldBus.emit({ type: "capsule", k: 0 });
+      return v >= 1 ? 1 : 0;
+    });
   }, []);
 
   const start = () => {
@@ -387,6 +378,7 @@ export function EnclaveDemo() {
     const tick = () => {
       const v = Math.min(1, (performance.now() - t0.current) / HOLD_MS);
       setK(v);
+      worldBus.emit({ type: "capsule", k: v });
       if (v >= 1) {
         raf.current = 0;
         setSealed(true);
@@ -404,51 +396,51 @@ export function EnclaveDemo() {
   const reset = () => {
     setSealed(false);
     setK(0);
+    setRun((r) => r + 1);
     worldBus.emit({ type: "seal", on: false });
   };
 
+  const req = fakeHex(`plan-${run}`, 64);
+  const sig = fakeHex(`sig-${run}`, 128);
+  const step = sealed ? 3 : k >= 0.66 ? 2 : k >= 0.33 ? 1 : k > 0 ? 0 : -1;
+
   return (
-    <div className="ln-demo ln-enclave" data-sealed={sealed ? "" : undefined} style={{ ["--k" as string]: k }}>
-      <svg className="ln-enclave__fig" viewBox="0 0 300 120" aria-hidden="true">
-        <rect className="ln-enclave__chamber" x="150" y="14" width="130" height="92" rx="14" />
-        <g className="ln-enclave__frost">
-          {Array.from({ length: 18 }, (_, i) => (
-            <circle key={i} cx={162 + (i % 6) * 21} cy={30 + Math.floor(i / 6) * 30} r="1.6" />
-          ))}
-        </g>
-        <path className="ln-enclave__rail" d="M20 64H150" />
-        <g className="ln-enclave__capsule">
-          <rect x="-26" y="-12" width="52" height="24" rx="12" />
-          <path d="M0 -12v24" />
-          <text y="4" x="-13">
-            plan
-          </text>
-        </g>
-        <g className="ln-enclave__stamp" transform="translate(215 60) rotate(-8)">
-          <rect x="-46" y="-15" width="92" height="30" rx="6" />
-          <text y="5" textAnchor="middle">
-            attested ✓
-          </text>
-        </g>
-      </svg>
+    <div className="ln-demo ln-enclave" data-sealed={sealed ? "" : undefined}>
+      <dl className="fd-kv fd-kv--steps">
+        <Row k="1 · request">
+          <span className="fd-kv__num" data-on={step >= 0 ? "" : undefined}>
+            {step >= 0 ? `0x${req.slice(0, 10)}…${req.slice(-6)}` : "—"}
+          </span>
+        </Row>
+        <Row k="2 · enclave">
+          {step >= 1 ? <State tone={step >= 2 ? "ok" : "accent"}>{step >= 2 ? "signed in TEE" : "computing plan…"}</State> : <span className="fd-kv__num">—</span>}
+        </Row>
+        <Row k="3 · signature">
+          <span className="fd-kv__num" data-on={step >= 2 ? "" : undefined}>
+            {step >= 2 ? `${sig.slice(0, 12)}…${sig.slice(-6)}` : "—"}
+          </span>
+        </Row>
+        <Row k="4 · contract">{step >= 3 ? <State tone="ok">verified ✓</State> : <span className="fd-kv__num">—</span>}</Row>
+      </dl>
       <div className="ln-demo__bar">
         {sealed ? (
           <>
-            <a className="keycap keycap--primary ln-btn ln-btn--sm" href={explorerTx(TEE_TX.hash)} target="_blank" rel="noopener noreferrer">
-              See the verified tx ↗
+            <a className="fd-btn fd-btn--primary fd-btn--sm" href={explorerTx(TEE_TX.hash)} target="_blank" rel="noopener noreferrer">
+              <Icon name="chain" /> See the verified tx ↗
             </a>
-            <span className="ln-demo__note">
-              real testnet tx <code>{TEE_TX.action}</code>
-            </span>
-            <button type="button" className="ln-linkbtn" onClick={reset}>
+            <button type="button" className="fd-link" onClick={reset}>
               again
             </button>
+            <span className="ln-demo__note">
+              rows are an <Sim kind="illustration" />; the link is the real testnet tx <code>{TEE_TX.action}</code>
+            </span>
           </>
         ) : (
           <>
             <button
               type="button"
-              className="keycap keycap--primary ln-btn ln-btn--sm ln-hold"
+              className="fd-btn fd-btn--primary fd-btn--sm ln-hold"
+              style={{ ["--k" as string]: k.toFixed(3) }}
               onPointerDown={start}
               onPointerUp={stop}
               onPointerLeave={stop}
@@ -464,10 +456,12 @@ export function EnclaveDemo() {
               }}
               onContextMenu={(e) => e.preventDefault()}
             >
-              <span className="ln-hold__ring" aria-hidden="true" />
-              Hold to send the plan
+              <span className="ln-hold__fill" aria-hidden="true" />
+              <Icon name="lock" /> Hold to send the plan
             </button>
-            <span className="ln-demo__note">the enclave signs; the contract checks the signature</span>
+            <span className="ln-demo__note">
+              the enclave signs; the contract checks the signature <Sim kind="illustration" />
+            </span>
           </>
         )}
       </div>

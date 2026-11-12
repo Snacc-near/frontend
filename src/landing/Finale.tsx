@@ -4,6 +4,7 @@ import { CONTRACT_ID, explorerAccount } from "./lib/chain.ts";
 import { OFFICIAL } from "./lib/live.ts";
 import { prefixIds, type FigureSource } from "./lib/figure.ts";
 import { World } from "./world.ts";
+import { Accent, Cap, Chip, Win } from "./fd.tsx";
 
 const FINALE = CHAPTERS[6]!;
 
@@ -50,8 +51,8 @@ export function Finale({ source }: { source: FigureSource | null }) {
   }, [markup]);
 
   useEffect(() => {
-    // small delay so the door swings after the section has settled into view
-    const id = window.setTimeout(() => worldRef.current?.setDoor(open ? "open" : "closed"), open ? 250 : 0);
+    // small delay so the light comes up after the section has settled into view
+    const id = window.setTimeout(() => worldRef.current?.setGlow(open), open ? 250 : 0);
     return () => window.clearTimeout(id);
   }, [open, markup]);
 
@@ -60,20 +61,21 @@ export function Finale({ source }: { source: FigureSource | null }) {
       <div className="ln-finale__fig">
         <div className="ln-finale__glow" aria-hidden="true" />
         <div className="ln-finale__host" ref={hostRef} aria-hidden="true" dangerouslySetInnerHTML={{ __html: markup }} />
+        <Cap icon="spark" className="ln-finale__cap">
+          door open · light on
+        </Cap>
       </div>
       <div className="ln-finale__copy">
-        <p className="ln-pill">
-          <span className="ln-pill__k">FIG. {FINALE.num}</span> {FINALE.fig}
-        </p>
+        <Chip>fig-{FINALE.num}.{FINALE.fig}</Chip>
         <h2 id="ln-finale-title" className="ln-finale__title">
-          {FINALE.headline}
+          <Accent text={FINALE.headline} accent={FINALE.accent} />
         </h2>
         <p className="ln-finale__line">{FINALE.line}</p>
         <div className="ln-cta">
-          <a className="keycap keycap--primary ln-btn ln-btn--lg" href={LINKS.app} data-magnetic="">
+          <a className="fd-btn fd-btn--primary fd-btn--lg" href={LINKS.app} data-magnetic="">
             Launch app (testnet)
           </a>
-          <a className="keycap ln-btn" href={LINKS.github} target="_blank" rel="noopener noreferrer" data-magnetic="">
+          <a className="fd-btn fd-btn--lg" href={LINKS.github} target="_blank" rel="noopener noreferrer" data-magnetic="">
             Read the code
           </a>
         </div>
@@ -118,17 +120,26 @@ export function Faq() {
   return (
     <section id="faq" className="ln-section ln-faq" aria-labelledby="ln-faq-title">
       <div className="ln-section__inner ln-faq__inner">
-        <h2 id="ln-faq-title" className="ln-section__title" data-reveal="">
-          Questions from the lab door.
-        </h2>
-        <div className="ln-faq__list">
-          {FAQ.map((f) => (
+        <header data-reveal="">
+          <Chip>faq.md</Chip>
+          <h2 id="ln-faq-title" className="ln-section__title">
+            <Accent text="Questions from the lab door." accent="lab door" />
+          </h2>
+        </header>
+        <Win title="questions.md" className="ln-faq__list">
+          {FAQ.map((f, i) => (
             <details key={f.q} className="ln-faq__item" data-reveal="">
-              <summary>{f.q}</summary>
+              <summary>
+                <span className="ln-faq__n" aria-hidden="true">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="ln-faq__q">{f.q}</span>
+                <span className="ln-faq__pm" aria-hidden="true" />
+              </summary>
               <p>{f.a}</p>
             </details>
           ))}
-        </div>
+        </Win>
       </div>
     </section>
   );

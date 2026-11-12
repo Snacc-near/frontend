@@ -1,9 +1,9 @@
 import "./landing.css";
 import { useEffect, useRef, useState } from "react";
-import { ChapterRail } from "./ChapterRail.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 import { SiteHeader } from "./SiteHeader.tsx";
-import { CHAPTER_IDS } from "./chapters.ts";
+import { StatusBar } from "./StatusBar.tsx";
+import { SECTION_IDS } from "./sections.ts";
 import { loadFigure, type FigureSource } from "./lib/figure.ts";
 import { StaticStory, TheatreStory } from "./Story.tsx";
 import { useLive } from "./useLive.ts";
@@ -16,7 +16,7 @@ import { Faq, Finale } from "./Finale.tsx";
 import { Spores } from "./Spores.tsx";
 
 export default function Landing() {
-  const active = useScrollSpy(CHAPTER_IDS);
+  const active = useScrollSpy(SECTION_IDS);
   const theatre = useTheatreMode();
   const fine = useFinePointer();
   const live = useLive();
@@ -40,7 +40,7 @@ export default function Landing() {
         Skip to content
       </a>
       <SiteHeader live={live.status} />
-      <ChapterRail active={active} />
+      <div className="fd-guides" aria-hidden="true" />
       <Spores count={fine ? 90 : 36} />
 
       <main id="main">
@@ -54,6 +54,7 @@ export default function Landing() {
       </main>
 
       <SiteFooter />
+      <StatusBar active={active} live={live} />
     </div>
   );
 }

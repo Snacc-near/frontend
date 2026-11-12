@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Accent, Cap, Chip, Win } from "./fd.tsx";
 import { CONTRACT_ID, EVIDENCE_TXS, explorerAccount, explorerTx, fetchNftCards, type NftCard } from "./lib/chain.ts";
 import { countUp, formatToken, shortHash, tokenToNumber, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
 import type { LiveState } from "./useLive.ts";
@@ -99,22 +100,6 @@ function Numbers({ live, run }: { live: LiveState; run: boolean }) {
   );
 }
 
-function tilt(e: RPointerEvent<HTMLElement>) {
-  const el = e.currentTarget;
-  const r = el.getBoundingClientRect();
-  const x = (e.clientX - r.left) / r.width - 0.5;
-  const y = (e.clientY - r.top) / r.height - 0.5;
-  el.style.setProperty("--ry", `${(x * 14).toFixed(2)}deg`);
-  el.style.setProperty("--rx", `${(-y * 12).toFixed(2)}deg`);
-  el.style.setProperty("--gx", `${((x + 0.5) * 100).toFixed(1)}%`);
-  el.style.setProperty("--gy", `${((y + 0.5) * 100).toFixed(1)}%`);
-}
-
-function untilt(e: RPointerEvent<HTMLElement>) {
-  e.currentTarget.style.setProperty("--rx", "0deg");
-  e.currentTarget.style.setProperty("--ry", "0deg");
-}
-
 const shortAccount = (a: string) => (a.length > 22 ? `${a.slice(0, 10)}…${a.slice(-9)}` : a);
 
 function Gallery({ run }: { run: boolean }) {
@@ -136,7 +121,9 @@ function Gallery({ run }: { run: boolean }) {
     return (
       <ul className="ln-gallery" aria-busy="true">
         {Array.from({ length: 6 }, (_, i) => (
-          <li key={i} className="ln-nft ln-nft--ghost" aria-hidden="true" />
+          <Win key={i} as="li" title={`specimen-${String(i + 1).padStart(2, "0")}.svg`} className="ln-nft ln-nft--ghost">
+            <div className="ln-nft__media" />
+          </Win>
         ))}
       </ul>
     );
@@ -144,23 +131,32 @@ function Gallery({ run }: { run: boolean }) {
   return (
     <ul className="ln-gallery">
       {cards.map((c, i) => (
-        <li key={c.tokenId} className="ln-nft" style={{ animationDelay: `${i * 70}ms` }} onPointerMove={tilt} onPointerLeave={untilt}>
-          <div className="ln-nft__media">
+        <Win key={c.tokenId} as="li" title={`specimen-${c.tokenId}.svg`} className="ln-nft" bodyClass="ln-nft__body">
+          <div className="ln-nft__media" style={{ animationDelay: `${i * 70}ms` }}>
             {c.src ? <img src={c.src} alt={`On-chain SVG of ${c.title}`} width={320} height={320} loading="lazy" decoding="async" /> : <span>no on-chain image</span>}
+            <span className="ln-nft__slide" aria-hidden="true">
+              #{String(i + 1).padStart(2, "0")}
+            </span>
           </div>
-          <div className="ln-nft__meta">
-            <p className="ln-nft__title">{c.title}</p>
-            <p className="ln-nft__row">
-              <span>owner</span> {shortAccount(c.owner)}
-            </p>
-            <p className="ln-nft__row">
-              <span>token</span> #{c.tokenId}
-            </p>
-            <a className="ln-nft__link" href={explorerAccount(CONTRACT_ID)} target="_blank" rel="noopener noreferrer">
-              contract on nearblocks ↗
-            </a>
-          </div>
-        </li>
+          <dl className="fd-kv ln-nft__meta">
+            <div className="fd-kv__row">
+              <dt>title</dt>
+              <dd className="ln-nft__title">{c.title}</dd>
+            </div>
+            <div className="fd-kv__row">
+              <dt>owner</dt>
+              <dd>{shortAccount(c.owner)}</dd>
+            </div>
+            <div className="fd-kv__row">
+              <dt>token</dt>
+              <dd>
+                <a href={explorerAccount(CONTRACT_ID)} target="_blank" rel="noopener noreferrer">
+                  #{c.tokenId} ↗
+                </a>
+              </dd>
+            </div>
+          </dl>
+        </Win>
       ))}
     </ul>
   );
@@ -174,11 +170,9 @@ export function LiveLab({ live }: { live: LiveState }) {
     <section id="live" className="ln-section ln-live" aria-labelledby="ln-live-title">
       <div className="ln-section__inner">
         <header className="ln-section__head" data-reveal="">
-          <p className="ln-pill">
-            <span className="ln-pill__k">LIVE</span> NEAR testnet · {CONTRACT_ID}
-          </p>
+          <Chip dot={live.status === "live" ? "live" : "off"}>live · NEAR testnet · {CONTRACT_ID}</Chip>
           <h2 id="ln-live-title" className="ln-section__title">
-            Not a mockup. This colony is on-chain.
+            <Accent text="Not a mockup. This colony is on-chain." accent="on-chain" />
           </h2>
           <p className="ln-section__line">
             Every number here is read from the contract on testnet, every card is an NFT whose picture the contract draws itself.
@@ -193,25 +187,30 @@ export function LiveLab({ live }: { live: LiveState }) {
         <div className="ln-live__grid">
           <div ref={galRef}>
             <h3 className="ln-sub">
-              On-chain gallery <span className="ln-tag">nft_tokens</span>
+              <Cap icon="cell">On-chain gallery</Cap> <span className="fd-tag">nft_tokens</span>
             </h3>
             <Gallery run={galSeen} />
           </div>
           <div>
             <h3 className="ln-sub">
-              Real transactions <span className="ln-tag">testnet</span>
+              <Cap icon="chain">Real transactions</Cap> <span className="fd-tag">testnet</span>
             </h3>
-            <ol className="ln-txs">
-              {EVIDENCE_TXS.map((t, i) => (
-                <li key={t.hash} data-reveal="" style={{ transitionDelay: `${i * 45}ms` }}>
-                  <a href={explorerTx(t.hash)} target="_blank" rel="noopener noreferrer">
-                    <span className="ln-txs__act">{t.action}</span>
-                    <span className="ln-txs__det">{t.detail}</span>
-                    <span className="ln-txs__hash">{shortHash(t.hash, 5, 4)} ↗</span>
-                  </a>
-                </li>
-              ))}
-            </ol>
+            <Win title="txs.testnet" className="ln-txs-win">
+              <ol className="ln-txs">
+                {EVIDENCE_TXS.map((t, i) => (
+                  <li key={t.hash} data-reveal="" style={{ transitionDelay: `${i * 45}ms` }}>
+                    <a href={explorerTx(t.hash)} target="_blank" rel="noopener noreferrer">
+                      <span className="ln-txs__n" aria-hidden="true">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="ln-txs__act">{t.action}</span>
+                      <span className="ln-txs__det">{t.detail}</span>
+                      <span className="ln-txs__hash">{shortHash(t.hash, 5, 4)} ↗</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </Win>
             <p className="ln-demo__note">From the rehearsal run of 2026-11-09 (evidence pack in the Snacc repo). Links open nearblocks.</p>
           </div>
         </div>

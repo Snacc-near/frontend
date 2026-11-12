@@ -10,6 +10,8 @@ export interface Chapter {
   /** Short figure name used in the "FIG 0N · name" pill and the rail. */
   fig: string;
   headline: string;
+  /** Phrase of the headline shown in the accent colour (must occur in `headline`). */
+  accent: string;
   line: string;
 }
 
@@ -19,6 +21,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "01",
     fig: "incubator",
     headline: "NFTs that eat a memecoin.",
+    accent: "memecoin",
     line: "Feed your Snacc or it gets snacked.",
   },
   {
@@ -26,6 +29,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "02",
     fig: "organism",
     headline: "Every Snacc has its own stomach.",
+    accent: "own stomach",
     line: "A living NFT that holds its own $SNACC and shows how full it is.",
   },
   {
@@ -33,6 +37,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "03",
     fig: "metabolism",
     headline: "Feed it. It works. Some of every bite burns.",
+    accent: "burns",
     line: "Spores become enzymes, enzymes become elixir. In a Feeding Frenzy 3.5% is burned; in a Famine, 2% comes back as relief.",
   },
   {
@@ -40,6 +45,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "04",
     fig: "colony",
     headline: "Feed your Snacc or it gets snacked.",
+    accent: "snacked",
     line: "A starving Snacc can be harvested by others, so keep yours fed.",
   },
   {
@@ -47,6 +53,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "05",
     fig: "appetite",
     headline: "The colony sets its own appetite.",
+    accent: "appetite",
     line: "CrucibleTemp reads the colony's mood and tilts the economy between Frenzy, Normal and Famine.",
   },
   {
@@ -54,6 +61,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "06",
     fig: "enclave",
     headline: "Private AI diet plans, verified on-chain.",
+    accent: "verified on-chain",
     line: "Plans are computed inside a TEE on NEAR AI Cloud; the contract checks their signature before anything changes.",
   },
   {
@@ -61,6 +69,7 @@ export const CHAPTERS: readonly Chapter[] = [
     num: "07",
     fig: "doorway",
     headline: "Open the incubator.",
+    accent: "incubator",
     line: "Testnet only. Explore the live colony and the lab demo.",
   },
 ] as const;

@@ -10,6 +10,8 @@ import type { ZoneKey } from "./lib/live.ts";
 
 export type WorldEvent =
   | { type: "feed" }
+  | { type: "full"; v: number }
+  | { type: "capsule"; k: number }
   | { type: "atp" }
   | { type: "snack" }
   | { type: "merge" }
@@ -28,7 +30,7 @@ const sticky = new Map<WorldEvent["type"], WorldEvent>();
 
 export const worldBus = {
   emit(e: WorldEvent) {
-    if (e.type === "thermo" || e.type === "seal") sticky.set(e.type, e);
+    if (e.type === "thermo" || e.type === "seal" || e.type === "full") sticky.set(e.type, e);
     for (const l of listeners) l(e);
   },
   on(l: Listener) {
@@ -57,6 +59,15 @@ export class World {
     this.root = root;
     this.prefix = prefix;
     this.installTint();
+    // Class hooks so the landing CSS also reaches id-prefixed copies of the figure.
+    for (const [id, cls] of [
+      ["ch-cell-stomach", "w-stomach"],
+      ["cell-hungry", "w-hungry"],
+      ["stamp", "w-stamp"],
+      ["ch-mito-atp", "w-atp-coins"],
+    ] as const) {
+      this.el(id)?.classList.add(cls);
+    }
   }
 
   el<T extends Element = SVGGElement>(...ids: string[]): T | null {
@@ -197,6 +208,81 @@ export class World {
     }
   }
 
+  /** Stomach level 0..1: the marigold contents of the cell scale from the bottom of the stomach. */
+  setFullness(v: number) {
+    const s = this.el<Css>("ch-cell-stomach");
+    if (s) s.style.scale = `1 ${(0.3 + 0.7 * Math.max(0, Math.min(1, v))).toFixed(3)}`;
+  }
+
+  /** Plan capsule sliding into the enclave while the button is held (k 0..1; 0 = idle loop). */
+  setCapsule(k: number) {
+    const cap = this.el<Css>("capsule");
+    if (!cap || this.root.classList.contains("w-sealed")) return;
+    if (k <= 0) {
+      cap.style.animation = "";
+      cap.style.opacity = "";
+      cap.style.transform = "";
+      return;
+    }
+    const t = 1 - k;
+    cap.style.animation = "none";
+    cap.style.opacity = Math.min(1, k * 1.6).toFixed(3);
+    cap.style.transform = `translate(${(109.5 * t).toFixed(2)}px, ${(-22.1 * t).toFixed(2)}px)`;
+  }
+
+  /**
+   * Finale: instead of swinging the door to a paper-thin angle, the glass fades away and the light
+   * inside spills out (door-spill + an outward light cone added to this copy only).
+   */
+  setGlow(on: boolean) {
+    const door = this.el<Css>("door");
+    if (door) {
+      door.style.setProperty("--door", "0deg");
+      door.style.transition = "opacity 1.4s ease, translate 1.4s cubic-bezier(.16,1,.3,1)";
+      door.style.opacity = on ? "0.08" : "";
+      door.style.translate = on ? "-14px 6px" : "";
+    }
+    const spill = this.el<Css>("door-spill");
+    if (spill) spill.style.opacity = on ? "1" : "";
+    this.root.classList.toggle("w-glow", on);
+    if (on) this.installCone();
+  }
+
+  private installCone() {
+    const host = this.el("ch-door");
+    if (!host || host.parentNode?.querySelector(".ln-cone")) return;
+    const ns = "http://www.w3.org/2000/svg";
+    const defs = document.createElementNS(ns, "defs");
+    const grad = document.createElementNS(ns, "linearGradient");
+    const gid = `${this.prefix}ln-cone-g`;
+    grad.setAttribute("id", gid);
+    grad.setAttribute("x1", "0.55");
+    grad.setAttribute("y1", "0");
+    grad.setAttribute("x2", "0.45");
+    grad.setAttribute("y2", "1");
+    for (const [off, op] of [
+      ["0", "0"],
+      ["0.18", "0.34"],
+      ["0.7", "0.2"],
+      ["1", "0.04"],
+    ] as const) {
+      const st = document.createElementNS(ns, "stop");
+      st.setAttribute("offset", off);
+      st.setAttribute("stop-color", "#f8aa06");
+      st.setAttribute("stop-opacity", op);
+      grad.appendChild(st);
+    }
+    defs.appendChild(grad);
+    // From the window opening (front face) out over the base plate, toward the viewer.
+    const cone = document.createElementNS(ns, "path");
+    cone.setAttribute("class", "ln-cone");
+    // Window bottom edge (≈467,612 → 947,516) down to the spill patch on the base plate.
+    cone.setAttribute("d", "M467 560L947 462L992 772L976 800L540 892L462 870Z");
+    cone.setAttribute("fill", `url(#${gid})`);
+    host.parentNode?.insertBefore(defs, host);
+    host.parentNode?.insertBefore(cone, host.nextSibling);
+  }
+
   private seal(on: boolean) {
     const cap = this.el<Css>("capsule");
     const stamp = this.el<Css>("stamp");
@@ -226,6 +312,12 @@ export class World {
     switch (e.type) {
       case "feed":
         this.flag("w-fed", 1400);
+        break;
+      case "full":
+        this.setFullness(e.v);
+        break;
+      case "capsule":
+        this.setCapsule(e.k);
         break;
       case "atp":
         this.root.classList.remove("w-atp");

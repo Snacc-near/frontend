@@ -1,54 +1,79 @@
 import { useEffect, useRef, useState } from "react";
 import { CHAPTERS, LINKS } from "./chapters.ts";
+import { Cap, Chip } from "./fd.tsx";
 import { eventLabel, formatToken, shortHash, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
 import { explorerAccount } from "./lib/chain.ts";
 import type { LiveState } from "./useLive.ts";
 
 const HERO = CHAPTERS[0]!;
 
-function Words({ text, start = 0, step = 70 }: { text: string; start?: number; step?: number }) {
+/** Headline split into rising words; the accent phrase keeps its colour. */
+function Words({ text, accent, start = 0, step = 70 }: { text: string; accent?: string; start?: number; step?: number }) {
+  const i = accent ? text.indexOf(accent) : -1;
+  const parts: Array<[string, boolean]> = i < 0 ? [[text, false]] : [
+    [text.slice(0, i), false],
+    [accent!, true],
+    [text.slice(i + accent!.length), false],
+  ];
+  let n = 0;
   return (
     <>
-      {text.split(" ").map((w, i) => (
-        <span key={i} className="ln-word" style={{ animationDelay: `${start + i * step}ms` }}>
-          {w}{" "}
-        </span>
-      ))}
+      {parts.flatMap(([t, hot], p) =>
+        t.split(/(\s+)/).map((w, j) => {
+          if (!w) return null;
+          if (/^\s+$/.test(w)) return " ";
+          const delay = start + n++ * step;
+          return (
+            <span key={`${p}-${j}`} className={hot ? "ln-word fd-accent" : "ln-word"} style={{ animationDelay: `${delay}ms` }}>
+              {w}
+            </span>
+          );
+        }),
+      )}
     </>
   );
 }
 
-/** Chapter 01: headline over the live incubator, CTAs, and the live ticker strip. */
+/** Chapter 01: headline over the live incubator, CTAs, the live ticker and the ruler strip. */
 export function HeroBlock({ live, finePointer }: { live: LiveState; finePointer: boolean }) {
   return (
     <section id={HERO.id} data-block="" className="ln-block ln-block--hero" aria-labelledby="ln-hero-title">
       <div className="ln-hero__copy">
-        <p className="ln-pill ln-rise" style={{ animationDelay: "120ms" }}>
-          <span className="ln-pill__k">FIG. 01</span> incubator · NEAR testnet
-        </p>
+        <Chip className="ln-rise" dot={live.status === "live" ? "live" : "accent"}>
+          fig-01.incubator · NEAR testnet
+        </Chip>
         <h1 id="ln-hero-title" className="ln-hero__title">
-          <Words text={HERO.headline} start={180} />
+          <Words text={HERO.headline} accent={HERO.accent} start={180} />
         </h1>
         <p className="ln-hero__line ln-rise" style={{ animationDelay: "560ms" }}>
           {HERO.line}
         </p>
         <div className="ln-cta ln-rise" style={{ animationDelay: "700ms" }}>
-          <a className="keycap keycap--primary ln-btn" href={LINKS.app} data-magnetic="">
+          <a className="fd-btn fd-btn--primary" href={LINKS.app} data-magnetic="">
             Enter the lab
           </a>
-          <a className="keycap ln-btn" href="#ch-02" data-magnetic="">
+          <a className="fd-btn" href="#ch-02" data-magnetic="">
             Scroll <span aria-hidden="true">↓</span>
           </a>
         </div>
         {finePointer ? (
           <p className="ln-hint ln-rise" style={{ animationDelay: "900ms" }} aria-hidden="true">
-            move the lens over the glass · hover the door
+            <Cap icon="eye">move the lens over the dish</Cap>
+            <Cap icon="grid">hover the door</Cap>
           </p>
         ) : null}
       </div>
-      <Ticker live={live} />
+      <div className="ln-hero__foot">
+        <Ticker live={live} />
+        <Ruler />
+      </div>
     </section>
   );
+}
+
+/** Ruler tick strip (decorative), under the hero. */
+export function Ruler() {
+  return <div className="fd-ruler" aria-hidden="true" />;
 }
 
 export function Ticker({ live }: { live: LiveState }) {
@@ -56,7 +81,7 @@ export function Ticker({ live }: { live: LiveState }) {
   const zone = m ? (zoneFromApi(m.zone) ?? zoneFromTemp(m.crucibleTemp)) : null;
   const items: Array<[string, string]> = m
     ? [
-        ["CrucibleTemp", `${m.crucibleTemp} mK`],
+        ["CrucibleTemp", `${m.crucibleTemp.toLocaleString("en-US")} mK`],
         ["zone", zone ? zone.label : "—"],
         ["strains alive", live.alive == null ? "—" : `${live.alive} of ${live.strains ?? "?"}`],
         ["total burned", `${formatToken(m.totalSnaccBurned)} $SNACC`],

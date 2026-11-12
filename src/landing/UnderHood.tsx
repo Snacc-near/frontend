@@ -1,4 +1,5 @@
 import { LINKS } from "./chapters.ts";
+import { Accent, Cap, Chip, Icon, Win } from "./fd.tsx";
 
 const REPOS = ["contracts", "oracle-tee", "sdk", "backend", "frontend", "scripts"] as const;
 
@@ -63,10 +64,10 @@ function TeeIcon() {
 }
 
 const ITEMS = [
-  { std: "NEP-141", name: "$SNACC", line: "The memecoin every Snacc eats. A testnet token with no monetary value.", Icon: CoinIcon },
-  { std: "NEP-171 / 177", name: "Living NFT", line: "Each Snacc is an NFT whose picture is an SVG drawn by the contract itself.", Icon: NftIcon },
-  { std: "NEP-245", name: "Spores · enzymes · elixirs", line: "The supply chain is a multi-token: raw, refined and finished goods.", Icon: VialsIcon },
-  { std: "NEAR AI Cloud", name: "TEE diet plans", line: "Plans run inside a TEE; the contract checks the enclave signature.", Icon: TeeIcon },
+  { std: "NEP-141", file: "nep-141.coin", name: "$SNACC", line: "The memecoin every Snacc eats. A testnet token with no monetary value.", Art: CoinIcon },
+  { std: "NEP-171 / 177", file: "nep-171.nft", name: "Living NFT", line: "Each Snacc is an NFT whose picture is an SVG drawn by the contract itself.", Art: NftIcon },
+  { std: "NEP-245", file: "nep-245.multi", name: "Spores · enzymes · elixirs", line: "The supply chain is a multi-token: raw, refined and finished goods.", Art: VialsIcon },
+  { std: "NEAR AI Cloud", file: "near-ai.tee", name: "TEE diet plans", line: "Plans run inside a TEE; the contract checks the enclave signature.", Art: TeeIcon },
 ] as const;
 
 export function UnderHood() {
@@ -74,25 +75,29 @@ export function UnderHood() {
     <section id="hood" className="ln-section ln-hood" aria-labelledby="ln-hood-title">
       <div className="ln-section__inner">
         <header className="ln-section__head" data-reveal="">
-          <p className="ln-pill">
-            <span className="ln-pill__k">FIG. 08</span> under the hood
-          </p>
+          <Chip>fig-08.under-the-hood</Chip>
           <h2 id="ln-hood-title" className="ln-section__title">
-            Four NEAR standards, one living machine.
+            <Accent text="Four NEAR standards, one living machine." accent="one living machine" />
           </h2>
         </header>
         <ul className="ln-hood__grid">
-          {ITEMS.map(({ std, name, line, Icon }, i) => (
-            <li key={std} className="ln-hood__item" data-reveal="" style={{ transitionDelay: `${i * 80}ms` }}>
-              <Icon />
-              <p className="ln-hood__std">{std}</p>
-              <h3 className="ln-hood__name">{name}</h3>
-              <p className="ln-hood__line">{line}</p>
+          {ITEMS.map(({ std, file, name, line, Art }, i) => (
+            <li key={std} className="ln-hood__cell" data-reveal="" style={{ transitionDelay: `${i * 80}ms` }}>
+              <Win title={file} className="ln-hood__item">
+                <Art />
+                <p className="ln-hood__std">
+                  <Cap icon="doc">{std}</Cap>
+                </p>
+                <h3 className="ln-hood__name">{name}</h3>
+                <p className="ln-hood__line">{line}</p>
+              </Win>
             </li>
           ))}
         </ul>
         <nav className="ln-repos" aria-label="Source code" data-reveal="">
-          <span className="ln-repos__k">open source</span>
+          <span className="ln-repos__k">
+            <Icon name="grid" /> open source
+          </span>
           {REPOS.map((r) => (
             <a key={r} href={`${LINKS.github}/${r}`} target="_blank" rel="noopener noreferrer">
               {r}

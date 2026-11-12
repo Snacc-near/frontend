@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { CHAPTERS } from "./chapters.ts";
 import { AppetiteDemo, ColonyDemo, EnclaveDemo, FeedDemo, MetabolismDemo } from "./demos.tsx";
-import { HeroBlock, Loader, Ticker } from "./Hero.tsx";
-import { DEFAULT_ANCHORS, FIGURE_SVG_URL, cropUrl, type FigureSource } from "./lib/figure.ts";
+import { Accent, Cap, Chip, Win } from "./fd.tsx";
+import { HeroBlock, Loader, Ruler, Ticker } from "./Hero.tsx";
+import { DEFAULT_ANCHORS, FIGURE_SVG_URL, type FigureSource } from "./lib/figure.ts";
+import { LiveCrop } from "./LiveCrop.tsx";
 import { STAGE_CUES } from "./story.ts";
 import { Theatre } from "./Theatre.tsx";
 import type { LiveState } from "./useLive.ts";
@@ -26,20 +28,20 @@ function demoFor(id: string, live: LiveState): ReactNode {
   }
 }
 
+/** Window title used for a chapter: `fig-02.organism`. */
+export const figTitle = (num: string, name: string) => `fig-${num}.${name}`;
+
 function ChapterCard({ index, live }: { index: number; live: LiveState }) {
   const c = STORY[index]!;
   const titleId = `${c.id}-title`;
   return (
-    <article className="ln-card" data-card="" aria-labelledby={titleId}>
-      <p className="ln-pill">
-        <span className="ln-pill__k">FIG. {c.num}</span> {c.fig}
-      </p>
+    <Win as="article" title={figTitle(c.num, c.fig)} className="ln-card" labelledBy={titleId} card>
       <h2 id={titleId} className="ln-card__title">
-        {c.headline}
+        <Accent text={c.headline} accent={c.accent} />
       </h2>
       <p className="ln-card__line">{c.line}</p>
       {demoFor(c.id, live)}
-    </article>
+    </Win>
   );
 }
 
@@ -60,8 +62,8 @@ export function TheatreStory({ source, live, finePointer }: { source: FigureSour
 }
 
 /**
- * Mobile and reduced motion: one chapter per screen, a static crop of the same figure per
- * chapter (SVG view fragment, no extra DOM), every interaction still works.
+ * Mobile and reduced motion: one chapter per screen. Each chapter shows its crop of the same
+ * figure; the crop is mounted as a live copy near the viewport so the demos still move it.
  */
 export function StaticStory({ source, live }: { source: FigureSource | null; live: LiveState }) {
   const anchors = { ...DEFAULT_ANCHORS, ...(source?.cam.anchors ?? {}) };
@@ -69,37 +71,36 @@ export function StaticStory({ source, live }: { source: FigureSource | null; liv
   return (
     <>
       <section id={hero.id} className="ln-sblock ln-sblock--hero" aria-labelledby="ln-hero-title">
-        <img className="ln-sblock__fig ln-sblock__fig--hero" src={FIGURE_SVG_URL} alt="Isometric cutaway of the Snacc incubator: a petri dish colony behind the glass, a thermometer and a frosted enclave." width={1600} height={1000} />
+        <img className="ln-sblock__fig--hero" src={FIGURE_SVG_URL} alt="Isometric cutaway of the Snacc incubator: a petri dish colony behind the glass, a thermometer and a frosted enclave." width={1600} height={1000} />
         <div className="ln-hero__copy ln-hero__copy--static">
-          <p className="ln-pill">
-            <span className="ln-pill__k">FIG. 01</span> incubator · NEAR testnet
-          </p>
+          <Chip>fig-01.incubator · NEAR testnet</Chip>
           <h1 id="ln-hero-title" className="ln-hero__title">
-            {hero.headline}
+            <Accent text={hero.headline} accent={hero.accent} />
           </h1>
           <p className="ln-hero__line">{hero.line}</p>
           <div className="ln-cta">
-            <a className="keycap keycap--primary ln-btn" href="/app">
+            <a className="fd-btn fd-btn--primary" href="/app">
               Enter the lab
             </a>
-            <a className="keycap ln-btn" href="#ch-02">
+            <a className="fd-btn" href="#ch-02">
               Scroll <span aria-hidden="true">↓</span>
             </a>
           </div>
         </div>
         <Ticker live={live} />
+        <Ruler />
       </section>
       {STORY.map((c, i) => {
         const cue = STAGE_CUES[i + 1]!;
         const a = anchors[cue.anchor] ?? DEFAULT_ANCHORS[cue.anchor]!;
         return (
           <section key={c.id} id={c.id} className="ln-sblock" aria-labelledby={`${c.id}-title`} data-reveal="">
-            <figure className="ln-sblock__crop">
-              <img src={cropUrl(a, cue.anchor === "ch-mito" ? 0.6 : 0.25)} alt="" loading="lazy" width={a.w} height={a.h} />
-              <figcaption className="ln-pill">
-                <span className="ln-pill__k">FIG. {c.num}</span> {cue.part}
-              </figcaption>
-            </figure>
+            <Win as="figure" title={`${figTitle(c.num, c.fig)} · ${cue.part}`} className="ln-sblock__crop">
+              <LiveCrop source={source} anchor={a} pad={cue.anchor === "ch-mito" ? 0.6 : 0.25} prefix={`s${c.num}-`} />
+              <Cap icon="ring" className="ln-sblock__cap">
+                {cue.part}
+              </Cap>
+            </Win>
             <ChapterCard index={i} live={live} />
           </section>
         );

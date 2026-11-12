@@ -36,7 +36,7 @@ export function SiteHeader({ live }: { live: LiveStatus }) {
               {sound ? <path className="ln-sound__wave" d="M13 7c1.2 1.6 1.2 4.4 0 6M15.5 5c2.2 2.8 2.2 7.2 0 10" /> : <path className="ln-sound__wave" d="M13 8l4 4M17 8l-4 4" />}
             </svg>
           </button>
-          <a className="keycap keycap--primary ln-btn ln-btn--sm" href={LINKS.app} data-magnetic="">
+          <a className="fd-btn fd-btn--primary fd-btn--sm" href={LINKS.app} data-magnetic="">
             Launch app
           </a>
         </nav>
