@@ -28,6 +28,9 @@ import { SwapPanel } from "./hud/SwapPanel.tsx";
 import { NpcPanel } from "./hud/NpcPanel.tsx";
 import { SocialLeaderboardModal } from "./hud/SocialLeaderboardModal.tsx";
 import { ThesisDashboardModal } from "./hud/ThesisDashboardModal.tsx";
+import { AuthModal } from "./hud/AuthModal.tsx";
+import { RecipeSearchModal } from "./hud/RecipeSearchModal.tsx";
+import { getStoredAuthSession } from "./auth/oneClickAuth.ts";
 import { NPC_PROFILES } from "./data/npc.ts";
 import { ActionDock, ProductionQueuePanel, ResourceBar, type DockButton } from "./hud/GameHud.tsx";
 import { CellLab } from "./hud/CellLab.tsx";
@@ -97,7 +100,7 @@ export const App: React.FC = () => {
   const [crucibleTempMk, setCrucibleTempMk] = useState<number | null>(null);
   const [reducedMotion] = useState<boolean>(() => prefersReducedMotion());
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
-  const [userAccount, setUserAccount] = useState("");
+  const [userAccount, setUserAccount] = useState(() => getStoredAuthSession()?.accountId ?? "");
   const [liveStrains, setLiveStrains] = useState<StrainSummary[]>([]);
   const [indexerIncomplete, setIndexerIncomplete] = useState(false);
   const [selectedStrain, setSelectedStrain] = useState<StrainDetail | null>(null);
@@ -115,6 +118,8 @@ export const App: React.FC = () => {
   const [npcOpen, setNpcOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [thesisOpen, setThesisOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [recipeSearchOpen, setRecipeSearchOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [iris, setIris] = useState<{ phase: "closing" | "opening"; cx: number; cy: number } | null>(null);
@@ -564,7 +569,17 @@ export const App: React.FC = () => {
                 </span>
               </span>
               <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
-              <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+              <div className="flex items-center gap-1.5">
+                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                <button
+                  type="button"
+                  onClick={() => setAuthOpen(true)}
+                  aria-label="open authentication modal"
+                  className="keycap min-h-[38px] px-2.5 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+                >
+                  {userAccount ? "⚡ ID" : "⚡ Login"}
+                </button>
+              </div>
               <span className="label-plate">
                 vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
                 <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
@@ -602,8 +617,25 @@ export const App: React.FC = () => {
             </div>
             {moreOpen ? (
               <div className="pointer-events-auto flex flex-col gap-1.5 rounded-xl border border-[var(--edge)] bg-[var(--panel)] p-2 shadow-[0_2px_0_var(--edge)]" data-testid="mobile-more">
-                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                <div className="flex items-center gap-1.5">
+                  <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                  <button
+                    type="button"
+                    onClick={() => setAuthOpen(true)}
+                    aria-label="open authentication modal mobile"
+                    className="keycap min-h-[38px] px-2.5 text-[11px] font-semibold text-[var(--accent-dk)]"
+                  >
+                    ⚡ Login
+                  </button>
+                </div>
                 <SkinSwitch skin={skin} onChange={setSkin} />
+                <button
+                  type="button"
+                  onClick={() => setRecipeSearchOpen(true)}
+                  className="keycap min-h-[34px] px-3 text-[11px] font-semibold text-[var(--accent-dk)]"
+                >
+                  🧪 Recipes Codex
+                </button>
                 <span className="label-plate">
                   vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
                   <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
@@ -676,6 +708,14 @@ export const App: React.FC = () => {
                 className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
               >
                 thesis 📜
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecipeSearchOpen(true)}
+                aria-label="open recipe search codex"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                recipes 🧪
               </button>
             </div>
             <span className="label-plate pointer-events-auto lowercase">
@@ -810,6 +850,34 @@ export const App: React.FC = () => {
             setMilestoneToast(`+${amount} spores from ${name}`);
             setToast(`Purchased ${amount} spores for ${totalCost} $SNACC`);
           }}
+        />
+      ) : null}
+
+      {authOpen ? (
+        <AuthModal
+          isOpen={authOpen}
+          onClose={() => setAuthOpen(false)}
+          activeAccount={userAccount}
+          onLogin={(acc) => {
+            setUserAccount(acc);
+            setAuthOpen(false);
+            showToast(`Logged in as ${acc}`);
+          }}
+          onLogout={() => {
+            setUserAccount("");
+            setAuthOpen(false);
+            showToast("Logged out successfully");
+          }}
+          skin={skin}
+        />
+      ) : null}
+
+      {recipeSearchOpen ? (
+        <RecipeSearchModal
+          isOpen={recipeSearchOpen}
+          onClose={() => setRecipeSearchOpen(false)}
+          skin={skin}
+          zone={zone}
         />
       ) : null}
     </main>
