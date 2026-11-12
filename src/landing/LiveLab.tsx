@@ -58,14 +58,38 @@ function CountUp({ to, final, run, digits = 0 }: { to: number | null; final: str
   return <>{text}</>;
 }
 
+/** Labels of the number cells; the placeholder grid uses the same ones so nothing moves when data lands. */
+const NUM_KEYS: ReadonlyArray<[string, string?]> = [
+  ["CrucibleTemp", "mK"],
+  ["$SNACC supply"],
+  ["$SNACC burned"],
+  ["The Pantry", "$SNACC"],
+  ["Snaccs minted"],
+  ["alive now"],
+  ["events indexed"],
+  ["block height"],
+];
+
 function Numbers({ live, run }: { live: LiveState; run: boolean }) {
   const m = live.macro;
   if (!m) {
     return (
-      <p className="ln-live__offline" data-status={live.status}>
-        <span className="ln-dot" aria-hidden="true" />
-        {live.status === "loading" ? "Reading the colony…" : "The backend did not answer, so no numbers are shown here."}
-      </p>
+      <>
+        <p className="ln-live__offline" data-status={live.status}>
+          <span className="ln-dot" aria-hidden="true" />
+          {live.status === "loading" ? "Reading the colony…" : "The backend did not answer, so no numbers are shown here."}
+        </p>
+        <dl className="ln-live__nums" aria-busy={live.status === "loading" ? "true" : undefined}>
+          {NUM_KEYS.map(([k, unit]) => (
+            <div key={k} className="ln-num" data-reveal="">
+              <dt>{k}</dt>
+              <dd>
+                —{unit ? <small> {unit}</small> : null}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </>
     );
   }
   const zone = zoneFromApi(m.zone) ?? zoneFromTemp(m.crucibleTemp);
@@ -108,7 +132,7 @@ function Gallery({ run }: { run: boolean }) {
   useEffect(() => {
     if (!run) return;
     const ac = new AbortController();
-    void fetchNftCards(9, ac.signal).then((c) => {
+    void fetchNftCards(GALLERY_SLOTS, ac.signal).then((c) => {
       if (ac.signal.aborted) return;
       if (c) setCards(c);
       else setFailed(true);
@@ -116,21 +140,24 @@ function Gallery({ run }: { run: boolean }) {
     return () => ac.abort();
   }, [run]);
 
-  if (failed) return <p className="ln-live__offline">The NEAR testnet RPC did not answer, so the gallery is empty.</p>;
-  if (!cards) {
+  // Placeholders have the real card's exact box (1:1 image + the three-row table), and the grid
+  // always holds GALLERY_SLOTS cards, so the section never changes height when the NFTs arrive.
+  if (failed || !cards) {
     return (
-      <ul className="ln-gallery" aria-busy="true">
-        {Array.from({ length: 6 }, (_, i) => (
-          <Win key={i} as="li" title={`specimen-${String(i + 1).padStart(2, "0")}.svg`} className="ln-nft ln-nft--ghost">
-            <div className="ln-nft__media" />
-          </Win>
-        ))}
-      </ul>
+      <div className="ln-gallery-wrap">
+        <ul className="ln-gallery" aria-busy={failed ? undefined : "true"} aria-hidden={failed ? "true" : undefined}>
+          {Array.from({ length: GALLERY_SLOTS }, (_, i) => (
+            <GhostCard key={i} n={i} />
+          ))}
+        </ul>
+        {failed ? <p className="ln-live__offline ln-gallery__msg">The NEAR testnet RPC did not answer, so the gallery is empty.</p> : null}
+      </div>
     );
   }
+  const shown = cards.slice(0, GALLERY_SLOTS);
   return (
     <ul className="ln-gallery">
-      {cards.map((c, i) => (
+      {shown.map((c, i) => (
         <Win key={c.tokenId} as="li" title={`specimen-${c.tokenId}.svg`} className="ln-nft" bodyClass="ln-nft__body">
           <div className="ln-nft__media" style={{ animationDelay: `${i * 70}ms` }}>
             {c.src ? <img src={c.src} alt={`On-chain SVG of ${c.title}`} width={320} height={320} loading="lazy" decoding="async" /> : <span>no on-chain image</span>}
@@ -158,7 +185,29 @@ function Gallery({ run }: { run: boolean }) {
           </dl>
         </Win>
       ))}
+      {Array.from({ length: GALLERY_SLOTS - shown.length }, (_, i) => (
+        <GhostCard key={`ghost-${i}`} n={shown.length + i} />
+      ))}
     </ul>
+  );
+}
+
+const GALLERY_SLOTS = 9;
+
+/** Empty specimen slide with the same box as a loaded one. */
+function GhostCard({ n }: { n: number }) {
+  return (
+    <Win as="li" title={`specimen-${String(n + 1).padStart(2, "0")}.svg`} className="ln-nft ln-nft--ghost" bodyClass="ln-nft__body">
+      <div className="ln-nft__media" />
+      <dl className="fd-kv ln-nft__meta" aria-hidden="true">
+        {["title", "owner", "token"].map((k) => (
+          <div key={k} className="fd-kv__row">
+            <dt>{k}</dt>
+            <dd>—</dd>
+          </div>
+        ))}
+      </dl>
+    </Win>
   );
 }
 

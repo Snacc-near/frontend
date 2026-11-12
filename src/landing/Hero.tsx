@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CHAPTERS, LINKS } from "./chapters.ts";
 import { Cap, Chip } from "../ui/fd.tsx";
 import { eventLabel, formatToken, shortHash, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
@@ -34,10 +34,14 @@ function Words({ text, accent, start = 0, step = 70 }: { text: string; accent?: 
   );
 }
 
-/** Chapter 01: headline over the live incubator, CTAs, the live ticker and the ruler strip. */
-export function HeroBlock({ live, finePointer }: { live: LiveState; finePointer: boolean }) {
+/**
+ * Chapter 01: headline over the live incubator, CTAs, the live ticker and the ruler strip. The
+ * content sits in a sticky layer; the theatre fades it out in place before the camera moves.
+ */
+export function HeroBlock({ live, finePointer, style }: { live: LiveState; finePointer: boolean; style?: CSSProperties }) {
   return (
-    <section id={HERO.id} data-block="" className="ln-block ln-block--hero" aria-labelledby="ln-hero-title">
+    <section id={HERO.id} data-block="" className="ln-block ln-block--hero" style={style} aria-labelledby="ln-hero-title">
+      <div className="ln-pin">
       <div className="ln-hero__copy">
         <Chip className="ln-rise" dot={live.status === "live" ? "live" : "accent"}>
           fig-01.incubator · NEAR testnet
@@ -66,6 +70,7 @@ export function HeroBlock({ live, finePointer }: { live: LiveState; finePointer:
       <div className="ln-hero__foot">
         <Ticker live={live} />
         <Ruler />
+      </div>
       </div>
     </section>
   );

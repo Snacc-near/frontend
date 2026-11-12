@@ -251,9 +251,8 @@ html {
   height: var(--bar-h);
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid var(--ink-hi);
-  background: rgba(239, 239, 236, 0.95);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  /* opaque paper: a backdrop blur over the moving figure would re-blur every frame */
+  background: var(--paper);
 }
 
 .fd-status__state {
@@ -339,9 +338,8 @@ html {
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 40;
-  background: rgba(239, 239, 236, 0.86);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* opaque paper: a backdrop blur over the moving figure would re-blur every frame */
+  background: var(--paper);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -450,7 +448,6 @@ html {
 }
 
 .ln-stage {
-  --hero: 1;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -475,6 +472,40 @@ html {
   visibility: hidden;
 }
 
+/* The figure's idle loops (the figure's own CSS) pause while the page scrolls (the theatre sets
+   data-scrolling until 150 ms after the last scroll event), while the theatre is off screen, while
+   the lens is hidden and while the finale is far away, so those frames go to the camera. Only the
+   animated parts are listed, which keeps the attribute flip cheap. */
+:is(.ln-stage[data-scrolling], .ln-stage[data-off], .ln-lens:not([data-on]), .ln-finale[data-far])
+  :is(
+    .idle-breathe,
+    .idle-blink,
+    .coin-drift,
+    .win-glow,
+    .drop,
+    .vent-steam,
+    .wob-1,
+    .wob-2,
+    .wob-3,
+    .merge-a,
+    .merge-b,
+    .crack,
+    .atp-speck,
+    .key-1,
+    .key-2,
+    .key-3,
+    .capsule-slide,
+    .stamp-blink,
+    .iso-line[data-flow],
+    circle[data-pulse],
+    [id$="thermo-fill"],
+    [id$="thermo-pointer"],
+    [id$="needle"]
+  ) {
+  /* important: the figure sets some loops on #id selectors */
+  animation-play-state: paused !important;
+}
+
 .ln-world .inc.iso-svg,
 .ln-lens__host .inc.iso-svg {
   display: block;
@@ -483,16 +514,27 @@ html {
   overflow: hidden;
 }
 
-/* marigold specks and droplets would be huge at cell/mito zoom: shrink them when the camera is deep */
-.ln-stage[data-chapter="1"] .atp-speck,
-.ln-stage[data-chapter="2"] .atp-speck {
+/* marigold specks and droplets would be huge at cell/mito zoom: shrink them while the camera is deep
+   (the theatre sets data-deep from the zoom, so the size follows the camera, not the chapter) */
+.ln-stage[data-deep] .atp-speck {
   r: 0.5px;
 }
 
-.ln-stage[data-chapter="1"] .drop,
-.ln-stage[data-chapter="2"] .drop {
+.ln-stage[data-deep] .drop {
   rx: 0.6px;
   ry: 0.8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ln-world .atp-speck {
+    transition: r 400ms ease;
+  }
+
+  .ln-world .drop {
+    transition:
+      rx 400ms ease,
+      ry 400ms ease;
+  }
 }
 
 .ln-overlay {
@@ -623,20 +665,20 @@ html {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--ink-hi);
-  opacity: calc(1 - var(--hero));
+  /* the theatre fades the key in as the camera leaves the hero (inline opacity) */
+  opacity: 0;
   pointer-events: none;
 }
 
-/* right-hand cards (chapters 03, 05): the key moves to the figure side, clear of the panel */
-.ln-stage[data-chapter="2"] .ln-scalekey,
-.ln-stage[data-chapter="4"] .ln-scalekey {
+/* right-hand cards (chapters 03, 05): the key sits on the figure side, clear of the panel. The
+   theatre switches data-key-side while the key is faded out mid cross-fade, so it never jumps. */
+.ln-stage[data-key-side="left"] .ln-scalekey {
   right: auto;
   left: calc(var(--guide) + 28px);
   align-items: flex-start;
 }
 
-.ln-stage[data-chapter="2"] .ln-scalekey__bar,
-.ln-stage[data-chapter="4"] .ln-scalekey__bar {
+.ln-stage[data-key-side="left"] .ln-scalekey__bar {
   transform-origin: left center;
 }
 
@@ -882,67 +924,77 @@ html {
 
 /* ================================================================ chapter blocks over the stage */
 
+/* The scroll map (story.ts THEATRE) places every block: --top and --len in viewport heights, set
+   inline at render, so the theatre's height is fixed by CSS and never shifts when content loads.
+   Blocks overlap; each holds a sticky layer the size of the screen, pinned for --len - 1 screens. */
 .ln-blocks {
   position: relative;
   z-index: 2;
+  height: calc(var(--total, 1) * 100vh);
+  height: calc(var(--total, 1) * 100svh);
   margin-top: -100vh;
   margin-top: -100svh;
   pointer-events: none;
 }
 
 .ln-block {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--top, 0) * 100vh);
+  top: calc(var(--top, 0) * 100svh);
+  height: calc(var(--len, 1) * 100vh);
+  height: calc(var(--len, 1) * 100svh);
+  /* a link to a chapter lands on its camera stop (the html scroll-padding is 64px) */
+  scroll-margin-top: calc(var(--to-stop, 0) * -100vh - 64px);
+  scroll-margin-top: calc(var(--to-stop, 0) * -100svh - 64px);
+}
+
+.ln-pin {
+  position: sticky;
+  top: 0;
   display: flex;
-  align-items: center;
-  min-height: 125vh;
+  height: 100vh;
+  height: 100svh;
   padding: 0 calc(var(--guide) + max(3vw, 20px));
 }
 
-.ln-block--left {
+.ln-block--left .ln-pin {
   justify-content: flex-start;
-}
-
-.ln-block--right {
-  justify-content: flex-end;
-}
-
-/* Chapter cards pin between the header and the status bar. The theatre sets --pin so the card is
-   centred in that space and the hold is centred on the camera stop; a card is only shown while its
-   box sits fully between the two bars. */
-.ln-block--left,
-.ln-block--right {
   align-items: flex-start;
-  padding-top: 28px;
 }
 
+.ln-block--right .ln-pin {
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+/* Chapter cards pin between the header and the status bar: the theatre sets --pin so the card is
+   centred in that space. Opacity and a short sideways slide follow the scroll map (inline styles),
+   so a card is visible for its whole chapter and cross-fades with the next one. */
 .ln-block--left .ln-card,
 .ln-block--right .ln-card {
-  position: sticky;
-  top: var(--pin, 72px);
+  margin-top: var(--pin, 72px);
   max-height: calc(100vh - 58px - var(--bar-h) - 24px);
   max-height: calc(100svh - 58px - var(--bar-h) - 24px);
 }
 
 .ln-card {
-  pointer-events: auto;
+  pointer-events: none;
   width: min(450px, 38vw);
   background: var(--card);
   opacity: 0;
-  /* slides in sideways only, so a card fading in never pokes under the bars */
-  transform: translate3d(-40px, 0, 0);
-  transition:
-    opacity 500ms ease,
-    transform 700ms var(--ease-out);
+  will-change: opacity;
 }
 
-.ln-block--right .ln-card {
-  transform: translate3d(40px, 0, 0);
+.ln-block[data-active] .ln-card {
+  pointer-events: auto;
 }
 
-.ln-block[data-active] .ln-card,
 .ln-card:focus-within {
-  opacity: 1;
-  transform: none;
+  pointer-events: auto;
+  opacity: 1 !important;
+  transform: none !important;
 }
 
 .ln-card .fd-win__body {
@@ -974,12 +1026,16 @@ html {
 
 /* ================================================================ hero (block 01) */
 
-.ln-block--hero {
-  min-height: 100vh;
-  min-height: 100svh;
+.ln-block--hero .ln-pin {
   align-items: center;
   padding-top: 64px;
   padding-bottom: calc(var(--bar-h) + 84px);
+}
+
+/* the theatre fades the hero UI out (inline opacity/transform) before the camera moves */
+.ln-block--hero .ln-hero__copy,
+.ln-block--hero .ln-hero__foot {
+  will-change: opacity, transform;
 }
 
 /* The theatre measures this column's right edge and fits the machine to the right of it. */
@@ -1607,6 +1663,28 @@ html {
   color: var(--ink-hi);
 }
 
+.ln-gallery-wrap {
+  position: relative;
+}
+
+/* the RPC error sits over the placeholder grid, so the section keeps its height */
+.ln-gallery__msg {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: max-content;
+  max-width: 90%;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper-hi);
+  translate: -50% 0;
+}
+
+.ln-nft--ghost .ln-nft__meta dd {
+  color: var(--ink);
+}
+
 .ln-nft--ghost .ln-nft__media {
   background: var(--dither), var(--paper);
   opacity: 0.35;
@@ -1922,11 +2000,22 @@ html {
   position: relative;
 }
 
+/* The figure copy mounts only near the section: its box is reserved up front (the 1600x1000 figure
+   at 112% width, minus the -4%/-6% bleed = 5:3), so nothing moves when it arrives. */
+.ln-finale__host {
+  position: relative;
+  aspect-ratio: 5 / 3;
+}
+
 .ln-finale__host .inc.iso-svg {
+  position: absolute;
+  left: 0;
+  top: 0;
   display: block;
   width: 112%;
   height: auto;
-  margin: -4% 0 -6% -8%;
+  /* percentage margins resolve against the width, as before */
+  margin: -4% 0 0 -8%;
 }
 
 .ln-finale__glow {

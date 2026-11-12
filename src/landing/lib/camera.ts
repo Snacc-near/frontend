@@ -38,6 +38,16 @@ export function easeInOut(t: number): number {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
+/** Sine in-out: its peak speed is π/2 times the mean (a cubic peaks at 3 times). */
+export function easeSine(t: number): number {
+  return (1 - Math.cos(Math.PI * clamp01(t))) / 2;
+}
+
+/** Frame-rate independent smoothing factor for a time step `dt` and time constant `tau` (same units). */
+export function smoothK(dt: number, tau: number): number {
+  return tau > 0 ? 1 - Math.exp(-Math.max(0, dt) / tau) : 1;
+}
+
 /** Fit an anchor box into a screen frame (with a margin factor > 1 leaving air around it). */
 export function fitAnchor(a: Anchor, frame: Box, margin = 1.15, maxScale = 80): Cam {
   const w = Math.max(a.w, 1e-3) * margin;
@@ -74,11 +84,72 @@ export function lerpCam(a: Cam, b: Cam, t: number): Cam {
   };
 }
 
+/** Mean on-screen displacement (px) of a grid of screen points when the camera goes from `a` to `b`. */
+export function screenShift(a: Cam, b: Cam, w: number, h: number, n = 5): number {
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const qx = ((i + 0.5) / n) * w;
+      const qy = ((j + 0.5) / n) * h;
+      const [bx, by] = project(b, a.cx + (qx - a.ox) / a.s, a.cy + (qy - a.oy) / a.s);
+      sum += Math.hypot(bx - qx, by - qy);
+    }
+  }
+  return sum / (n * n);
+}
+
+/**
+ * Arc-length table of the move from `a` to `b`: `len` is the total on-screen travel (px) and
+ * `t[k]` the `lerpCam` parameter reached after `k / (t.length - 1)` of that travel. Driving the
+ * move through it keeps the on-screen speed even when a pan and a deep zoom are mixed.
+ */
+export interface Warp {
+  len: number;
+  t: number[];
+}
+
+export function pathWarp(a: Cam, b: Cam, w: number, h: number, steps = 64): Warp {
+  const acc = [0];
+  let prev = a;
+  for (let k = 1; k <= steps; k++) {
+    const c = lerpCam(a, b, k / steps);
+    acc.push(acc[k - 1]! + screenShift(prev, c, w, h));
+    prev = c;
+  }
+  const len = acc[steps]!;
+  const t = [0];
+  let k = 0;
+  for (let j = 1; j < steps; j++) {
+    const want = (j / steps) * len;
+    while (k < steps - 1 && acc[k + 1]! < want) k++;
+    const seg = acc[k + 1]! - acc[k]!;
+    t.push(len > 0 ? (k + (seg > 0 ? (want - acc[k]!) / seg : 0)) / steps : j / steps);
+  }
+  t.push(1);
+  return { len, t };
+}
+
+/** `lerpCam` parameter after fraction `u` (0..1) of a move's on-screen travel. */
+export function warpAt(wp: Warp, u: number): number {
+  const last = wp.t.length - 1;
+  if (last < 1) return clamp01(u);
+  const x = clamp01(u) * last;
+  const i = Math.min(last - 1, Math.floor(x));
+  return wp.t[i]! + (wp.t[i + 1]! - wp.t[i]!) * (x - i);
+}
+
 /**
  * Camera for a scroll position. `stops[i]` is the scroll offset where keyframe `i` is fully on;
- * between stops the camera holds for `hold` of the segment on each side, then eases across.
+ * between stops the camera holds for `hold` of the segment on each side, then eases across with a
+ * sine in-out. With `warps[i]` the move from stop `i` runs at an even on-screen speed.
  */
-export function camAtScroll(stops: readonly number[], cams: readonly Cam[], y: number, hold = 0.22): Cam {
+export function camAtScroll(
+  stops: readonly number[],
+  cams: readonly Cam[],
+  y: number,
+  hold = 0.1,
+  warps?: ReadonlyArray<Warp | undefined>,
+): Cam {
   const n = Math.min(stops.length, cams.length);
   if (n === 0) return { s: 1, cx: 0, cy: 0, ox: 0, oy: 0 };
   if (n === 1 || y <= stops[0]!) return cams[0]!;
@@ -87,12 +158,27 @@ export function camAtScroll(stops: readonly number[], cams: readonly Cam[], y: n
   while (i < n - 2 && y >= stops[i + 1]!) i++;
   const span = stops[i + 1]! - stops[i]!;
   const raw = span > 0 ? (y - stops[i]!) / span : 1;
-  const t = easeInOut((raw - hold) / Math.max(1e-6, 1 - 2 * hold));
-  return lerpCam(cams[i]!, cams[i + 1]!, t);
+  const u = easeSine((raw - hold) / Math.max(1e-6, 1 - 2 * hold));
+  const wp = warps?.[i];
+  return lerpCam(cams[i]!, cams[i + 1]!, wp ? warpAt(wp, u) : u);
+}
+
+/** Largest on-screen move (px) of the screen corners and centre between two cameras. */
+export function camDelta(a: Cam, b: Cam, w: number, h: number): number {
+  let d = 0;
+  for (const [qx, qy] of [
+    [0, 0],
+    [w, h],
+    [w / 2, h / 2],
+  ] as const) {
+    const [bx, by] = project(b, a.cx + (qx - a.ox) / a.s, a.cy + (qy - a.oy) / a.s);
+    d = Math.max(d, Math.abs(bx - qx) + Math.abs(by - qy));
+  }
+  return d;
 }
 
 /** Index of the nearest stop and the 0..1 "focus" of that keyframe (1 = fully held). */
-export function focusAt(stops: readonly number[], y: number, hold = 0.22): { index: number; focus: number } {
+export function focusAt(stops: readonly number[], y: number, hold = 0.1): { index: number; focus: number } {
   if (stops.length === 0) return { index: 0, focus: 0 };
   let best = 0;
   for (let i = 1; i < stops.length; i++) {
