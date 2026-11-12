@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Accent, Cap, Chip, Win } from "./fd.tsx";
+import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 import { CONTRACT_ID, EVIDENCE_TXS, explorerAccount, explorerTx, fetchNftCards, type NftCard } from "./lib/chain.ts";
 import { countUp, formatToken, shortHash, tokenToNumber, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
 import type { LiveState } from "./useLive.ts";

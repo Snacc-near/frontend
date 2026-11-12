@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from "react";
 import { bioSound } from "../sound.ts";
-import { Icon, Sim } from "./fd.tsx";
+import { Icon, Sim } from "../ui/fd.tsx";
 import { OFFICIAL, gaugeToTemp, tempToGauge, zoneFromTemp, type ZoneKey } from "./lib/live.ts";
 import { TEE_TX, explorerTx, CONTRACT_ID } from "./lib/chain.ts";
 import { worldBus } from "./world.ts";

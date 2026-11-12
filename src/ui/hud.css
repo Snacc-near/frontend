@@ -1,0 +1,123 @@
+/* Game chrome in the docs-site language of fd.css: square corners, 1 px ink borders and dithered
+   offset shadows. The paper/marigold palette and the figures (SVG, iframe) are unchanged. Loaded
+   after index.css, so these rules win over the older rounded keycap and plate styles. */
+
+/* square corners on the HTML chrome; round status dots keep `rounded-full` */
+.route-app main [class*="rounded"]:not([class*="rounded-full"]) {
+  border-radius: 0;
+}
+
+.receipt-tape {
+  border-radius: 0;
+}
+
+/* dithered offset shadow shared by keycaps and plates */
+.keycap::after,
+.plate-panel::after,
+.hud-seg::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  transform: translate(var(--sh), var(--sh));
+  background: var(--dither);
+  clip-path: polygon(calc(100% - var(--sh)) 0, 100% 0, 100% 100%, 0 100%, 0 calc(100% - var(--sh)), calc(100% - var(--sh)) calc(100% - var(--sh)));
+  pointer-events: none;
+}
+
+/* keycaps: flat paper key, ink border, dither shadow that closes on press */
+.keycap {
+  position: relative;
+  border: 1px solid var(--ink-hi);
+  border-radius: 0;
+  background: var(--paper-hi);
+  box-shadow: none;
+  --sh: 3px;
+}
+
+.keycap:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  background: #fff;
+}
+
+.keycap:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+  --sh: 1px;
+}
+
+.keycap:disabled {
+  border-color: var(--detail);
+  box-shadow: none;
+}
+
+.keycap:disabled::after {
+  opacity: 0.3;
+}
+
+.keycap--primary {
+  background: var(--accent);
+  border-color: var(--ink-hi);
+  box-shadow: none;
+}
+
+.keycap--primary:hover:not(:disabled) {
+  background: #ffbb2e;
+  box-shadow: none;
+}
+
+.keycap--primary:active:not(:disabled),
+.keycap--primary:disabled {
+  box-shadow: none;
+}
+
+/* plates and label plates */
+.plate-panel {
+  position: relative;
+  border: 1px solid var(--ink-hi);
+  border-radius: 0;
+  box-shadow: none;
+  --sh: 4px;
+}
+
+.label-plate {
+  border: 1px solid var(--ink-hi);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--paper-hi);
+}
+
+/* `.label-plate` sets display without a layer, which used to beat Tailwind's `max-sm:hidden` */
+@media (max-width: 639.98px) {
+  .label-plate.max-sm\:hidden {
+    display: none;
+  }
+}
+
+/* segmented switch (demo / live): one bordered strip, keys separated by ink rules */
+.hud-seg {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper-hi);
+  --sh: 4px;
+}
+
+.hud-seg > .keycap {
+  border: 0;
+  border-right: 1px solid var(--ink-hi);
+}
+
+.hud-seg > .keycap:last-child {
+  border-right: 0;
+}
+
+.hud-seg > .keycap::after {
+  display: none;
+}
+
+.hud-seg > .keycap:active:not(:disabled) {
+  transform: none;
+  background-image: var(--dither);
+}

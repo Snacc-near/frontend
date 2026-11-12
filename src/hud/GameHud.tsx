@@ -1,6 +1,7 @@
 /** Cozy mobile-game style HUD: top resource bar, bottom action dock, production queue. */
 import React from "react";
 import type { ProductionItem } from "../game/simulation.ts";
+import type { SkinMode } from "../config/constants.ts";
 import { IconAtp, IconElixir, IconEnzyme, IconSnacc, IconSpore } from "./ResourceIcons.tsx";
 
 export type HudMode = "demo" | "live";
@@ -23,15 +24,16 @@ export interface DockButton {
 interface ResourceBarProps {
   mode: HudMode;
   resources: ResourceValues;
+  skin?: SkinMode;
 }
 
-export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources }) => {
+export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources, skin = "biolab" }) => {
   const pills = [
     { key: "snacc", label: "$SNACC", value: resources.snacc, Icon: IconSnacc },
-    { key: "atp", label: "atp", value: resources.atp, Icon: IconAtp },
-    { key: "spores", label: "spores", value: resources.spores, Icon: IconSpore },
-    { key: "enzymes", label: "enzymes", value: resources.enzymes, Icon: IconEnzyme },
-    { key: "elixir", label: "elixir", value: resources.elixir, Icon: IconElixir },
+    { key: "atp", label: skin === "fintech" ? "int-atp" : "atp", value: resources.atp, Icon: IconAtp },
+    { key: "spores", label: skin === "fintech" ? "coupons" : "spores", value: resources.spores, Icon: IconSpore },
+    { key: "enzymes", label: skin === "fintech" ? "clearing" : "enzymes", value: resources.enzymes, Icon: IconEnzyme },
+    { key: "elixir", label: skin === "fintech" ? "reserve" : "elixir", value: resources.elixir, Icon: IconElixir },
   ];
   return (
     <div

@@ -1,0 +1,128 @@
+/**
+ * Great Feast leaderboard. Live mode shows the backend's `/api/appetite` podium or, when that has
+ * none, reads `get_appetite_meter` + `get_top_feeder` straight from the contract; with no data it
+ * shows an empty state. Demo mode shows invented feeders, each number labelled SIMULATION.
+ */
+import { useEffect, useState } from "react";
+import type { GameMode, SkinMode } from "../config/constants.ts";
+import type { AppetiteViewModel } from "../data/types.ts";
+import { DEMO_FEAST, fetchFeastBoard, formatSnacc, formatSocialPost, type FeastBoard } from "../swap/socialFormat.ts";
+import { CONTRACT_ID } from "../data/nearView.ts";
+import { Modal } from "../ui/Modal.tsx";
+import { CopyButton, Empty, ExtLink } from "../ui/controls.tsx";
+import { Sim, Tag } from "../ui/fd.tsx";
+
+export interface SocialLeaderboardModalProps {
+  onClose: () => void;
+  appetite: AppetiteViewModel | null;
+  mode: GameMode;
+  skin?: SkinMode;
+}
+
+function boardFromAppetite(a: AppetiteViewModel | null): FeastBoard | null {
+  if (!a || a.topFeeders.length === 0) return null;
+  return {
+    epoch: a.currentEpoch,
+    zone: a.zone,
+    crucibleTempMk: a.crucibleTempMk,
+    feastVolume: a.feastVolume,
+    feastTarget: a.feastTarget,
+    topFeeders: a.topFeeders.map((f) => ({ account_id: f.account_id, amount: String(f.amount) })),
+  };
+}
+
+export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab" }: SocialLeaderboardModalProps) {
+  const live = mode === "live";
+  const fromBackend = live ? boardFromAppetite(appetite) : null;
+  const [rpcBoard, setRpcBoard] = useState<FeastBoard | null | "loading">(live && !fromBackend ? "loading" : null);
+
+  useEffect(() => {
+    if (!live || fromBackend) return;
+    const ac = new AbortController();
+    void fetchFeastBoard(ac.signal).then((b) => {
+      if (!ac.signal.aborted) setRpcBoard(b);
+    });
+    return () => ac.abort();
+    // fromBackend is derived from appetite; re-run only on mode change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live]);
+
+  const board: FeastBoard | null = live ? (fromBackend ?? (rpcBoard === "loading" ? null : rpcBoard)) : DEMO_FEAST;
+  const source = live ? (fromBackend ? "backend /api/appetite" : `contract views on ${CONTRACT_ID}`) : "demo fixture";
+  const S = () => (live ? null : <Sim />);
+
+  return (
+    <Modal
+      title="great-feast.md"
+      heading={skin === "fintech" ? "Top feeders board" : "The Great Feast"}
+      onClose={onClose}
+      testId="social-modal"
+      footer={
+        <>
+          <span>source: {source}</span>
+          {live ? <Tag>live · testnet</Tag> : <Sim />}
+        </>
+      }
+    >
+      <div className="fd-stack">
+        {live && rpcBoard === "loading" && !fromBackend ? (
+          <Empty icon="eye">reading get_appetite_meter and get_top_feeder…</Empty>
+        ) : !board ? (
+          <Empty icon="podium">No Great Feast data yet: the backend and the testnet RPC returned nothing. Nothing is shown in its place.</Empty>
+        ) : (
+          <>
+            <dl className="fd-kv" data-testid="feast-stats">
+              <div className="fd-kv__row">
+                <dt>epoch</dt>
+                <dd className="fd-kv__num">
+                  {board.epoch ?? "—"} <S />
+                </dd>
+              </div>
+              <div className="fd-kv__row">
+                <dt>zone · temp</dt>
+                <dd className="fd-kv__num">
+                  {board.zone ?? "—"} · {board.crucibleTempMk ?? "—"} mK <S />
+                </dd>
+              </div>
+              <div className="fd-kv__row">
+                <dt>feast volume</dt>
+                <dd className="fd-kv__num">
+                  {formatSnacc(board.feastVolume)} of {formatSnacc(board.feastTarget)} $SNACC <S />
+                </dd>
+              </div>
+            </dl>
+            {board.topFeeders.length === 0 ? (
+              <Empty icon="podium">No feeds recorded this epoch.</Empty>
+            ) : (
+              <ol className="fd-list" aria-label="top feeders" data-testid="feast-podium">
+                {board.topFeeders.slice(0, 3).map((f, i) => (
+                  <li key={f.account_id} className="fd-row" data-first={i === 0 ? "" : undefined}>
+                    <span className="fd-list__rank" aria-hidden="true">
+                      {i + 1}
+                    </span>
+                    <code className="feast-account">{f.account_id}</code>
+                    <span className="fd-num feast-amount">
+                      {formatSnacc(f.amount)} $SNACC <S />
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <section className="fd-stack" aria-label="near.social post">
+              <div className="fd-row fd-row--between">
+                <span className="fd-sub">near.social post (markdown)</span>
+                <CopyButton label="copy post" text={formatSocialPost(board, { simulated: !live })} />
+              </div>
+              <pre className="fd-pre">{formatSocialPost(board, { simulated: !live })}</pre>
+              <p className="fd-field__hint">
+                This app posts nothing; copy the text and post it yourself on <ExtLink href="https://near.social">near.social</ExtLink>.
+              </p>
+            </section>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+export default SocialLeaderboardModal;

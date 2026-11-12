@@ -3,12 +3,9 @@
  * the curated list of real testnet transactions from the gladi evidence pack.
  */
 import { safeNftMediaSrc } from "./live.ts";
+import { CONTRACT_ID, explorerAccount, explorerTx, viewCall } from "../../data/nearView.ts";
 
-export const CONTRACT_ID = "snacc-v001.testnet";
-const RPCS = ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"];
-
-export const explorerTx = (hash: string) => `https://testnet.nearblocks.io/txns/${hash}`;
-export const explorerAccount = (id: string) => `https://testnet.nearblocks.io/address/${id}`;
+export { CONTRACT_ID, explorerAccount, explorerTx };
 export const explorerToken = (contract: string, tokenId: string) =>
   `https://testnet.nearblocks.io/nft-token/${contract}/${encodeURIComponent(tokenId)}`;
 
@@ -18,51 +15,6 @@ export interface NftCard {
   title: string;
   description: string;
   src: string | null;
-}
-
-function b64(json: unknown): string {
-  return btoa(JSON.stringify(json));
-}
-
-async function viewCall<T>(method: string, args: unknown, signal?: AbortSignal): Promise<T | null> {
-  for (const url of RPCS) {
-    if (signal?.aborted) return null;
-    // Each endpoint gets 7 s before the next one is tried.
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 7000);
-    const relay = () => ac.abort();
-    signal?.addEventListener("abort", relay);
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: ac.signal,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "snacc-landing",
-          method: "query",
-          params: {
-            request_type: "call_function",
-            finality: "final",
-            account_id: CONTRACT_ID,
-            method_name: method,
-            args_base64: b64(args),
-          },
-        }),
-      });
-      if (!res.ok) continue;
-      const body = (await res.json()) as { result?: { result?: number[] } };
-      const bytes = body.result?.result;
-      if (!Array.isArray(bytes)) continue;
-      return JSON.parse(new TextDecoder().decode(new Uint8Array(bytes))) as T;
-    } catch {
-      // timeout or network error: try the next endpoint (unless the caller aborted)
-    } finally {
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", relay);
-    }
-  }
-  return null;
 }
 
 interface RawToken {
@@ -86,30 +38,5 @@ export async function fetchNftCards(limit = 9, signal?: AbortSignal): Promise<Nf
   return raw ? raw.map(toNftCard) : null;
 }
 
-export interface EvidenceTx {
-  hash: string;
-  action: string;
-  detail: string;
-}
-
-/**
- * Real testnet transactions, copied from `evidence/gladi-manifest.json` in the Snacc umbrella repo
- * (rehearsal run 2026-11-09, contract `snacc-v001.testnet`).
- */
-export const EVIDENCE_TXS: readonly EvidenceTx[] = [
-  { hash: "5JCAmSL7pLTV8mShrNuEtG5WLPkCqKkYCZBf5WGtQ2wY", action: "incubate", detail: "Extractor, strain 1" },
-  { hash: "4hnA4pEUqghdtN8WycJJXCnSYQSEZ9F5DQamAuEub3GF", action: "feed", detail: "strain 1" },
-  { hash: "4ABtdBdjYkynQXXMsYD8ZKUwMtNAWX1wgEpREsX3i4nH", action: "merge (splice)", detail: "strain 1 absorbs 2" },
-  { hash: "8dh9iuu1HaiFRFMSKiimnHj14saC3nqNRHz4yCiurYSf", action: "extract spores", detail: "ignis" },
-  { hash: "9bTCpP7FJfgTLmHw4vXJHPjpEiQEAdcosnS9iRoLuvY5", action: "transmute", detail: "ignis + lumin to redactase" },
-  { hash: "8Zi3VxSmGrmWEZPM346XPQGt4DS1fAw1HnB3MicKtxCA", action: "synthesize elixir", detail: "homeostasis" },
-  { hash: "B8xdaukdnf3Fh9ZkMNfXxXW7TrHVLZLeXQNdYyBtD2AG", action: "apply_tee_mutation_zero_trust", detail: "strain 5, TEE-signed" },
-  { hash: "ERBRL4rTS6JHEKVsSumLYtru1hXsSYWdkGJH8d1krJaL", action: "ft_burn", detail: "$SNACC burn" },
-  { hash: "AhEk4TNNeTj4orchvXSuPood8vAxTiQNWhZZwSdD9JH9", action: "harvest_starving_strain", detail: "snack it" },
-  { hash: "4o4qwoGZtR7HE5E3VnjQZpXwDicpa9QVBzXHS1YP2v4f", action: "hostile_takeover_splice", detail: "steal a plate" },
-  { hash: "HfhZG6sAdqpKRSJsYRagD9mapCq7JrJvPthkUxFUZQQn", action: "nft_transfer", detail: "strain 4 to a second account" },
-  { hash: "9F4KGd9bZXwtQEpvJGQYcx2Vz7fsa9LbyyTySxYhfLjW", action: "advance_epoch", detail: "close epoch 0" },
-];
-
-/** The TEE-verified mutation, linked from the enclave chapter. */
-export const TEE_TX = EVIDENCE_TXS.find((t) => t.action === "apply_tee_mutation_zero_trust")!;
+/** Real testnet transactions (rehearsal run 2026-11-09), shared with the game screens. */
+export { EVIDENCE_TXS, TEE_TX, type EvidenceTx } from "../../data/evidence.ts";

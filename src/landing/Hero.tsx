@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CHAPTERS, LINKS } from "./chapters.ts";
-import { Cap, Chip } from "./fd.tsx";
+import { Cap, Chip } from "../ui/fd.tsx";
 import { eventLabel, formatToken, shortHash, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
 import { explorerAccount } from "./lib/chain.ts";
 import type { LiveState } from "./useLive.ts";

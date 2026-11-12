@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MacroZone } from "./config/zones.ts";
 import { classifyZone } from "./config/zones.ts";
 import type { SkinMode } from "./config/constants.ts";
-import { INITIAL_ATP } from "./config/constants.ts";
+import { INITIAL_ATP, SKIN_LABELS } from "./config/constants.ts";
 import type {
   AppetiteViewModel,
   BreachLogItem,
@@ -23,6 +23,12 @@ import { SkinSwitch } from "./hud/SkinSwitch.tsx";
 import { AppetitePanel } from "./hud/AppetitePanel.tsx";
 import { ThermalGauge } from "./hud/ThermalGauge.tsx";
 import { BreachLog } from "./hud/BreachLog.tsx";
+import "./ui/fd.css";
+import "./ui/hud.css";
+import { Icon } from "./ui/fd.tsx";
+import { ToolsToolbar, type ToolId } from "./hud/ToolsToolbar.tsx";
+import { clearGuestLabel, readGuestLabel, saveGuestLabel, type GuestLabel } from "./auth/guestLabel.ts";
+import { npcName } from "./data/npc.ts";
 import { ActionDock, ProductionQueuePanel, ResourceBar, type DockButton } from "./hud/GameHud.tsx";
 import { CellLab } from "./hud/CellLab.tsx";
 import {
@@ -40,6 +46,14 @@ import { bioSound } from "./sound.ts";
 
 import { ColonyPlate } from "./plate/ColonyPlate.tsx";
 import { IrisOverlay } from "./hud/IrisOverlay.tsx";
+
+// Tool windows load on first open, outside the game's entry chunk.
+const SwapPanel = React.lazy(() => import("./hud/SwapPanel.tsx"));
+const NpcPanel = React.lazy(() => import("./hud/NpcPanel.tsx"));
+const SocialLeaderboardModal = React.lazy(() => import("./hud/SocialLeaderboardModal.tsx"));
+const ThesisDashboardModal = React.lazy(() => import("./hud/ThesisDashboardModal.tsx"));
+const GuestLabelModal = React.lazy(() => import("./hud/GuestLabelModal.tsx"));
+const RecipeSearchModal = React.lazy(() => import("./hud/RecipeSearchModal.tsx"));
 
 const demoSeedLogs: BreachLogItem[] = [
   {
@@ -90,7 +104,9 @@ export const App: React.FC = () => {
   const [crucibleTempMk, setCrucibleTempMk] = useState<number | null>(null);
   const [reducedMotion] = useState<boolean>(() => prefersReducedMotion());
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
-  const [userAccount, setUserAccount] = useState("");
+  const [guest, setGuest] = useState<GuestLabel | null>(() => readGuestLabel());
+  // The guest label may only seed the highlight filter with a valid `.testnet` account.
+  const [userAccount, setUserAccount] = useState(() => readGuestLabel()?.account ?? "");
   const [liveStrains, setLiveStrains] = useState<StrainSummary[]>([]);
   const [indexerIncomplete, setIndexerIncomplete] = useState(false);
   const [selectedStrain, setSelectedStrain] = useState<StrainDetail | null>(null);
@@ -104,6 +120,8 @@ export const App: React.FC = () => {
   const [appetiteError, setAppetiteError] = useState(false);
   const [sim, setSim] = useState<SimulationState>(() => createInitialSimulation());
   const [panelsOpen, setPanelsOpen] = useState(false);
+  const [tool, setTool] = useState<ToolId | null>(null);
+  const closeTool = useCallback(() => setTool(null), []);
   const [toast, setToast] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [iris, setIris] = useState<{ phase: "closing" | "opening"; cx: number; cy: number } | null>(null);
@@ -208,11 +226,11 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const poller = new TelemetryPoller({
-      onMacroUpdate: (macro) => {
+      onMacroUpdate: (macroData) => {
         setIsBackendConnected(true);
         if (mode === "live") {
-          setCrucibleTempMk(macro.crucibleTemp);
-          setZone(classifyZone(macro.crucibleTemp));
+          setCrucibleTempMk(macroData.crucibleTemp);
+          setZone(classifyZone(macroData.crucibleTemp));
         }
       },
       onStrainsUpdate: (strains) => {
@@ -548,7 +566,7 @@ export const App: React.FC = () => {
                 <span className="lp-label">fig</span>
                 <span className="font-mono text-xs font-bold tracking-wider text-[var(--ink-hi)]">
                   $SNACC <span className="font-normal text-[var(--ink)]">·</span>{" "}
-                  <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">living cell crucible</span>
+                  <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">{SKIN_LABELS[skin].crucible}</span>
                 </span>
               </span>
               <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
@@ -562,7 +580,7 @@ export const App: React.FC = () => {
               <div className="pointer-events-auto">
                 <SkinSwitch skin={skin} onChange={setSkin} />
               </div>
-              <ResourceBar mode={mode} resources={resources} />
+              <ResourceBar mode={mode} resources={resources} skin={skin} />
             </div>
           </header>
 
@@ -579,14 +597,14 @@ export const App: React.FC = () => {
                   onClick={() => setMoreOpen((v) => !v)}
                   aria-expanded={moreOpen}
                   aria-label="more options"
-                  className="keycap min-h-[40px] min-w-[40px] px-2 text-[15px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+                  className="keycap inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-2 focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
                 >
-                  ⋯
+                  <Icon name="more" />
                 </button>
               </div>
             </div>
             <div className="pointer-events-auto w-full min-w-0">
-              <ResourceBar mode={mode} resources={resources} />
+              <ResourceBar mode={mode} resources={resources} skin={skin} />
             </div>
             {moreOpen ? (
               <div className="pointer-events-auto flex flex-col gap-1.5 rounded-xl border border-[var(--edge)] bg-[var(--panel)] p-2 shadow-[0_2px_0_var(--edge)]" data-testid="mobile-more">
@@ -624,16 +642,15 @@ export const App: React.FC = () => {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setPanelsOpen((v) => !v)}
-              aria-expanded={panelsOpen}
-              className="keycap pointer-events-auto min-h-[40px] px-4 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
-            >
-              telemetry {panelsOpen ? "hide" : "show"}
-            </button>
-            <span className="label-plate pointer-events-auto lowercase">
-              <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · /api data only"}</span>
+            <ToolsToolbar
+              skin={skin}
+              panelsOpen={panelsOpen}
+              onTogglePanels={() => setPanelsOpen((v) => !v)}
+              onOpen={setTool}
+              guestLabel={guest?.label || null}
+            />
+            <span className="label-plate pointer-events-auto hidden lowercase sm:inline-flex">
+              <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · testnet reads only"}</span>
             </span>
           </div>
           {panelsOpen ? (
@@ -710,6 +727,7 @@ export const App: React.FC = () => {
           isLoading={isLoadingStrain}
           zone={zone}
           mode={mode}
+          skin={skin}
           svgDataUri={svgDataUri}
           svgStatus={svgStatus}
           simOrganel={sim.organel}
@@ -717,8 +735,55 @@ export const App: React.FC = () => {
           onClose={handleLabClose}
           onAction={handleLabAction}
           onUpgrade={handleUpgrade}
+          onOpenNpcMarket={() => setTool("npc")}
         />
       ) : null}
+
+      <React.Suspense fallback={<div className="fd-modal fd-ui" role="status" aria-label="loading tool" />}>
+        {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
+        {tool === "social" ? <SocialLeaderboardModal onClose={closeTool} appetite={appetite} mode={mode} skin={skin} /> : null}
+        {tool === "thesis" ? <ThesisDashboardModal onClose={closeTool} mode={mode} skin={skin} /> : null}
+        {tool === "npc" ? (
+          <NpcPanel
+            onClose={closeTool}
+            skin={skin}
+            crucibleTempMk={crucibleTempMk}
+            mode={mode}
+            userSnaccBalance={sim.snacc}
+            onBuySpores={(npcId, amount, totalCost) => {
+              setSim((prev) => ({
+                ...prev,
+                snacc: Math.max(0, prev.snacc - totalCost),
+                spores: prev.spores + amount,
+              }));
+              setMilestoneToast(`+${amount} spores from ${npcName(npcId, skin)}`);
+              showToast(`simulation: bought ${amount} spores for ${totalCost} $SNACC`);
+            }}
+          />
+        ) : null}
+        {tool === "guest" ? (
+          <GuestLabelModal
+            current={guest}
+            skin={skin}
+            onClose={closeTool}
+            onSave={(next) => {
+              const saved = saveGuestLabel(next);
+              setGuest(saved);
+              if (saved.account) setUserAccount(saved.account);
+              setTool(null);
+              showToast(saved.label ? `guest label set: ${saved.label} (local only)` : "guest label saved (local only)");
+            }}
+            onClear={() => {
+              clearGuestLabel();
+              if (guest?.account && userAccount === guest.account) setUserAccount("");
+              setGuest(null);
+              setTool(null);
+              showToast("guest label cleared");
+            }}
+          />
+        ) : null}
+        {tool === "recipes" ? <RecipeSearchModal onClose={closeTool} skin={skin} zone={zone} /> : null}
+      </React.Suspense>
     </main>
   );
 };

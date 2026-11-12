@@ -4,7 +4,7 @@ import { CONTRACT_ID, explorerAccount } from "./lib/chain.ts";
 import { OFFICIAL } from "./lib/live.ts";
 import { prefixIds, type FigureSource } from "./lib/figure.ts";
 import { World } from "./world.ts";
-import { Accent, Cap, Chip, Win } from "./fd.tsx";
+import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 
 const FINALE = CHAPTERS[6]!;
 

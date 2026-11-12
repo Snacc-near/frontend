@@ -1,3 +1,4 @@
+import "../ui/fd.css";
 import "./landing.css";
 import { useEffect, useRef, useState } from "react";
 import { SiteFooter } from "./SiteFooter.tsx";

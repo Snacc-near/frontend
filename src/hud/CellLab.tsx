@@ -2,6 +2,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { MacroZone } from "../config/zones.ts";
+import type { SkinMode } from "../config/constants.ts";
+import { SKIN_LABELS } from "../config/constants.ts";
+import { Icon } from "../ui/fd.tsx";
 import type { HudMode } from "./GameHud.tsx";
 import type { LabAction } from "../game/simulation.ts";
 import type { OrganelleLevels } from "../game/simulation.ts";
@@ -33,6 +36,7 @@ interface CellLabProps {
   isLoading: boolean;
   zone: MacroZone;
   mode: HudMode;
+  skin?: SkinMode;
   svgDataUri: string | null;
   svgStatus: SvgLoadStatus;
   simOrganel: OrganelleLevels;
@@ -41,6 +45,7 @@ interface CellLabProps {
   /** Runs the demo sim effect (or a live "preview only" toast). Return false to refuse (no animation). */
   onAction: (action: LabAction) => boolean | void;
   onUpgrade: (slot: "mitokondria" | "nucleus" | "lysosome") => void;
+  onOpenNpcMarket?: () => void;
 }
 
 const ORGANELLES: {
@@ -80,6 +85,7 @@ export const CellLab: React.FC<CellLabProps> = ({
   isLoading,
   zone,
   mode,
+  skin = "biolab",
   svgDataUri,
   svgStatus,
   simOrganel,
@@ -87,7 +93,9 @@ export const CellLab: React.FC<CellLabProps> = ({
   onClose,
   onAction,
   onUpgrade,
+  onOpenNpcMarket,
 }) => {
+  const labels = SKIN_LABELS[skin];
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [ready, setReady] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -389,24 +397,37 @@ export const CellLab: React.FC<CellLabProps> = ({
             </section>
 
             <section className="plate-panel p-3" aria-label="production chain">
-              <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">production chain</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold lowercase text-[var(--ink-hi)]">{labels.productionChain}</h3>
+                {onOpenNpcMarket && (
+                  <button
+                    type="button"
+                    onClick={onOpenNpcMarket}
+                    aria-haspopup="dialog"
+                    className="keycap inline-flex min-h-[40px] items-center gap-1.5 px-3 text-[11px] font-semibold focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+                  >
+                    <Icon name="scale" />
+                    <span>{skin === "fintech" ? "market makers" : "npc merchants"}</span>
+                  </button>
+                )}
+              </div>
               <ol className="flex flex-wrap items-center gap-1 text-[11px] lowercase text-[var(--ink-hi)]">
                 <li className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2 py-1">
-                  <IconSpore className="h-3.5 w-3.5" /> spores
+                  <IconSpore className="h-3.5 w-3.5" /> {labels.spores}
                 </li>
                 <li aria-hidden="true">→</li>
                 <li className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2 py-1">
-                  <IconEnzyme className="h-3.5 w-3.5" /> enzyme
+                  <IconEnzyme className="h-3.5 w-3.5" /> {labels.enzymes}
                 </li>
                 <li aria-hidden="true">→</li>
                 <li className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2 py-1">
-                  <IconElixir className="h-3.5 w-3.5" /> elixir
+                  <IconElixir className="h-3.5 w-3.5" /> {labels.elixir}
                 </li>
               </ol>
             </section>
 
             <section className="plate-panel p-3" aria-label="on chain svg">
-              <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">on-chain svg</h3>
+              <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">{labels.onChainSvg}</h3>
               <div className="onchain-frame rounded-xl border border-[var(--line)] bg-[var(--pl-base)] p-2">
                 {live && svgStatus === "loading" ? (
                   <div className="eyepiece relative flex h-32 flex-col rounded-lg border border-[var(--line)]" role="status" aria-label="focusing">

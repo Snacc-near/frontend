@@ -194,7 +194,7 @@ export function describeZonePolicy(
         : "Homeostatic Balance — Optimal Cellular Division & Synthesis",
     policyRule:
       skin === "fintech"
-        ? `Velocity inside ${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK}–${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK band; 100% of non-burn fees route to Treasury & Industrial Dividend Pool.`
+        ? `Velocity inside ${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK}–${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK band; 100% of non-burn fees route to the treasury and the industrial pool.`
         : `Thermal equilibrium (${OFFICIAL_CONSTANTS.HYPOTHERMIA_THRESHOLD_MK}–${OFFICIAL_CONSTANTS.FEVER_THRESHOLD_MK} mK) sustains steady basal metabolic rate across all castes.`,
     rateLabel: "0.00% NEUTRAL BAND",
     invariantCode: "EN-105",
