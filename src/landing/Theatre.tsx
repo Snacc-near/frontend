@@ -152,6 +152,8 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
     };
 
     const measure = () => {
+      // a card that changes height only needs a new pin; the camera keeps easing from where it is
+      const resized = st.w !== stage.clientWidth || st.h !== stage.clientHeight;
       st.w = stage.clientWidth;
       st.h = stage.clientHeight;
       const vb = `0 0 ${st.w} ${st.h}`;
@@ -182,8 +184,10 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       });
       const mid = frameFor("left", st.w, st.h);
       st.levels = SCALE_LEVEL_ANCHORS.map((id) => fitAnchor(anchors[id]!, mid, 1.2).s);
-      st.cur = null;
-      st.written = null;
+      if (resized) {
+        st.cur = null;
+        st.written = null;
+      }
       st.hero = -1;
       st.cardK = [];
       st.tagText = "";

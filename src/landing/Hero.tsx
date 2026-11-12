@@ -42,35 +42,35 @@ export function HeroBlock({ live, finePointer, style }: { live: LiveState; fineP
   return (
     <section id={HERO.id} data-block="" className="ln-block ln-block--hero" style={style} aria-labelledby="ln-hero-title">
       <div className="ln-pin">
-      <div className="ln-hero__copy">
-        <Chip className="ln-rise" dot={live.status === "live" ? "live" : "accent"}>
-          fig-01.incubator · NEAR testnet
-        </Chip>
-        <h1 id="ln-hero-title" className="ln-hero__title">
-          <Words text={HERO.headline} accent={HERO.accent} start={180} />
-        </h1>
-        <p className="ln-hero__line ln-rise" style={{ animationDelay: "560ms" }}>
-          {HERO.line}
-        </p>
-        <div className="ln-cta ln-rise" style={{ animationDelay: "700ms" }}>
-          <a className="fd-btn fd-btn--primary" href={LINKS.app} data-magnetic="">
-            Enter the lab
-          </a>
-          <a className="fd-btn" href="#ch-02" data-magnetic="">
-            Scroll <span aria-hidden="true">↓</span>
-          </a>
-        </div>
-        {finePointer ? (
-          <p className="ln-hint ln-rise" style={{ animationDelay: "900ms" }} aria-hidden="true">
-            <Cap icon="eye">move the lens over the dish</Cap>
-            <Cap icon="grid">hover the door</Cap>
+        <div className="ln-hero__copy">
+          <Chip className="ln-rise" dot={live.status === "live" ? "live" : "accent"}>
+            fig-01.incubator · NEAR testnet
+          </Chip>
+          <h1 id="ln-hero-title" className="ln-hero__title">
+            <Words text={HERO.headline} accent={HERO.accent} start={180} />
+          </h1>
+          <p className="ln-hero__line ln-rise" style={{ animationDelay: "560ms" }}>
+            {HERO.line}
           </p>
-        ) : null}
-      </div>
-      <div className="ln-hero__foot">
-        <Ticker live={live} />
-        <Ruler />
-      </div>
+          <div className="ln-cta ln-rise" style={{ animationDelay: "700ms" }}>
+            <a className="fd-btn fd-btn--primary" href={LINKS.app} data-magnetic="">
+              Enter the lab
+            </a>
+            <a className="fd-btn" href="#ch-02" data-magnetic="">
+              Scroll <span aria-hidden="true">↓</span>
+            </a>
+          </div>
+          {finePointer ? (
+            <p className="ln-hint ln-rise" style={{ animationDelay: "900ms" }} aria-hidden="true">
+              <Cap icon="eye">move the lens over the dish</Cap>
+              <Cap icon="grid">hover the door</Cap>
+            </p>
+          ) : null}
+        </div>
+        <div className="ln-hero__foot">
+          <Ticker live={live} />
+          <Ruler />
+        </div>
       </div>
     </section>
   );
