@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { CHAPTERS } from "./chapters.ts";
 import { AppetiteDemo, ColonyDemo, EnclaveDemo, FeedDemo, MetabolismDemo } from "./demos.tsx";
 import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 import { HeroBlock, Loader, Ruler, Ticker } from "./Hero.tsx";
 import { DEFAULT_ANCHORS, FIGURE_SVG_URL, type FigureSource } from "./lib/figure.ts";
 import { LiveCrop } from "./LiveCrop.tsx";
-import { STAGE_CUES } from "./story.ts";
+import { STAGE_CUES, theatreMap, type TheatreBlock } from "./story.ts";
 import { Theatre } from "./Theatre.tsx";
 import type { LiveState } from "./useLive.ts";
 
@@ -45,20 +45,39 @@ function ChapterCard({ index, live }: { index: number; live: LiveState }) {
   );
 }
 
+const MAP = theatreMap();
+
+/** Block position from the static scroll map: CSS lays the theatre out, so it never shifts later. */
+export function blockStyle(b: TheatreBlock): CSSProperties {
+  const r = (v: number) => String(Math.round(v * 10000) / 10000);
+  return { "--top": r(b.top), "--len": r(b.len), "--to-stop": r(b.toStop) } as CSSProperties;
+}
+
 /** Desktop: pinned stage + camera. */
 export function TheatreStory({ source, live, finePointer }: { source: FigureSource | null; live: LiveState; finePointer: boolean }) {
   const blocks = [
-    <HeroBlock key="hero" live={live} finePointer={finePointer} />,
+    <HeroBlock key="hero" live={live} finePointer={finePointer} style={blockStyle(MAP.blocks[0]!)} />,
     ...STORY.map((c, i) => {
       const cue = STAGE_CUES[i + 1]!;
+      const b = MAP.blocks[i + 1]!;
       return (
-        <section key={c.id} id={c.id} data-block="" className={`ln-block ln-block--${cue.side}`} aria-labelledby={`${c.id}-title`}>
-          <ChapterCard index={i} live={live} />
+        <section
+          key={c.id}
+          id={c.id}
+          data-block=""
+          data-spy={String(Math.round(b.spy * 10000) / 10000)}
+          className={`ln-block ln-block--${cue.side}`}
+          style={blockStyle(b)}
+          aria-labelledby={`${c.id}-title`}
+        >
+          <div className="ln-pin">
+            <ChapterCard index={i} live={live} />
+          </div>
         </section>
       );
     }),
   ];
-  return <Theatre source={source} finePointer={finePointer} blocks={blocks} overlay={<Loader ready={!!source} />} />;
+  return <Theatre source={source} finePointer={finePointer} blocks={blocks} map={MAP} overlay={<Loader ready={!!source} />} />;
 }
 
 /**

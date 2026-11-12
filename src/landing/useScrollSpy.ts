@@ -17,7 +17,14 @@ export function useScrollSpy(ids: readonly string[]): string {
     let raf = 0;
     const measure = () => {
       raf = 0;
-      const tops = ids.map((id) => document.getElementById(id)?.getBoundingClientRect().top ?? null);
+      // Theatre blocks overlap; `data-spy` (viewport heights) moves the top the spy sees to where the
+      // block's card fades in.
+      const tops = ids.map((id) => {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const k = Number(el.dataset.spy ?? 0);
+        return el.getBoundingClientRect().top + (Number.isFinite(k) ? k * window.innerHeight : 0);
+      });
       const next = ids[activeIndex(tops, window.innerHeight * PROBE)] ?? ids[0] ?? "";
       setActive((prev) => (prev === next ? prev : next));
     };

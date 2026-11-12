@@ -1,41 +1,61 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   camAtScroll,
+  camDelta,
   camTransform,
   clamp01,
   easeInOut,
   fitAnchor,
   focusAt,
   lerpCam,
+  pathWarp,
   project,
   scaleKey,
+  smoothK,
   zoomAbout,
   type Anchor,
   type Cam,
+  type Warp,
 } from "./lib/camera.ts";
 import { DEFAULT_ANCHORS, prefixIds, type FigureSource } from "./lib/figure.ts";
 import { Icon } from "../ui/fd.tsx";
-import { LENS_PARTS, SCALE_LEVEL_ANCHORS, STAGE_CUES, frameFor } from "./story.ts";
+import { LENS_PARTS, SCALE_LEVEL_ANCHORS, STAGE_CUES, THEATRE, cardOpacity, frameFor, type TheatreMap } from "./story.ts";
 import { World, worldBus } from "./world.ts";
 
 const LENS_R = 112;
 const LENS_ZOOM = 4;
+/** Share of each camera move held still at both ends. */
+const HOLD = 0.08;
+/** Time constant of the camera smoothing (ms): frame-rate independent, so a slow frame never lurches. */
+const CAM_TAU = 90;
+/** Camera changes smaller than this (screen px) are not written to the DOM. */
+const EPS = 0.05;
+/** The figure's idle loops pause until this long after the last scroll event (ms). */
+const SCROLL_IDLE = 150;
 
 interface Props {
   source: FigureSource | null;
   finePointer: boolean;
   /** One node per stage cue: the hero block first, then the chapter blocks. */
   blocks: ReactNode[];
+  /** Static scroll map the blocks were laid out with (viewport heights). */
+  map: TheatreMap;
   /** Rendered inside the pinned stage (loader, etc.). */
   overlay?: ReactNode;
 }
 
+const smoothstep = (t: number) => {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
+};
+
 /**
  * Pinned 100vh stage holding the incubator figure. Scroll position drives the camera on `#cam`
- * through the chapter anchors; chapter blocks scroll over the stage. One rAF loop runs only while
- * something changes and the theatre is on screen.
+ * through the chapter anchors; chapter cards sit in sticky layers over the stage and cross-fade.
+ * One rAF loop runs only while something changes and the theatre is on screen; it reads no layout
+ * per frame and writes only what changed.
  */
-export function Theatre({ source, finePointer, blocks, overlay }: Props) {
+export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
   const theatreRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -49,6 +69,7 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
   const leaderTagRef = useRef<HTMLSpanElement>(null);
   const leaderTagTextRef = useRef<HTMLSpanElement>(null);
   const overlaySvgRef = useRef<SVGSVGElement>(null);
+  const keyRef = useRef<HTMLDivElement>(null);
   const keyBarRef = useRef<HTMLSpanElement>(null);
   const keyLabelRef = useRef<HTMLSpanElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -69,7 +90,12 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
     const lensWorld = lensSvg ? new World(lensSvg, "lz-") : null;
     const camEl = world.el("cam");
     const lensCam = lensWorld?.el("cam") ?? null;
+    const layers = (lensWorld ? [world, lensWorld] : [world]).flatMap((w) => [w.el<SVGGElement>("layer-front"), w.el<SVGGElement>("layer-back")]);
     const anchors: Record<string, Anchor> = { ...DEFAULT_ANCHORS, ...source.cam.anchors };
+    const blockEls = Array.from(theatre.querySelectorAll<HTMLElement>("[data-block]"));
+    const cardEls = blockEls.slice(1).map((b) => b.querySelector<HTMLElement>("[data-card]"));
+    const heroCopy = blockEls[0]?.querySelector<HTMLElement>(".ln-hero__copy") ?? null;
+    const heroFoot = blockEls[0]?.querySelector<HTMLElement>(".ln-hero__foot") ?? null;
 
     // Part positions, measured once with an identity camera.
     camEl?.removeAttribute("transform");
@@ -85,10 +111,15 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
     const st = {
       w: 0,
       h: 0,
+      top0: 0,
       stops: [] as number[],
       cams: [] as Cam[],
+      warps: [] as Warp[],
       levels: [] as number[],
+      cards: [] as Array<{ l: number; r: number; t: number } | null>,
       cur: null as Cam | null,
+      written: null as Cam | null,
+      lastT: 0,
       raf: 0,
       visible: true,
       px: -1,
@@ -101,15 +132,28 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       sny: 0,
       lensOn: false,
       active: -1,
-      shown: -1,
-      headB: 0,
-      barT: 0,
-      keyLabel: "",
-      blocks: [] as HTMLElement[],
       door: "closed" as "closed" | "ajar",
+      // last written values, so unchanged frames touch nothing
+      layerFront: "",
+      layerBack: "",
+      hero: -1,
+      cardK: [] as number[],
+      cardOn: [] as boolean[],
+      keyLabel: "",
+      keyBar: "",
+      keyOp: "",
+      keySide: "",
+      deep: false,
+      tagText: "",
+      tagW: 0,
+      leaderOn: true,
+      scrolling: false,
+      scrollTimer: 0,
     };
 
     const measure = () => {
+      // a card that changes height only needs a new pin; the camera keeps easing from where it is
+      const resized = st.w !== stage.clientWidth || st.h !== stage.clientHeight;
       st.w = stage.clientWidth;
       st.h = stage.clientHeight;
       const vb = `0 0 ${st.w} ${st.h}`;
@@ -120,28 +164,33 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
         lensHostRef.current.style.width = `${st.w}px`;
         lensHostRef.current.style.height = `${st.h}px`;
       }
-      st.blocks = Array.from(theatre.querySelectorAll<HTMLElement>("[data-block]"));
-      st.stops = st.blocks.map((b, i) => (i === 0 ? 0 : b.offsetTop + (b.offsetHeight - st.h) / 2));
+      st.top0 = theatre.getBoundingClientRect().top + window.scrollY;
+      st.stops = map.stops.map((v) => v * st.h);
       // Hero: keep the machine clear of the headline column and of the ticker strip.
-      const heroCopy = st.blocks[0]?.querySelector<HTMLElement>(".ln-hero__copy");
-      const heroFoot = st.blocks[0]?.querySelector<HTMLElement>(".ln-hero__foot");
       const heroInset = {
         left: heroCopy ? heroCopy.getBoundingClientRect().right - stage.getBoundingClientRect().left + 28 : 0,
         bottom: heroFoot ? st.h - heroFoot.offsetTop + 14 : 0,
       };
       st.cams = STAGE_CUES.map((cue) => fitAnchor(anchors[cue.anchor] ?? DEFAULT_ANCHORS[cue.anchor]!, frameFor(cue.side, st.w, st.h, heroInset), cue.margin));
+      st.warps = st.cams.slice(1).map((b, i) => pathWarp(st.cams[i]!, b, st.w, st.h));
       // Chapter cards: pin each one centred between the header and the status bar.
-      st.headB = document.querySelector(".ln-header")?.getBoundingClientRect().bottom ?? 0;
-      st.barT = st.h - (document.querySelector<HTMLElement>(".fd-status")?.offsetHeight ?? 0);
-      for (const b of st.blocks) {
-        const card = b.querySelector<HTMLElement>("[data-card]");
-        if (!card) continue;
-        const pin = Math.max(st.headB + 10, st.headB + (st.barT - st.headB - card.offsetHeight) / 2);
-        card.style.setProperty("--pin", `${Math.round(pin)}px`);
-      }
+      const headB = document.querySelector(".ln-header")?.getBoundingClientRect().bottom ?? 0;
+      const barT = st.h - (document.querySelector<HTMLElement>(".fd-status")?.offsetHeight ?? 0);
+      st.cards = cardEls.map((card) => {
+        if (!card) return null;
+        const pin = Math.round(Math.max(headB + 10, headB + (barT - headB - card.offsetHeight) / 2));
+        card.style.setProperty("--pin", `${pin}px`);
+        return { l: card.offsetLeft, r: card.offsetLeft + card.offsetWidth, t: pin };
+      });
       const mid = frameFor("left", st.w, st.h);
       st.levels = SCALE_LEVEL_ANCHORS.map((id) => fitAnchor(anchors[id]!, mid, 1.2).s);
-      st.cur = null;
+      if (resized) {
+        st.cur = null;
+        st.written = null;
+      }
+      st.hero = -1;
+      st.cardK = [];
+      st.tagText = "";
       schedule();
     };
 
@@ -149,45 +198,85 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       if (!st.raf && st.visible) st.raf = requestAnimationFrame(frame);
     };
 
-    const frame = () => {
+    const frame = (now: number) => {
       st.raf = 0;
-      const y = -theatre.getBoundingClientRect().top;
-      const target = { ...camAtScroll(st.stops, st.cams, y) };
+      const dt = st.lastT ? Math.min(250, now - st.lastT) : 1000 / 60;
+      st.lastT = now;
+      const y = window.scrollY - st.top0;
+      const yh = st.h > 0 ? y / st.h : 0;
+      const target = { ...camAtScroll(st.stops, st.cams, y, HOLD, st.warps) };
       const heroK = clamp01(1 - y / (st.h * 0.55));
       // pointer parallax, eased, strongest in the hero
-      st.snx += (st.nx - st.snx) * 0.12;
-      st.sny += (st.ny - st.sny) * 0.12;
+      const kp = smoothK(dt, 110);
+      st.snx += (st.nx - st.snx) * kp;
+      st.sny += (st.ny - st.sny) * kp;
       target.ox -= st.snx * 16 * (0.35 + 0.65 * heroK);
       target.oy -= st.sny * 10 * (0.35 + 0.65 * heroK);
       const prev = st.cur;
-      st.cur = prev ? lerpCam(prev, target, 0.2) : target;
-      const cur = st.cur;
-      camEl?.setAttribute("transform", camTransform(cur));
+      let cur = prev ? lerpCam(prev, target, smoothK(dt, CAM_TAU)) : target;
+      if (camDelta(cur, target, st.w, st.h) < EPS) cur = target;
+      st.cur = cur;
+      if (!st.written || camDelta(st.written, cur, st.w, st.h) >= EPS) {
+        camEl?.setAttribute("transform", camTransform(cur));
+        st.written = cur;
+      }
       // depth layers drift against each other (in figure units, so the effect fades when deep)
       const front = `translate(${(-st.snx * 7).toFixed(2)}px, ${(-st.sny * 4.5).toFixed(2)}px)`;
       const back = `translate(${(st.snx * 6).toFixed(2)}px, ${(st.sny * 3.5).toFixed(2)}px)`;
-      for (const w of lensWorld ? [world, lensWorld] : [world]) {
-        const f = w.el<SVGGElement>("layer-front");
-        if (f) f.style.transform = front;
-        const b = w.el<SVGGElement>("layer-back");
-        if (b) b.style.transform = back;
+      if (front !== st.layerFront || back !== st.layerBack) {
+        st.layerFront = front;
+        st.layerBack = back;
+        layers.forEach((g, i) => {
+          if (g) g.style.transform = i % 2 === 0 ? front : back;
+        });
       }
 
-      // active chapter + leader line
-      const { index, focus } = focusAt(st.stops, y);
+      // hero UI fades out in place (its layer is sticky) before the camera leaves the hero frame
+      const hp = Math.round(smoothstep((yh - THEATRE.heroFade[0]) / (THEATRE.heroFade[1] - THEATRE.heroFade[0])) * 200) / 200;
+      if (hp !== st.hero) {
+        st.hero = hp;
+        for (const [el, dy] of [
+          [heroCopy, -24],
+          [heroFoot, 14],
+        ] as const) {
+          if (!el) continue;
+          el.style.opacity = hp > 0 ? String(1 - hp) : "";
+          el.style.transform = hp > 0 ? `translate3d(0, ${(hp * dy).toFixed(1)}px, 0)` : "";
+          el.style.visibility = hp >= 1 ? "hidden" : "";
+        }
+      }
+
+      // chapter cards: opacity follows the scroll map, so one card always shows or two cross-fade
+      let bestK = 0;
+      let best = -1;
+      cardEls.forEach((card, i) => {
+        if (!card) return;
+        const k = Math.round(cardOpacity(map, i, yh) * 100) / 100;
+        if (k > bestK) {
+          bestK = k;
+          best = i;
+        }
+        if (k === st.cardK[i]) return;
+        st.cardK[i] = k;
+        // opacity only: a moving card would shift its text on every scroll step
+        card.style.opacity = String(k);
+        const on = k > 0.5;
+        if (on !== st.cardOn[i]) {
+          st.cardOn[i] = on;
+          blockEls[i + 1]?.toggleAttribute("data-active", on);
+        }
+      });
+
+      // active chapter (figure state) + leader line
+      const { index, focus } = focusAt(st.stops, y, HOLD);
       const active = focus > 0.3 ? index : -1;
       if (active !== st.active) {
         st.active = active;
         world.apply({ type: "stage", index: active < 0 ? null : active });
         stage.dataset.chapter = String(active);
       }
-      // The card is shown only while its layout box (transform ignored) is between the two bars.
-      const shown = active >= 0 && cardInside(active) ? active : -1;
-      if (shown !== st.shown) {
-        st.shown = shown;
-        st.blocks.forEach((b, i) => b.toggleAttribute("data-active", i === shown));
-      }
-      drawLeader(index, focus, cur);
+      const leaderIdx = best >= 0 ? best + 1 : index;
+      drawLeader(leaderIdx, leaderIdx === index ? focus : 0, best >= 0 ? (st.cardK[best] ?? 0) : 0, cur);
 
       // scale key
       const key = scaleKey(cur.s, st.levels);
@@ -195,8 +284,29 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
         st.keyLabel = key.label;
         keyLabelRef.current.textContent = key.label;
       }
-      if (keyBarRef.current) keyBarRef.current.style.transform = `scaleX(${(key.bar / 64).toFixed(3)})`;
-      stage.style.setProperty("--hero", heroK.toFixed(3));
+      const bar = `scaleX(${(key.bar / 64).toFixed(3)})`;
+      if (bar !== st.keyBar && keyBarRef.current) {
+        st.keyBar = bar;
+        keyBarRef.current.style.transform = bar;
+      }
+      // the key sits on the figure side; it fades out through a card cross-fade and swaps sides
+      // while invisible
+      const keySide = best >= 0 && STAGE_CUES[best + 1]?.side === "right" ? "left" : "right";
+      if (keySide !== st.keySide) {
+        st.keySide = keySide;
+        stage.dataset.keySide = keySide;
+      }
+      const keyOp = ((1 - heroK) * clamp01(2 * bestK - 1)).toFixed(2);
+      if (keyOp !== st.keyOp && keyRef.current) {
+        st.keyOp = keyOp;
+        keyRef.current.style.opacity = keyOp;
+      }
+      // specks and droplets shrink while the camera is deeper than half-way between colony and cell
+      const deep = st.levels.length > 3 && cur.s > Math.sqrt(st.levels[2]! * st.levels[3]!);
+      if (deep !== st.deep) {
+        st.deep = deep;
+        stage.toggleAttribute("data-deep", deep);
+      }
 
       // microscope lens (hero only): rests over the dish, follows the pointer inside the window,
       // clamped to the dish and the thermometer so it never magnifies empty glass.
@@ -212,8 +322,9 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
           st.lx = tx;
           st.ly = ty;
         } else {
-          st.lx += (tx - st.lx) * 0.22;
-          st.ly += (ty - st.ly) * 0.22;
+          const kl = smoothK(dt, 55);
+          st.lx += (tx - st.lx) * kl;
+          st.ly += (ty - st.ly) * kl;
         }
         lensMoving = Math.abs(tx - st.lx) + Math.abs(ty - st.ly) > 0.3;
         const lx = st.lx - LENS_R;
@@ -224,22 +335,9 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
         if (lensTagRef.current) lensTagRef.current.textContent = `×${LENS_ZOOM} · ${partAt(cur, st.lx, st.ly)}`;
       }
 
-      const moving =
-        lensMoving ||
-        !prev ||
-        Math.abs(prev.s - target.s) / target.s > 1e-4 ||
-        Math.abs(prev.ox - target.ox) + Math.abs(prev.oy - target.oy) > 0.05 ||
-        Math.abs((prev.cx - target.cx) * cur.s) + Math.abs((prev.cy - target.cy) * cur.s) > 0.05 ||
-        Math.abs(st.nx - st.snx) + Math.abs(st.ny - st.sny) > 0.002;
+      const moving = lensMoving || cur !== target || Math.abs(st.nx - st.snx) + Math.abs(st.ny - st.sny) > 0.002;
       if (moving) schedule();
-    };
-
-    const cardInside = (i: number) => {
-      const block = st.blocks[i];
-      const card = block?.querySelector<HTMLElement>("[data-card]");
-      if (!block || !card) return true;
-      const top = block.getBoundingClientRect().top + card.offsetTop;
-      return top >= st.headB && top + card.offsetHeight <= st.barT;
+      else st.lastT = 0;
     };
 
     const screenBox = (cam: Cam, id: string, inset = 0): [number, number, number, number] | null => {
@@ -292,7 +390,8 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       el.style.opacity = on ? "1" : "0";
     };
 
-    const drawLeader = (index: number, focus: number, cam: Cam) => {
+    /** Leader from the visible card's title bar to its part; `k` is the card's opacity. */
+    const drawLeader = (index: number, focus: number, k: number, cam: Cam) => {
       const path = leaderRef.current;
       const dot = leaderDotRef.current;
       const start = leaderStartRef.current;
@@ -300,47 +399,62 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       const tag = leaderTagRef.current;
       if (!path || !dot || !start || !elbow || !tag) return;
       const cue = STAGE_CUES[index];
-      const block = st.blocks[index];
-      const card = block?.querySelector<HTMLElement>("[data-card]");
-      if (!cue || cue.side === "hero" || !card || focus <= 0) {
-        path.style.opacity = "0";
-        for (const n of [dot, start, elbow]) n.style.opacity = "0";
-        tag.style.opacity = "0";
+      const box = st.cards[index - 1];
+      if (!cue || cue.side === "hero" || !box || focus <= 0 || k <= 0) {
+        if (st.leaderOn) {
+          st.leaderOn = false;
+          path.style.opacity = "0";
+          for (const n of [dot, start, elbow]) n.style.opacity = "0";
+          tag.style.opacity = "0";
+        }
         return;
       }
-      const sr = stage.getBoundingClientRect();
-      const cr = card.getBoundingClientRect();
+      st.leaderOn = true;
       const [ex, ey] = project(cam, targets[index]![0], targets[index]![1]);
       const left = cue.side === "left";
       // Leaves the card at its title bar, runs out horizontally, then bends to the part.
-      const sx = (left ? cr.right : cr.left) - sr.left;
-      const sy = cr.top - sr.top + 13;
+      const sx = left ? box.r : box.l;
+      const sy = box.t + 13;
       const mx = sx + (left ? 44 : -44);
       const d = `M${sx.toFixed(1)} ${sy.toFixed(1)}H${mx.toFixed(1)}L${ex.toFixed(1)} ${ey.toFixed(1)}`;
       const len = Math.abs(mx - sx) + Math.hypot(ex - mx, ey - sy);
-      const k = easeInOut(focus);
-      const done = k > 0.9;
+      const e = easeInOut(focus);
+      const done = e > 0.9;
       path.setAttribute("d", d);
       path.style.strokeDasharray = `${len.toFixed(1)}`;
-      path.style.strokeDashoffset = `${(len * (1 - k)).toFixed(1)}`;
-      path.style.opacity = "1";
-      node(start, sx + (left ? 4 : -4), sy, 7, true);
-      node(elbow, mx, sy, 6, k > 0.2);
-      node(dot, ex, ey, 9, done);
-      if (leaderTagTextRef.current && leaderTagTextRef.current.textContent !== cue.part) leaderTagTextRef.current.textContent = cue.part;
+      path.style.strokeDashoffset = `${(len * (1 - e)).toFixed(1)}`;
+      path.style.opacity = k.toFixed(2);
+      node(start, sx + (left ? 4 : -4), sy, 7, k > 0.5);
+      node(elbow, mx, sy, 6, k > 0.5 && e > 0.2);
+      node(dot, ex, ey, 9, k > 0.5 && done);
+      if (st.tagText !== cue.part && leaderTagTextRef.current) {
+        st.tagText = cue.part;
+        leaderTagTextRef.current.textContent = cue.part;
+        st.tagW = tag.offsetWidth;
+      }
       // Caption box sits beside the part, on the side away from the card.
-      const tw = tag.offsetWidth;
-      const tx = left ? ex + 14 : ex - 14 - tw;
+      const tx = left ? ex + 14 : ex - 14 - st.tagW;
       tag.style.transform = `translate3d(${tx.toFixed(1)}px, ${(ey - 11).toFixed(1)}px, 0)`;
-      tag.style.opacity = done ? "1" : "0";
+      tag.style.opacity = k > 0.5 && done ? "1" : "0";
     };
 
-    const onScroll = () => schedule();
+    const onScroll = () => {
+      schedule();
+      // idle CSS loops pause while the page moves (see landing.css), so frames go to the camera
+      if (!st.scrolling) {
+        st.scrolling = true;
+        stage.setAttribute("data-scrolling", "");
+      }
+      window.clearTimeout(st.scrollTimer);
+      st.scrollTimer = window.setTimeout(() => {
+        st.scrolling = false;
+        stage.removeAttribute("data-scrolling");
+      }, SCROLL_IDLE);
+    };
     const onPointer = (e: PointerEvent) => {
       if (e.pointerType !== "mouse" && e.pointerType !== "pen") return;
-      const r = stage.getBoundingClientRect();
-      st.px = e.clientX - r.left;
-      st.py = e.clientY - r.top;
+      st.px = e.clientX;
+      st.py = e.clientY;
       st.nx = (st.px / Math.max(1, st.w)) * 2 - 1;
       st.ny = (st.py / Math.max(1, st.h)) * 2 - 1;
       schedule();
@@ -366,7 +480,7 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
     ro.observe(stage);
     ro.observe(theatre);
     // a card whose content changes height gets a new pin offset
-    for (const card of theatre.querySelectorAll<HTMLElement>("[data-card]")) ro.observe(card);
+    for (const card of cardEls) if (card) ro.observe(card);
     const io = new IntersectionObserver((entries) => {
       const entry = entries[entries.length - 1];
       st.visible = !!entry?.isIntersecting;
@@ -388,6 +502,8 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
 
     return () => {
       cancelAnimationFrame(st.raf);
+      window.clearTimeout(st.scrollTimer);
+      stage.removeAttribute("data-scrolling");
       ro.disconnect();
       io.disconnect();
       off();
@@ -396,10 +512,10 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       document.documentElement.removeEventListener("pointerleave", onLeave);
       svg.removeEventListener("pointerover", onOver);
     };
-  }, [source, finePointer]);
+  }, [source, finePointer, map]);
 
   return (
-    <div className="ln-theatre" ref={theatreRef}>
+    <div className="ln-theatre" ref={theatreRef} style={{ "--total": String(Math.round(map.total * 10000) / 10000) } as CSSProperties}>
       <div className="ln-stage" ref={stageRef} data-ready={mounted ? "" : undefined}>
         <div className="ln-world" ref={hostRef} aria-hidden="true" dangerouslySetInnerHTML={{ __html: mainMarkup }} />
         <svg className="ln-overlay" ref={overlaySvgRef} aria-hidden="true">
@@ -425,7 +541,7 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
             </div>
           </>
         ) : null}
-        <div className="ln-scalekey" aria-hidden="true">
+        <div className="ln-scalekey" ref={keyRef} aria-hidden="true">
           <span className="ln-scalekey__bar" ref={keyBarRef} />
           <span className="ln-scalekey__label" ref={keyLabelRef}>
             1 cm
