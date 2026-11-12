@@ -119,7 +119,14 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       }
       st.blocks = Array.from(theatre.querySelectorAll<HTMLElement>("[data-block]"));
       st.stops = st.blocks.map((b, i) => (i === 0 ? 0 : b.offsetTop + (b.offsetHeight - st.h) / 2));
-      st.cams = STAGE_CUES.map((cue) => fitAnchor(anchors[cue.anchor] ?? DEFAULT_ANCHORS[cue.anchor]!, frameFor(cue.side, st.w, st.h), cue.margin));
+      // Hero: keep the machine clear of the headline column and of the ticker strip.
+      const heroCopy = st.blocks[0]?.querySelector<HTMLElement>(".ln-hero__copy");
+      const heroFoot = st.blocks[0]?.querySelector<HTMLElement>(".ln-hero__foot");
+      const heroInset = {
+        left: heroCopy ? heroCopy.getBoundingClientRect().right - stage.getBoundingClientRect().left + 28 : 0,
+        bottom: heroFoot ? st.h - heroFoot.offsetTop + 14 : 0,
+      };
+      st.cams = STAGE_CUES.map((cue) => fitAnchor(anchors[cue.anchor] ?? DEFAULT_ANCHORS[cue.anchor]!, frameFor(cue.side, st.w, st.h, heroInset), cue.margin));
       const mid = frameFor("left", st.w, st.h);
       st.levels = SCALE_LEVEL_ANCHORS.map((id) => fitAnchor(anchors[id]!, mid, 1.2).s);
       st.cur = null;

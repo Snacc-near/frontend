@@ -28,13 +28,23 @@ export const STAGE_CUES: readonly StageCue[] = [
   { anchor: "ch-enclave", side: "left", margin: 0.86, targets: ["enclave-stamp", "capsule", "ch-enclave"], part: "enclave" },
 ];
 
-/** Screen frame the figure is fitted into for a card side. */
-export function frameFor(side: Side, w: number, h: number): Box {
+/** Space the hero copy takes from the stage: its right edge and the strip kept free at the bottom (px). */
+export interface HeroInset {
+  left: number;
+  bottom: number;
+}
+
+/**
+ * Screen frame the figure is fitted into for a card side. In the hero the machine takes everything
+ * right of the measured headline column and above the ticker strip, so the two never overlap.
+ */
+export function frameFor(side: Side, w: number, h: number, hero?: HeroInset): Box {
   const top = Math.min(84, h * 0.1);
   if (side === "hero") {
-    // Leave the lower-left corner to the headline; the machine leans right and fills the height.
-    const x = w * 0.2;
-    return { x, y: top * 0.7, w: w - x - w * 0.02, h: h - top * 0.7 - Math.min(96, h * 0.11) };
+    const x = Math.max(w * 0.2, hero?.left ?? 0);
+    const y = top * 0.7;
+    const bottom = Math.max(Math.min(96, h * 0.11), hero?.bottom ?? 0);
+    return { x, y, w: Math.max(1, w - x - w * 0.015), h: Math.max(1, h - y - bottom) };
   }
   const figW = w * 0.56;
   const x = side === "left" ? w - figW - w * 0.03 : w * 0.05;
