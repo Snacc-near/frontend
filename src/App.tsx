@@ -24,6 +24,7 @@ import { AppetitePanel } from "./hud/AppetitePanel.tsx";
 import { ThermalGauge } from "./hud/ThermalGauge.tsx";
 import { BreachLog } from "./hud/BreachLog.tsx";
 import "./ui/fd.css";
+import "./ui/hud.css";
 import { Icon } from "./ui/fd.tsx";
 import { ToolsToolbar, type ToolId } from "./hud/ToolsToolbar.tsx";
 import { clearGuestLabel, readGuestLabel, saveGuestLabel, type GuestLabel } from "./auth/guestLabel.ts";

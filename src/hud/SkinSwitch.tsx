@@ -10,7 +10,7 @@ interface SkinSwitchProps {
 /** ADR-31 terminology switch: the same mechanics named as a bio-lab or as a fintech desk. */
 export const SkinSwitch: React.FC<SkinSwitchProps> = ({ skin, onChange }) => {
   return (
-    <div className="fd-tabs skin-switch" role="group" aria-label="the ADR-31 terminology choice">
+    <div className="fd-tabs fd-dither skin-switch" role="group" aria-label="the ADR-31 terminology choice">
       <button type="button" onClick={() => onChange("biolab")} aria-pressed={skin === "biolab"} className="fd-tab skin-switch__opt">
         <Icon name="cell" />
         <span>bio-lab</span>

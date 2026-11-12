@@ -15,7 +15,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
   return (
     <div className="flex flex-col gap-1 items-start">
       <div
-        className="inline-flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1 shadow-[0_2px_0_var(--edge)]"
+        className="hud-seg"
         role="group"
         aria-label="the game arena mode"
       >

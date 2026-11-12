@@ -1,4 +1,5 @@
 import React from "react";
+import { Icon } from "../ui/fd.tsx";
 
 interface AccountFilterProps {
   account: string;
@@ -27,7 +28,7 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
           value={account}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g.: alice.testnet"
-          className="min-h-[40px] w-36 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 font-mono text-xs text-[var(--ink-hi)] placeholder:text-[var(--ink-mute)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none sm:min-h-[44px] sm:w-48"
+          className="min-h-[40px] w-36 border border-[var(--ink-hi)] bg-white px-2.5 py-1.5 font-mono text-xs text-[var(--ink-hi)] placeholder:text-[var(--ink-mute)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none sm:min-h-[44px] sm:w-48"
           spellCheck={false}
           autoComplete="off"
         />
@@ -36,9 +37,9 @@ export const AccountFilter: React.FC<AccountFilterProps> = ({
             type="button"
             onClick={() => onChange("")}
             aria-label="clear the account filter"
-            className="keycap flex h-9 w-9 shrink-0 items-center justify-center font-mono text-xs sm:h-11 sm:w-11 focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+            className="keycap flex h-10 w-10 shrink-0 items-center justify-center font-mono text-xs sm:h-11 sm:w-11 focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
           >
-            ✕
+            <Icon name="close" />
           </button>
         )}
       </div>
