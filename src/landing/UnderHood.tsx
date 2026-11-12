@@ -77,7 +77,7 @@ export function UnderHood() {
         <header className="ln-section__head" data-reveal="">
           <Chip>fig-08.under-the-hood</Chip>
           <h2 id="ln-hood-title" className="ln-section__title">
-            <Accent text="Four NEAR standards, one living machine." accent="one living machine" />
+            <Accent text="Four NEAR building blocks, one living machine." accent="one living machine" />
           </h2>
         </header>
         <ul className="ln-hood__grid">
