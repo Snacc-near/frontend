@@ -101,6 +101,9 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       sny: 0,
       lensOn: false,
       active: -1,
+      shown: -1,
+      headB: 0,
+      barT: 0,
       keyLabel: "",
       blocks: [] as HTMLElement[],
       door: "closed" as "closed" | "ajar",
@@ -127,6 +130,15 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
         bottom: heroFoot ? st.h - heroFoot.offsetTop + 14 : 0,
       };
       st.cams = STAGE_CUES.map((cue) => fitAnchor(anchors[cue.anchor] ?? DEFAULT_ANCHORS[cue.anchor]!, frameFor(cue.side, st.w, st.h, heroInset), cue.margin));
+      // Chapter cards: pin each one centred between the header and the status bar.
+      st.headB = document.querySelector(".ln-header")?.getBoundingClientRect().bottom ?? 0;
+      st.barT = st.h - (document.querySelector<HTMLElement>(".fd-status")?.offsetHeight ?? 0);
+      for (const b of st.blocks) {
+        const card = b.querySelector<HTMLElement>("[data-card]");
+        if (!card) continue;
+        const pin = Math.max(st.headB + 10, st.headB + (st.barT - st.headB - card.offsetHeight) / 2);
+        card.style.setProperty("--pin", `${Math.round(pin)}px`);
+      }
       const mid = frameFor("left", st.w, st.h);
       st.levels = SCALE_LEVEL_ANCHORS.map((id) => fitAnchor(anchors[id]!, mid, 1.2).s);
       st.cur = null;
@@ -166,9 +178,14 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
       const active = focus > 0.3 ? index : -1;
       if (active !== st.active) {
         st.active = active;
-        st.blocks.forEach((b, i) => b.toggleAttribute("data-active", i === active));
         world.apply({ type: "stage", index: active < 0 ? null : active });
         stage.dataset.chapter = String(active);
+      }
+      // The card is shown only while its layout box (transform ignored) is between the two bars.
+      const shown = active >= 0 && cardInside(active) ? active : -1;
+      if (shown !== st.shown) {
+        st.shown = shown;
+        st.blocks.forEach((b, i) => b.toggleAttribute("data-active", i === shown));
       }
       drawLeader(index, focus, cur);
 
@@ -215,6 +232,14 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
         Math.abs((prev.cx - target.cx) * cur.s) + Math.abs((prev.cy - target.cy) * cur.s) > 0.05 ||
         Math.abs(st.nx - st.snx) + Math.abs(st.ny - st.sny) > 0.002;
       if (moving) schedule();
+    };
+
+    const cardInside = (i: number) => {
+      const block = st.blocks[i];
+      const card = block?.querySelector<HTMLElement>("[data-card]");
+      if (!block || !card) return true;
+      const top = block.getBoundingClientRect().top + card.offsetTop;
+      return top >= st.headB && top + card.offsetHeight <= st.barT;
     };
 
     const screenBox = (cam: Cam, id: string, inset = 0): [number, number, number, number] | null => {
@@ -340,6 +365,8 @@ export function Theatre({ source, finePointer, blocks, overlay }: Props) {
     const ro = new ResizeObserver(measure);
     ro.observe(stage);
     ro.observe(theatre);
+    // a card whose content changes height gets a new pin offset
+    for (const card of theatre.querySelectorAll<HTMLElement>("[data-card]")) ro.observe(card);
     const io = new IntersectionObserver((entries) => {
       const entry = entries[entries.length - 1];
       st.visible = !!entry?.isIntersecting;

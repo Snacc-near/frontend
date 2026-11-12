@@ -119,7 +119,7 @@ export function MetabolismDemo() {
   const [sel, setSel] = useState(0);
   const pick = (i: number) => {
     setSel(i);
-    worldBus.emit({ type: "atp" });
+    worldBus.emit({ type: "atp", stage: i });
     bioSound.playClick();
   };
   return (

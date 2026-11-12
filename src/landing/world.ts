@@ -12,7 +12,7 @@ export type WorldEvent =
   | { type: "feed" }
   | { type: "full"; v: number }
   | { type: "capsule"; k: number }
-  | { type: "atp" }
+  | { type: "atp"; stage?: number }
   | { type: "snack" }
   | { type: "merge" }
   | { type: "seal"; on: boolean }
@@ -65,6 +65,9 @@ export class World {
       ["cell-hungry", "w-hungry"],
       ["stamp", "w-stamp"],
       ["ch-mito-atp", "w-atp-coins"],
+      ["ch-mito-atp-0", "w-coin-0"],
+      ["ch-mito-atp-1", "w-coin-1"],
+      ["ch-mito-atp-2", "w-coin-2"],
     ] as const) {
       this.el(id)?.classList.add(cls);
     }
@@ -319,11 +322,15 @@ export class World {
       case "capsule":
         this.setCapsule(e.k);
         break;
-      case "atp":
-        this.root.classList.remove("w-atp");
+      case "atp": {
+        // A production stage spends one ATP coin (coin 0..2 lifts off, pops and grows back).
+        const spend = e.stage == null ? null : `w-spend-${Math.max(0, Math.min(2, e.stage))}`;
+        this.root.classList.remove("w-atp", "w-spend-0", "w-spend-1", "w-spend-2");
         void this.root.getBoundingClientRect(); // restart the pulse on repeated clicks
         this.flag("w-atp", 1300);
+        if (spend) this.flag(spend, 1300);
         break;
+      }
       case "snack":
         this.snack();
         break;

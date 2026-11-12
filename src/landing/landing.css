@@ -1006,6 +1006,19 @@ html {
   pointer-events: none;
 }
 
+/* right-hand cards (chapters 03, 05): the key moves to the figure side, clear of the panel */
+.ln-stage[data-chapter="2"] .ln-scalekey,
+.ln-stage[data-chapter="4"] .ln-scalekey {
+  right: auto;
+  left: calc(var(--guide) + 28px);
+  align-items: flex-start;
+}
+
+.ln-stage[data-chapter="2"] .ln-scalekey__bar,
+.ln-stage[data-chapter="4"] .ln-scalekey__bar {
+  transform-origin: left center;
+}
+
 .ln-scalekey__bar {
   display: block;
   width: 64px;
@@ -1131,6 +1144,46 @@ html {
   transform-origin: center;
 }
 
+.inc .w-coin-0,
+.inc .w-coin-1,
+.inc .w-coin-2 {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* the figure staggers its coins with inline animation-delay; the spend starts on the click */
+  .inc.w-spend-0 .w-coin-0,
+  .inc.w-spend-1 .w-coin-1,
+  .inc.w-spend-2 .w-coin-2 {
+    animation: ln-spend 1.25s var(--ease-out);
+    animation-delay: 0s !important;
+  }
+}
+
+@keyframes ln-spend {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(-45%) scale(1.35);
+    opacity: 1;
+  }
+  48% {
+    transform: translateY(-130%) scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 @keyframes ln-speck-pulse {
   35% {
     transform: scale(2.2);
@@ -1199,6 +1252,13 @@ html {
   opacity: 1;
 }
 
+/* finale "light on": the three keypad lamps stay lit */
+.inc.w-glow .key-lamp {
+  animation: none;
+  opacity: 1;
+  transition: opacity 600ms ease 400ms;
+}
+
 /* ================================================================ chapter blocks over the stage */
 
 .ln-blocks {
@@ -1225,19 +1285,37 @@ html {
   justify-content: flex-end;
 }
 
+/* Chapter cards pin between the header and the status bar. The theatre sets --pin so the card is
+   centred in that space and the hold is centred on the camera stop; a card is only shown while its
+   box sits fully between the two bars. */
+.ln-block--left,
+.ln-block--right {
+  align-items: flex-start;
+  padding-top: 28px;
+}
+
+.ln-block--left .ln-card,
+.ln-block--right .ln-card {
+  position: sticky;
+  top: var(--pin, 72px);
+  max-height: calc(100vh - 58px - var(--bar-h) - 24px);
+  max-height: calc(100svh - 58px - var(--bar-h) - 24px);
+}
+
 .ln-card {
   pointer-events: auto;
   width: min(450px, 38vw);
   background: var(--card);
   opacity: 0;
-  transform: translate3d(-40px, 20px, 0);
+  /* slides in sideways only, so a card fading in never pokes under the bars */
+  transform: translate3d(-40px, 0, 0);
   transition:
     opacity 500ms ease,
     transform 700ms var(--ease-out);
 }
 
 .ln-block--right .ln-card {
-  transform: translate3d(40px, 20px, 0);
+  transform: translate3d(40px, 0, 0);
 }
 
 .ln-block[data-active] .ln-card,
@@ -1248,6 +1326,13 @@ html {
 
 .ln-card .fd-win__body {
   padding: 18px 20px 18px;
+}
+
+/* last resort on very short screens: the panel body scrolls inside its window */
+.ln-block .ln-card .fd-win__body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .ln-card__title {
