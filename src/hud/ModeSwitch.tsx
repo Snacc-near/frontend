@@ -38,7 +38,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
             className="inline-block h-2 w-2 rounded-full border border-[var(--ink-hi)]"
             style={{ backgroundColor: isBackendConnected ? "var(--ok)" : "var(--accent)", boxShadow: isBackendConnected ? "0 0 0 1px var(--ok)" : "0 0 0 1px var(--accent)" }}
           />
-          live testnet
+          live on-chain
         </button>
       </div>
 

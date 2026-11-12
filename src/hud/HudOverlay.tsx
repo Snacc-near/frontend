@@ -1,6 +1,7 @@
 import React from "react";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
+import { SKIN_LABELS } from "../config/constants.ts";
 import type { AppetiteViewModel, BreachLogItem, NutrientBurstState, StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
 import type { GameMode } from "../config/constants.ts";
@@ -84,7 +85,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
             </span>
             <span className="text-slate-500 text-xs">·</span>
             <span className="text-xs text-slate-300 font-medium lowercase hidden min-[420px]:inline">
-              living cell crucible
+              {SKIN_LABELS[skin].crucible}
             </span>
           </div>
           <ModeSwitch

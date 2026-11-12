@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { MacroZone } from "./config/zones.ts";
 import { classifyZone } from "./config/zones.ts";
 import type { SkinMode } from "./config/constants.ts";
-import { INITIAL_ATP } from "./config/constants.ts";
+import { INITIAL_ATP, SKIN_LABELS } from "./config/constants.ts";
 import type {
   AppetiteViewModel,
   BreachLogItem,
+  MacroTelemetry,
   NutrientBurstState,
   StrainDetail,
   StrainSummary,
@@ -23,6 +24,14 @@ import { SkinSwitch } from "./hud/SkinSwitch.tsx";
 import { AppetitePanel } from "./hud/AppetitePanel.tsx";
 import { ThermalGauge } from "./hud/ThermalGauge.tsx";
 import { BreachLog } from "./hud/BreachLog.tsx";
+import { SwapPanel } from "./hud/SwapPanel.tsx";
+import { NpcPanel } from "./hud/NpcPanel.tsx";
+import { SocialLeaderboardModal } from "./hud/SocialLeaderboardModal.tsx";
+import { ThesisDashboardModal } from "./hud/ThesisDashboardModal.tsx";
+import { AuthModal } from "./hud/AuthModal.tsx";
+import { RecipeSearchModal } from "./hud/RecipeSearchModal.tsx";
+import { getStoredAuthSession } from "./auth/oneClickAuth.ts";
+import { NPC_PROFILES } from "./data/npc.ts";
 import { ActionDock, ProductionQueuePanel, ResourceBar, type DockButton } from "./hud/GameHud.tsx";
 import { CellLab } from "./hud/CellLab.tsx";
 import {
@@ -57,8 +66,8 @@ const demoSeedLogs: BreachLogItem[] = [
   {
     id: "seed-2",
     kind: "zone_changed",
-    actor: "alkemis.testnet",
-    summary: "alkemis.testnet triggered a zone shift from hypothermia to goldilocks (605 mK)",
+    actor: "alkemis.near",
+    summary: "alkemis.near triggered a zone shift from hypothermia to goldilocks (605 mK)",
     crucibleTemp: 605,
     tempDeltaMk: 14,
     timestampMs: Date.now() - 1100,
@@ -87,10 +96,11 @@ export const App: React.FC = () => {
   const [skin, setSkin] = useState<SkinMode>("biolab");
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [zone, setZone] = useState<MacroZone>("Goldilocks");
+  const [macro, setMacro] = useState<MacroTelemetry | null>(null);
   const [crucibleTempMk, setCrucibleTempMk] = useState<number | null>(null);
   const [reducedMotion] = useState<boolean>(() => prefersReducedMotion());
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
-  const [userAccount, setUserAccount] = useState("");
+  const [userAccount, setUserAccount] = useState(() => getStoredAuthSession()?.accountId ?? "");
   const [liveStrains, setLiveStrains] = useState<StrainSummary[]>([]);
   const [indexerIncomplete, setIndexerIncomplete] = useState(false);
   const [selectedStrain, setSelectedStrain] = useState<StrainDetail | null>(null);
@@ -104,6 +114,12 @@ export const App: React.FC = () => {
   const [appetiteError, setAppetiteError] = useState(false);
   const [sim, setSim] = useState<SimulationState>(() => createInitialSimulation());
   const [panelsOpen, setPanelsOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [npcOpen, setNpcOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [thesisOpen, setThesisOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [recipeSearchOpen, setRecipeSearchOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [iris, setIris] = useState<{ phase: "closing" | "opening"; cx: number; cy: number } | null>(null);
@@ -208,11 +224,12 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const poller = new TelemetryPoller({
-      onMacroUpdate: (macro) => {
+      onMacroUpdate: (macroData) => {
         setIsBackendConnected(true);
+        setMacro(macroData);
         if (mode === "live") {
-          setCrucibleTempMk(macro.crucibleTemp);
-          setZone(classifyZone(macro.crucibleTemp));
+          setCrucibleTempMk(macroData.crucibleTemp);
+          setZone(classifyZone(macroData.crucibleTemp));
         }
       },
       onStrainsUpdate: (strains) => {
@@ -245,8 +262,8 @@ export const App: React.FC = () => {
           const vitality = simRef.current.vitality;
           setSelectedStrain({
             strain_id: 1,
-            owner_id: userAccount.trim() || "player.testnet",
-            vault_subaccount: "v1.snacc-crucible.testnet",
+            owner_id: userAccount.trim() || "player.near",
+            vault_subaccount: "v1.snacc-crucible.near",
             vitality,
             efficiency_bps: 9850,
             bmr_per_hour: 45,
@@ -269,7 +286,7 @@ export const App: React.FC = () => {
         const demoVitality = cellId === 3 ? 3100 : 7200;
         setSelectedStrain({
           strain_id: cellId,
-          owner_id: cellId === 3 ? "strain-3.testnet" : "strain-2.testnet",
+          owner_id: cellId === 3 ? "strain-3.near" : "strain-2.near",
           vault_subaccount: "",
           vitality: demoVitality,
           efficiency_bps: 9000,
@@ -548,11 +565,21 @@ export const App: React.FC = () => {
                 <span className="lp-label">fig</span>
                 <span className="font-mono text-xs font-bold tracking-wider text-[var(--ink-hi)]">
                   $SNACC <span className="font-normal text-[var(--ink)]">·</span>{" "}
-                  <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">living cell crucible</span>
+                  <span className="hidden font-medium text-[var(--ink)] min-[420px]:inline">{SKIN_LABELS[skin].crucible}</span>
                 </span>
               </span>
               <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
-              <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+              <div className="flex items-center gap-1.5">
+                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                <button
+                  type="button"
+                  onClick={() => setAuthOpen(true)}
+                  aria-label="open authentication modal"
+                  className="keycap min-h-[38px] px-2.5 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+                >
+                  {userAccount ? "⚡ ID" : "⚡ Login"}
+                </button>
+              </div>
               <span className="label-plate">
                 vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
                 <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
@@ -562,7 +589,7 @@ export const App: React.FC = () => {
               <div className="pointer-events-auto">
                 <SkinSwitch skin={skin} onChange={setSkin} />
               </div>
-              <ResourceBar mode={mode} resources={resources} />
+              <ResourceBar mode={mode} resources={resources} skin={skin} />
             </div>
           </header>
 
@@ -586,12 +613,29 @@ export const App: React.FC = () => {
               </div>
             </div>
             <div className="pointer-events-auto w-full min-w-0">
-              <ResourceBar mode={mode} resources={resources} />
+              <ResourceBar mode={mode} resources={resources} skin={skin} />
             </div>
             {moreOpen ? (
               <div className="pointer-events-auto flex flex-col gap-1.5 rounded-xl border border-[var(--edge)] bg-[var(--panel)] p-2 shadow-[0_2px_0_var(--edge)]" data-testid="mobile-more">
-                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                <div className="flex items-center gap-1.5">
+                  <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                  <button
+                    type="button"
+                    onClick={() => setAuthOpen(true)}
+                    aria-label="open authentication modal mobile"
+                    className="keycap min-h-[38px] px-2.5 text-[11px] font-semibold text-[var(--accent-dk)]"
+                  >
+                    ⚡ Login
+                  </button>
+                </div>
                 <SkinSwitch skin={skin} onChange={setSkin} />
+                <button
+                  type="button"
+                  onClick={() => setRecipeSearchOpen(true)}
+                  className="keycap min-h-[34px] px-3 text-[11px] font-semibold text-[var(--accent-dk)]"
+                >
+                  🧪 Recipes Codex
+                </button>
                 <span className="label-plate">
                   vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
                   <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
@@ -624,14 +668,56 @@ export const App: React.FC = () => {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setPanelsOpen((v) => !v)}
-              aria-expanded={panelsOpen}
-              className="keycap pointer-events-auto min-h-[40px] px-4 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
-            >
-              telemetry {panelsOpen ? "hide" : "show"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPanelsOpen((v) => !v)}
+                aria-expanded={panelsOpen}
+                className="keycap pointer-events-auto min-h-[40px] px-4 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                telemetry {panelsOpen ? "hide" : "show"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setNpcOpen(true)}
+                aria-label="open npc market"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                {skin === "biolab" ? "alchemists ⚖️" : "market makers 📊"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSwapOpen(true)}
+                aria-label="open swap terminal"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                swap DEX ↗
+              </button>
+              <button
+                type="button"
+                onClick={() => setSocialOpen(true)}
+                aria-label="open social leaderboard"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                social 🏆
+              </button>
+              <button
+                type="button"
+                onClick={() => setThesisOpen(true)}
+                aria-label="open thesis proof dashboard"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                thesis 📜
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecipeSearchOpen(true)}
+                aria-label="open recipe search codex"
+                className="keycap pointer-events-auto min-h-[40px] px-3 text-[11px] font-semibold text-[var(--accent-dk)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+              >
+                recipes 🧪
+              </button>
+            </div>
             <span className="label-plate pointer-events-auto lowercase">
               <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · /api data only"}</span>
             </span>
@@ -710,6 +796,7 @@ export const App: React.FC = () => {
           isLoading={isLoadingStrain}
           zone={zone}
           mode={mode}
+          skin={skin}
           svgDataUri={svgDataUri}
           svgStatus={svgStatus}
           simOrganel={sim.organel}
@@ -717,6 +804,80 @@ export const App: React.FC = () => {
           onClose={handleLabClose}
           onAction={handleLabAction}
           onUpgrade={handleUpgrade}
+          onOpenNpcMarket={() => setNpcOpen(true)}
+        />
+      ) : null}
+
+      {swapOpen ? <SwapPanel mode={mode} onClose={() => setSwapOpen(false)} skin={skin} /> : null}
+
+      {socialOpen ? (
+        <SocialLeaderboardModal
+          isOpen={socialOpen}
+          onClose={() => setSocialOpen(false)}
+          appetite={appetite}
+          mode={mode}
+          skin={skin}
+        />
+      ) : null}
+
+      {thesisOpen ? (
+        <ThesisDashboardModal
+          isOpen={thesisOpen}
+          onClose={() => setThesisOpen(false)}
+          macro={macro}
+          appetite={appetite}
+          mode={mode}
+          skin={skin}
+        />
+      ) : null}
+
+      {npcOpen ? (
+        <NpcPanel
+          isOpen={npcOpen}
+          onClose={() => setNpcOpen(false)}
+          skin={skin}
+          crucibleTempMk={crucibleTempMk ?? 605}
+          mode={mode}
+          userSnaccBalance={sim.snacc}
+          onBuySpores={(npcId, amount, totalCost) => {
+            setSim((prev) => ({
+              ...prev,
+              snacc: Math.max(0, prev.snacc - totalCost),
+              spores: prev.spores + amount,
+            }));
+            const p = NPC_PROFILES[npcId];
+            const name = skin === "biolab" ? p.biolab.name : p.fintech.name;
+            setMilestoneToast(`+${amount} spores from ${name}`);
+            setToast(`Purchased ${amount} spores for ${totalCost} $SNACC`);
+          }}
+        />
+      ) : null}
+
+      {authOpen ? (
+        <AuthModal
+          isOpen={authOpen}
+          onClose={() => setAuthOpen(false)}
+          activeAccount={userAccount}
+          onLogin={(acc) => {
+            setUserAccount(acc);
+            setAuthOpen(false);
+            showToast(`Logged in as ${acc}`);
+          }}
+          onLogout={() => {
+            setUserAccount("");
+            setAuthOpen(false);
+            showToast("Logged out successfully");
+          }}
+          skin={skin}
+        />
+      ) : null}
+
+      {recipeSearchOpen ? (
+        <RecipeSearchModal
+          isOpen={recipeSearchOpen}
+          onClose={() => setRecipeSearchOpen(false)}
+          skin={skin}
+          zone={zone}
         />
       ) : null}
     </main>
