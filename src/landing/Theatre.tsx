@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
+  aheadCam,
   camAtScroll,
   camDelta,
   camTransform,
@@ -10,6 +11,9 @@ import {
   lerpCam,
   pathWarp,
   project,
+  relCam,
+  relCovers,
+  relTransform,
   scaleKey,
   smoothK,
   zoomAbout,
@@ -32,6 +36,13 @@ const CAM_TAU = 90;
 const EPS = 0.05;
 /** The figure's idle loops pause until this long after the last scroll event (ms). */
 const SCROLL_IDLE = 150;
+/** Margin painted around the stage (share of its larger side), so a composited move can reveal it. */
+const PAD = 0.25;
+/**
+ * Composited zoom band: the figure is painted at the shown zoom or up to 1/REL_LO above it and only
+ * ever scaled down by the compositor (scaling up would need new, sharper tiles mid-move).
+ */
+const REL_LO = 0.75;
 
 interface Props {
   source: FigureSource | null;
@@ -50,8 +61,13 @@ const smoothstep = (t: number) => {
 };
 
 /**
- * Pinned 100vh stage holding the incubator figure. Scroll position drives the camera on `#cam`
- * through the chapter anchors; chapter cards sit in sticky layers over the stage and cross-fade.
+ * Pinned 100vh stage holding the incubator figure. Scroll position drives the camera through the
+ * chapter anchors; chapter cards sit in sticky layers over the stage and cross-fade.
+ * The camera is split in two: `#cam` holds a base camera the figure is painted with, and the
+ * composited `.ln-world` layer carries the rest as a CSS transform. While the page scrolls only
+ * that transform changes, so the GPU keeps drawing tiles it already has; the base is repainted when
+ * the zoom leaves a small band (lines keep their width) or the margin runs out, and once more at
+ * rest so a still frame is painted exactly at its camera.
  * One rAF loop runs only while something changes and the theatre is on screen; it reads no layout
  * per frame and writes only what changed.
  */
@@ -80,17 +96,21 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
   useEffect(() => {
     const theatre = theatreRef.current;
     const stage = stageRef.current;
-    const svg = hostRef.current?.querySelector("svg") ?? null;
-    if (!source || !theatre || !stage || !svg) return;
+    const host = hostRef.current;
+    const svg = host?.querySelector("svg") ?? null;
+    if (!source || !theatre || !stage || !host || !svg) return;
 
     prepSvg(svg);
+    host.style.transform = "";
     const world = new World(svg, "");
     const lensSvg = lensHostRef.current?.querySelector("svg") ?? null;
     if (lensSvg) prepSvg(lensSvg);
     const lensWorld = lensSvg ? new World(lensSvg, "lz-") : null;
     const camEl = world.el("cam");
     const lensCam = lensWorld?.el("cam") ?? null;
-    const layers = (lensWorld ? [world, lensWorld] : [world]).flatMap((w) => [w.el<SVGGElement>("layer-front"), w.el<SVGGElement>("layer-back")]);
+    const layersOf = (w: World | null) => (w ? [w.el<SVGGElement>("layer-front"), w.el<SVGGElement>("layer-back")] : []);
+    const mainLayers = layersOf(world);
+    const lensLayers = layersOf(lensWorld);
     const anchors: Record<string, Anchor> = { ...DEFAULT_ANCHORS, ...source.cam.anchors };
     const blockEls = Array.from(theatre.querySelectorAll<HTMLElement>("[data-block]"));
     const cardEls = blockEls.slice(1).map((b) => b.querySelector<HTMLElement>("[data-card]"));
@@ -118,7 +138,12 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       levels: [] as number[],
       cards: [] as Array<{ l: number; r: number; t: number } | null>,
       cur: null as Cam | null,
-      written: null as Cam | null,
+      /** camera the figure is painted with (`#cam`) */
+      base: null as Cam | null,
+      /** composited transform last written on `.ln-world` */
+      rel: "",
+      pad: 0,
+      lensCamT: "",
       lastT: 0,
       raf: 0,
       visible: true,
@@ -157,7 +182,10 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       st.w = stage.clientWidth;
       st.h = stage.clientHeight;
       const vb = `0 0 ${st.w} ${st.h}`;
-      svg.setAttribute("viewBox", vb);
+      // the figure is painted with a margin so a composited move does not run off its edge
+      st.pad = Math.round(Math.max(st.w, st.h) * PAD);
+      svg.setAttribute("viewBox", `${-st.pad} ${-st.pad} ${st.w + 2 * st.pad} ${st.h + 2 * st.pad}`);
+      host.style.setProperty("--pad", `${st.pad}px`);
       lensSvg?.setAttribute("viewBox", vb);
       overlaySvgRef.current?.setAttribute("viewBox", vb);
       if (lensHostRef.current) {
@@ -186,7 +214,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       st.levels = SCALE_LEVEL_ANCHORS.map((id) => fitAnchor(anchors[id]!, mid, 1.2).s);
       if (resized) {
         st.cur = null;
-        st.written = null;
+        st.base = null;
       }
       st.hero = -1;
       st.cardK = [];
@@ -216,19 +244,31 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       let cur = prev ? lerpCam(prev, target, smoothK(dt, CAM_TAU)) : target;
       if (camDelta(cur, target, st.w, st.h) < EPS) cur = target;
       st.cur = cur;
-      if (!st.written || camDelta(st.written, cur, st.w, st.h) >= EPS) {
-        camEl?.setAttribute("transform", camTransform(cur));
-        st.written = cur;
+      const pointerEasing = Math.abs(st.nx - st.snx) + Math.abs(st.ny - st.sny) > 0.002;
+      // Repaint the figure at the current camera only when the composited move would run out of
+      // band, or once the page is still (so a resting frame is painted exactly, never resampled).
+      const still = !st.scrolling && cur === target && !pointerEasing;
+      const base = paintCam(st.base, cur, still);
+      if (base !== st.base) {
+        camEl?.setAttribute("transform", camTransform(base));
+        st.base = base;
       }
-      // depth layers drift against each other (in figure units, so the effect fades when deep)
-      const front = `translate(${(-st.snx * 7).toFixed(2)}px, ${(-st.sny * 4.5).toFixed(2)}px)`;
-      const back = `translate(${(st.snx * 6).toFixed(2)}px, ${(st.sny * 3.5).toFixed(2)}px)`;
-      if (front !== st.layerFront || back !== st.layerBack) {
-        st.layerFront = front;
-        st.layerBack = back;
-        layers.forEach((g, i) => {
-          if (g) g.style.transform = i % 2 === 0 ? front : back;
-        });
+      const rel = base === cur ? "" : relTransform(relCam(base, cur));
+      if (rel !== st.rel) {
+        st.rel = rel;
+        host.style.transform = rel;
+      }
+      // Depth layers drift against each other with the pointer, in the hero only and never while the
+      // page scrolls: each write repaints the figure.
+      if (heroK > 0 && !st.scrolling) {
+        const front = `translate(${(-st.snx * 7).toFixed(2)}px, ${(-st.sny * 4.5).toFixed(2)}px)`;
+        const back = `translate(${(st.snx * 6).toFixed(2)}px, ${(st.sny * 3.5).toFixed(2)}px)`;
+        if (front !== st.layerFront || back !== st.layerBack) {
+          st.layerFront = front;
+          st.layerBack = back;
+          writeLayers(mainLayers);
+          if (st.lensOn) writeLayers(lensLayers);
+        }
       }
 
       // hero UI fades out in place (its layer is sticky) before the camera leaves the hero frame
@@ -302,7 +342,8 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
         keyRef.current.style.opacity = keyOp;
       }
       // specks and droplets shrink while the camera is deeper than half-way between colony and cell
-      const deep = st.levels.length > 3 && cur.s > Math.sqrt(st.levels[2]! * st.levels[3]!);
+      // (read from the painted camera, so the swap lands on a frame that repaints anyway)
+      const deep = st.levels.length > 3 && base.s > Math.sqrt(st.levels[2]! * st.levels[3]!);
       if (deep !== st.deep) {
         st.deep = deep;
         stage.toggleAttribute("data-deep", deep);
@@ -313,7 +354,9 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       const lensWanted = finePointer && heroK > 0.6;
       if (lensWanted !== st.lensOn) {
         st.lensOn = lensWanted;
+        // off, the lens copy is not rendered at all (display: none) and gets no writes
         lensRef.current?.toggleAttribute("data-on", lensWanted);
+        if (lensWanted) writeLayers(lensLayers);
       }
       let lensMoving = false;
       if (lensWanted && lensRef.current && lensHostRef.current && lensCam) {
@@ -331,13 +374,37 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
         const ly = st.ly - LENS_R;
         lensRef.current.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0)`;
         lensHostRef.current.style.transform = `translate3d(${(-lx).toFixed(1)}px, ${(-ly).toFixed(1)}px, 0)`;
-        lensCam.setAttribute("transform", camTransform(zoomAbout(cur, LENS_ZOOM, st.lx, st.ly)));
-        if (lensTagRef.current) lensTagRef.current.textContent = `×${LENS_ZOOM} · ${partAt(cur, st.lx, st.ly)}`;
+        const lt = camTransform(zoomAbout(cur, LENS_ZOOM, st.lx, st.ly));
+        if (lt !== st.lensCamT) {
+          st.lensCamT = lt;
+          lensCam.setAttribute("transform", lt);
+        }
+        const tag = `×${LENS_ZOOM} · ${partAt(cur, st.lx, st.ly)}`;
+        if (lensTagRef.current && lensTagRef.current.textContent !== tag) lensTagRef.current.textContent = tag;
       }
 
-      const moving = lensMoving || cur !== target || Math.abs(st.nx - st.snx) + Math.abs(st.ny - st.sny) > 0.002;
+      const moving = lensMoving || cur !== target || pointerEasing;
       if (moving) schedule();
       else st.lastT = 0;
+    };
+
+    /** Camera to paint the figure with: the current one unless the composited move still fits. */
+    const paintCam = (base: Cam | null, cur: Cam, still: boolean): Cam => {
+      if (!base) return cur;
+      // still: below this the composited remainder rounds to the identity (see relTransform)
+      if (still) return camDelta(base, cur, st.w, st.h) >= 0.005 ? cur : base;
+      const rel = relCam(base, cur);
+      if (relCovers(rel, st.w, st.h, st.pad, REL_LO, 1)) return base;
+      // zooming in: paint ahead (the layer then shrinks back towards 1:1); zooming out or panning:
+      // paint at the shown zoom, or keep the current ratio when that still fits
+      const ahead = aheadCam(cur, rel.r > 1 ? 1 / REL_LO : rel.r < REL_LO ? 1 : 1 / rel.r);
+      return relCovers(relCam(ahead, cur), st.w, st.h, st.pad, REL_LO, 1) ? ahead : cur;
+    };
+
+    const writeLayers = (gs: Array<SVGGElement | null>) => {
+      gs.forEach((g, i) => {
+        if (g) g.style.transform = i % 2 === 0 ? st.layerFront : st.layerBack;
+      });
     };
 
     const screenBox = (cam: Cam, id: string, inset = 0): [number, number, number, number] | null => {
@@ -449,6 +516,8 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       st.scrollTimer = window.setTimeout(() => {
         st.scrolling = false;
         stage.removeAttribute("data-scrolling");
+        // the page is still: repaint the figure at its exact camera
+        schedule();
       }, SCROLL_IDLE);
     };
     const onPointer = (e: PointerEvent) => {
@@ -504,6 +573,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       cancelAnimationFrame(st.raf);
       window.clearTimeout(st.scrollTimer);
       stage.removeAttribute("data-scrolling");
+      host.style.transform = "";
       ro.disconnect();
       io.disconnect();
       off();

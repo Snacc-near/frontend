@@ -459,17 +459,25 @@ html {
   z-index: 1;
 }
 
+/* The figure's own layer: the theatre moves it with a composited transform between repaints (see
+   Theatre.tsx), so camera motion never invalidates the painted figure. */
 .ln-world {
   position: absolute;
   inset: 0;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* nothing on screen to paint: skip the figure copies entirely */
 .ln-stage[data-off] .ln-world,
 .ln-stage[data-off] .ln-lens,
-.ln-lens:not([data-on]) .ln-lens__host,
 .ln-finale[data-far] .ln-finale__host {
   visibility: hidden;
+}
+
+/* the lens copy is a second full figure: not rendered at all while the lens is off */
+.ln-lens:not([data-on]) .ln-lens__host {
+  display: none;
 }
 
 /* The figure's idle loops (the figure's own CSS) pause while the page scrolls (the theatre sets
@@ -506,7 +514,17 @@ html {
   animation-play-state: paused !important;
 }
 
-.ln-world .inc.iso-svg,
+/* painted with a margin (`--pad`, set by the theatre with the matching viewBox) around the stage */
+.ln-world .inc.iso-svg {
+  position: absolute;
+  left: calc(-1 * var(--pad, 0px));
+  top: calc(-1 * var(--pad, 0px));
+  display: block;
+  width: calc(100% + 2 * var(--pad, 0px));
+  height: calc(100% + 2 * var(--pad, 0px));
+  overflow: hidden;
+}
+
 .ln-lens__host .inc.iso-svg {
   display: block;
   width: 100%;
@@ -515,7 +533,8 @@ html {
 }
 
 /* marigold specks and droplets would be huge at cell/mito zoom: shrink them while the camera is deep
-   (the theatre sets data-deep from the zoom, so the size follows the camera, not the chapter) */
+   (the theatre sets data-deep from the zoom, so the size follows the camera, not the chapter; it
+   switches on a frame that repaints the figure anyway, so there is no transition to repaint for) */
 .ln-stage[data-deep] .atp-speck {
   r: 0.5px;
 }
@@ -523,18 +542,6 @@ html {
 .ln-stage[data-deep] .drop {
   rx: 0.6px;
   ry: 0.8px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .ln-world .atp-speck {
-    transition: r 400ms ease;
-  }
-
-  .ln-world .drop {
-    transition:
-      rx 400ms ease,
-      ry 400ms ease;
-  }
 }
 
 .ln-overlay {

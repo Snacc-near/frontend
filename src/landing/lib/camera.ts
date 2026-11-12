@@ -3,7 +3,7 @@
  *
  * A camera shows the world point (cx, cy) at the screen point (ox, oy) with zoom `s`, i.e.
  * `translate(ox oy) scale(s) translate(-cx -cy)` on the figure's root `<g id="cam">`.
- * The stage SVG's viewBox equals the stage's pixel size, so screen units are CSS pixels.
+ * The stage SVG's user units are the stage's CSS pixels (its viewBox is the stage plus a margin).
  */
 
 export interface Anchor {
@@ -199,6 +199,58 @@ export function focusAt(stops: readonly number[], y: number, hold = 0.1): { inde
 export function camTransform(c: Cam): string {
   const r = (v: number) => Math.round(v * 1000) / 1000;
   return `translate(${r(c.ox)} ${r(c.oy)}) scale(${r(c.s)}) translate(${r(-c.cx)} ${r(-c.cy)})`;
+}
+
+/**
+ * Composited remainder of a camera move: the figure is painted under a `base` camera and a screen
+ * transform `q' = t + r·q` (CSS `translate(t) scale(r)`, origin 0 0) carries it to where `cur`
+ * shows it. Only `base` repaints the figure; `rel` moves pixels already painted.
+ */
+export interface Rel {
+  r: number;
+  tx: number;
+  ty: number;
+}
+
+export function relCam(base: Cam, cur: Cam): Rel {
+  const r = cur.s / base.s;
+  return {
+    r,
+    tx: cur.ox + (base.cx - cur.cx) * cur.s - r * base.ox,
+    ty: cur.oy + (base.cy - cur.cy) * cur.s - r * base.oy,
+  };
+}
+
+/**
+ * True while a figure painted under the base camera, with `pad` px of margin around a `w`×`h`
+ * screen, still covers that screen through `rel` and the zoom ratio stays inside `[lo, hi]`
+ * (strokes do not scale with the figure, so a large ratio would show thicker or thinner lines).
+ */
+export function relCovers(rel: Rel, w: number, h: number, pad: number, lo: number, hi: number): boolean {
+  if (!(rel.r >= lo && rel.r <= hi)) return false;
+  const x0 = -rel.tx / rel.r;
+  const y0 = -rel.ty / rel.r;
+  const x1 = (w - rel.tx) / rel.r;
+  const y1 = (h - rel.ty) / rel.r;
+  return x0 >= -pad && y0 >= -pad && x1 <= w + pad && y1 <= h + pad;
+}
+
+/**
+ * Base camera for a repaint: the same view as `cur` painted `k` times larger, so the composited
+ * remainder is a plain `1/k` scale about the camera's screen point (`k > 1` paints ahead of a
+ * zoom-in, and the layer is only ever scaled down, never up).
+ */
+export function aheadCam(cur: Cam, k: number): Cam {
+  return { ...cur, s: cur.s * k };
+}
+
+/** CSS transform for `rel` (origin 0 0); empty for the identity. */
+export function relTransform(rel: Rel): string {
+  const tx = Math.round(rel.tx * 100) / 100;
+  const ty = Math.round(rel.ty * 100) / 100;
+  const r = Math.round(rel.r * 1e5) / 1e5;
+  if (tx === 0 && ty === 0 && r === 1) return "";
+  return `translate3d(${tx}px, ${ty}px, 0) scale(${r})`;
 }
 
 /** World point -> screen point under a camera. */

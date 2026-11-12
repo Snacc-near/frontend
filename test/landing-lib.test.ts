@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { camAtScroll, camTransform, fitAnchor, focusAt, lerpCam, project, scaleKey, zoomAbout, type Cam } from "../src/landing/lib/camera.ts";
+import {
+  aheadCam,
+  camAtScroll,
+  camTransform,
+  fitAnchor,
+  focusAt,
+  lerpCam,
+  project,
+  relCam,
+  relCovers,
+  relTransform,
+  scaleKey,
+  zoomAbout,
+  type Cam,
+} from "../src/landing/lib/camera.ts";
 import { cropUrl, innerSvg, prefixIds } from "../src/landing/lib/figure.ts";
 import {
   OFFICIAL,
@@ -75,6 +89,39 @@ describe("camera", () => {
     expect(scaleKey(1, levels).label).toBe("1 cm");
     expect(scaleKey(10, levels).label).toBe("10 µm");
     expect(scaleKey(30, levels).label).toBe("1 µm");
+  });
+
+  it("splits a camera into a painted base and a composited remainder", () => {
+    const base: Cam = { s: 3, cx: 120, cy: 80, ox: 700, oy: 450 };
+    const cur: Cam = { s: 2.4, cx: 140, cy: 70, ox: 720, oy: 430 };
+    const rel = relCam(base, cur);
+    // a world point painted under `base`, moved by `rel`, lands where `cur` shows it
+    for (const [wx, wy] of [
+      [100, 60],
+      [140, 70],
+      [300, 10],
+    ] as const) {
+      const [bx, by] = project(base, wx, wy);
+      const [cx, cy] = project(cur, wx, wy);
+      expect(close(rel.tx + rel.r * bx, cx) && close(rel.ty + rel.r * by, cy)).toBe(true);
+    }
+    expect(relCam(cur, cur)).toEqual({ r: 1, tx: 0, ty: 0 });
+    expect(relTransform(relCam(cur, cur))).toBe("");
+    expect(relTransform({ r: 0.8, tx: 12.3456, ty: -4 })).toBe("translate3d(12.35px, -4px, 0) scale(0.8)");
+  });
+
+  it("paints ahead of a zoom-in and knows when the painted margin runs out", () => {
+    const cur: Cam = { s: 2, cx: 100, cy: 100, ox: 500, oy: 300 };
+    const ahead = aheadCam(cur, 1 / 0.75);
+    const rel = relCam(ahead, cur);
+    expect(close(rel.r, 0.75)).toBe(true);
+    // the camera's screen point stays put
+    expect(close(rel.tx + rel.r * cur.ox, cur.ox) && close(rel.ty + rel.r * cur.oy, cur.oy)).toBe(true);
+    expect(relCovers(rel, 1000, 600, 250, 0.75, 1)).toBe(true);
+    expect(relCovers(rel, 1000, 600, 50, 0.75, 1)).toBe(false); // shrunk layer leaves the margin
+    expect(relCovers({ r: 1.1, tx: 0, ty: 0 }, 1000, 600, 250, 0.75, 1)).toBe(false); // would upscale
+    expect(relCovers({ r: 1, tx: 240, ty: 0 }, 1000, 600, 250, 0.75, 1)).toBe(true);
+    expect(relCovers({ r: 1, tx: 260, ty: 0 }, 1000, 600, 250, 0.75, 1)).toBe(false); // panned past it
   });
 });
 
