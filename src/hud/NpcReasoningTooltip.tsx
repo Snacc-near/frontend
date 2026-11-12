@@ -1,81 +1,59 @@
-import React, { useState } from "react";
-import type { SkinMode } from "../config/constants.ts";
-import type { NpcProfile, NpcQuoteView } from "../data/npc.ts";
+/**
+ * The NPC's reasoning line for a quote. Live mode shows the contract's `reasoning_tooltip`
+ * verbatim; demo mode shows the same text produced by a local copy of the contract rule.
+ */
+import { useId, useState } from "react";
+import type { NpcQuote } from "../data/npc.ts";
+import { Sim, Tag } from "../ui/fd.tsx";
 
-interface NpcReasoningTooltipProps {
-  quote: NpcQuoteView;
-  profile: NpcProfile;
-  skin: SkinMode;
-  className?: string;
+export interface NpcReasoningTooltipProps {
+  quote: NpcQuote;
+  npcName: string;
+  source: "contract" | "simulation";
+  stockBefore: number;
 }
 
-export const NpcReasoningTooltip: React.FC<NpcReasoningTooltipProps> = ({
-  quote,
-  profile,
-  skin,
-  className = "",
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const skinInfo = skin === "biolab" ? profile.biolab : profile.fintech;
-
+export function NpcReasoningTooltip({ quote, npcName, source, stockBefore }: NpcReasoningTooltipProps) {
+  const [open, setOpen] = useState(false);
+  const detailId = useId();
   return (
-    <div
-      className={`rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-3 shadow-[0_2px_0_var(--edge)] ${className}`}
-      role="region"
-      aria-label="NPC reasoning rationale"
-    >
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="inline-flex h-2 w-2 rounded-full bg-[var(--accent)] animate-pulse" />
-          <span className="font-mono text-[10px] uppercase tracking-wider font-semibold text-[var(--accent-dk)]">
-            ADR-30 on-chain reasoning
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsExpanded((prev) => !prev)}
-          className="font-mono text-[10px] text-[var(--ink)] hover:text-[var(--ink-hi)] cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--accent-dk)] rounded px-1"
-          aria-expanded={isExpanded}
-        >
-          {isExpanded ? "collapse" : "inspect"}
-        </button>
+    <section className="fd-win npc-why" aria-label={`${npcName} reasoning`}>
+      <div className="fd-win__bar">
+        <span className="fd-win__btn" aria-hidden="true" />
+        <span className="fd-win__rule" aria-hidden="true" />
+        <span className="fd-win__title">reasoning_tooltip</span>
+        <span className="fd-win__rule" aria-hidden="true" />
+        <span className="fd-win__btn" aria-hidden="true" />
       </div>
-
-      <div className="relative rounded-lg border border-[var(--edge)] bg-white p-2.5 text-[11px] text-[var(--ink-hi)]">
-        <div className="flex items-center gap-1.5 mb-1 text-[10px] font-semibold text-[var(--ink)]">
-          <span className="capitalize">{skinInfo.name}</span>
-          <span>·</span>
-          <span className="lowercase">{skinInfo.roleTitle}</span>
+      <div className="fd-win__body fd-stack">
+        <div className="fd-row fd-row--between">
+          {source === "contract" ? <Tag>contract view npc_quote_spores</Tag> : <Sim />}
+          <button type="button" className="fd-key fd-key--mono" aria-expanded={open} aria-controls={detailId} onClick={() => setOpen((v) => !v)}>
+            {open ? "hide formula" : "show formula"}
+          </button>
         </div>
-        <blockquote className="italic font-serif leading-relaxed text-[var(--ink-hi)]">
-          &ldquo;{quote.reasoningTooltip}&rdquo;
-        </blockquote>
-
-        {isExpanded && (
-          <div className="mt-2.5 pt-2 border-t border-[var(--edge)] flex flex-col gap-1 text-[10px] text-[var(--ink)] font-mono">
-            <div className="flex justify-between">
-              <span>Pricing Formula:</span>
-              <span className="text-[var(--ink-hi)]">unit = max(1, floor(P_base × S_target / S_after))</span>
+        <blockquote className="npc-why__quote">&ldquo;{quote.reasoning_tooltip}&rdquo;</blockquote>
+        {open ? (
+          <dl id={detailId} className="fd-kv">
+            <div className="fd-kv__row">
+              <dt>rule I-15</dt>
+              <dd>unit = max(1, floor(P_base × S_target / max(S_after, 1)))</dd>
             </div>
-            <div className="flex justify-between">
-              <span>Stock Impact:</span>
-              <span className="text-[var(--ink-hi)]">
-                {quote.sporesStockBefore} → {quote.npcSporesStockAfter} units
-              </span>
+            <div className="fd-kv__row">
+              <dt>stock</dt>
+              <dd className="fd-kv__num">
+                {stockBefore} → {quote.npc_spores_stock_after}
+              </dd>
             </div>
-            <div className="flex justify-between">
-              <span>Unit Price / Total:</span>
-              <span className="text-[var(--ink-hi)]">
-                {quote.unitPriceVita} VITA / {quote.totalCostSnacc} $SNACC
-              </span>
+            <div className="fd-kv__row">
+              <dt>unit / total</dt>
+              <dd className="fd-kv__num">
+                {String(quote.unit_price_vita)} / {String(quote.total_cost_snacc)}
+              </dd>
             </div>
-            <div className="flex justify-between">
-              <span>Wallet:</span>
-              <span className="truncate max-w-[200px] text-[var(--ink-hi)]">{profile.walletAccount}</span>
-            </div>
-          </div>
-        )}
+          </dl>
+        ) : null}
       </div>
-    </div>
+    </section>
   );
-};
+}

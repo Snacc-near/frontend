@@ -14,7 +14,7 @@ import {
   type Cam,
 } from "./lib/camera.ts";
 import { DEFAULT_ANCHORS, prefixIds, type FigureSource } from "./lib/figure.ts";
-import { Icon } from "./fd.tsx";
+import { Icon } from "../ui/fd.tsx";
 import { LENS_PARTS, SCALE_LEVEL_ANCHORS, STAGE_CUES, frameFor } from "./story.ts";
 import { World, worldBus } from "./world.ts";
 

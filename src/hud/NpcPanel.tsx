@@ -1,303 +1,258 @@
-import React, { useEffect, useState } from "react";
+/**
+ * NPC spore merchants (ADR-30). Live mode reads the contract views `get_npc` and
+ * `npc_quote_spores` on `snacc-v001.testnet` and shows their values only; buying needs the signed
+ * change call `npc_buy_spores`, which this wallet-less app cannot make. Demo mode runs the same
+ * quote rule on local genesis state and labels every number as a simulation.
+ */
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { SkinMode } from "../config/constants.ts";
 import {
-  NPC_PROFILES,
-  calculateNpcQuote,
-  createDefaultNpcStates,
+  NPC_IDS,
+  NPC_SKIN,
+  createGenesisNpcs,
+  fetchAllNpcs,
+  fetchNpcQuote,
+  npcName,
+  simulateNpcQuote,
+  type NpcAgent,
   type NpcId,
-  type NpcMerchantState,
+  type NpcQuote,
 } from "../data/npc.ts";
+import { CONTRACT_ID } from "../data/nearView.ts";
 import { NpcReasoningTooltip } from "./NpcReasoningTooltip.tsx";
-import { IconSnacc, IconSpore } from "./ResourceIcons.tsx";
+import { Modal } from "../ui/Modal.tsx";
+import { CopyButton, Empty, Field, Input, KeycapButton, TabPanel, Tabs } from "../ui/controls.tsx";
+import { Sim, Tag } from "../ui/fd.tsx";
 
-interface NpcPanelProps {
-  isOpen: boolean;
+export interface NpcPanelProps {
   onClose: () => void;
   skin: SkinMode;
-  crucibleTempMk: number;
+  /** Demo temperature (live mode uses the contract's own reading in the quote). */
+  crucibleTempMk: number | null;
   mode: "demo" | "live";
   userSnaccBalance: number;
-  onBuySpores?: (npcId: NpcId, amount: number, totalCost: number) => boolean | void;
+  onBuySpores?: (npcId: NpcId, amount: number, totalCost: number) => void;
 }
 
-export const NpcPanel: React.FC<NpcPanelProps> = ({
-  isOpen,
-  onClose,
-  skin,
-  crucibleTempMk,
-  mode,
-  userSnaccBalance,
-  onBuySpores,
-}) => {
-  const [selectedNpcId, setSelectedNpcId] = useState<NpcId>("npc-extractor");
-  const [buyAmount, setBuyAmount] = useState<number>(10);
-  const [npcStates, setNpcStates] = useState<Record<NpcId, NpcMerchantState>>(createDefaultNpcStates);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+const QUICK_AMOUNTS = [1, 10, 50];
 
-  // Close on Escape
+export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance, onBuySpores }: NpcPanelProps) {
+  const idBase = useId();
+  const live = mode === "live";
+  const [selected, setSelected] = useState<NpcId>("npc-extractor");
+  const [amount, setAmount] = useState(10);
+  const [demoNpcs, setDemoNpcs] = useState<Record<NpcId, NpcAgent>>(createGenesisNpcs);
+  const [liveNpcs, setLiveNpcs] = useState<Partial<Record<NpcId, NpcAgent>> | null>(null);
+  const [liveQuote, setLiveQuote] = useState<NpcQuote | null | "loading">("loading");
+  const [feedback, setFeedback] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+    if (!live) return;
+    const ac = new AbortController();
+    void fetchAllNpcs(ac.signal).then((rows) => {
+      if (!ac.signal.aborted) setLiveNpcs(rows);
+    });
+    return () => ac.abort();
+  }, [live]);
+
+  useEffect(() => {
+    if (!live) return;
+    setLiveQuote("loading");
+    const ac = new AbortController();
+    const t = window.setTimeout(() => {
+      void fetchNpcQuote(selected, amount, ac.signal).then((q) => {
+        if (!ac.signal.aborted) setLiveQuote(q);
+      });
+    }, 300);
+    return () => {
+      ac.abort();
+      clearTimeout(t);
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [live, selected, amount]);
 
-  if (!isOpen) return null;
+  const npc: NpcAgent | undefined = live ? liveNpcs?.[selected] : demoNpcs[selected];
+  const demoQuote = useMemo(
+    () => (live ? null : simulateNpcQuote(demoNpcs[selected], amount, crucibleTempMk ?? 605)),
+    [live, demoNpcs, selected, amount, crucibleTempMk],
+  );
+  const quote: NpcQuote | null = live ? (liveQuote === "loading" ? null : liveQuote) : demoQuote;
+  const name = npcName(selected, skin);
+  // Every demo number carries its own SIMULATION chip.
+  const V = ({ children }: { children: ReactNode }) => (
+    <dd className="fd-kv__num">
+      {children} {live ? null : <Sim />}
+    </dd>
+  );
 
-  const currentNpc = npcStates[selectedNpcId];
-  const profile = NPC_PROFILES[selectedNpcId];
-  const skinInfo = skin === "biolab" ? profile.biolab : profile.fintech;
-
-  const quote = calculateNpcQuote(currentNpc, buyAmount, crucibleTempMk, skin);
-  const canAfford = userSnaccBalance >= quote.totalCostSnacc;
-  const isStockAvailable = currentNpc.sporesStock >= buyAmount;
-
-  const handleExecuteTrade = () => {
-    if (mode === "live") {
-      setFeedbackMessage("On-chain execution: invoke npc_buy_spores via an external wallet.");
+  const buyDemo = () => {
+    if (!demoQuote) return;
+    const cost = Number(demoQuote.total_cost_snacc);
+    if (amount > demoNpcs[selected].spores_stock) {
+      setFeedback(`${name} holds only ${demoNpcs[selected].spores_stock} spores.`);
       return;
     }
-
-    if (!canAfford) {
-      setFeedbackMessage(`Insufficient $SNACC (need ${quote.totalCostSnacc}, have ${userSnaccBalance}).`);
+    if (cost > userSnaccBalance) {
+      setFeedback(`Not enough simulated $SNACC: need ${cost}, have ${userSnaccBalance}.`);
       return;
     }
-
-    if (!isStockAvailable) {
-      setFeedbackMessage(`Insufficient NPC inventory (${currentNpc.sporesStock} available).`);
-      return;
-    }
-
-    // Update local NPC state
-    setNpcStates((prev) => ({
+    setDemoNpcs((prev) => ({
       ...prev,
-      [selectedNpcId]: {
-        ...prev[selectedNpcId],
-        sporesStock: quote.npcSporesStockAfter,
-        snaccReserve: prev[selectedNpcId].snaccReserve + quote.totalCostSnacc,
-        tradesExecuted: prev[selectedNpcId].tradesExecuted + 1,
+      [selected]: {
+        ...prev[selected],
+        spores_stock: demoQuote.npc_spores_stock_after,
+        snacc_reserve: Number(prev[selected].snacc_reserve) + cost,
+        trades_executed: prev[selected].trades_executed + 1,
       },
     }));
-
-    if (onBuySpores) {
-      onBuySpores(selectedNpcId, buyAmount, quote.totalCostSnacc);
-    }
-
-    setFeedbackMessage(
-      `Acquired ${buyAmount} ${skinInfo.sporeType} from ${skinInfo.name} for ${quote.totalCostSnacc} $SNACC!`
-    );
+    onBuySpores?.(selected, amount, cost);
+    setFeedback(`Simulation: bought ${amount} spores from ${name} for ${cost} simulated $SNACC.`);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/40 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="npc-panel-title"
+    <Modal
+      title={skin === "fintech" ? "market-makers.view" : "npc-merchants.view"}
+      heading={skin === "fintech" ? "NPC market makers" : "NPC spore merchants"}
+      onClose={onClose}
+      size="lg"
+      testId="npc-modal"
+      footer={
+        live ? (
+          <>
+            <span>contract views get_npc · npc_quote_spores on {CONTRACT_ID}</span>
+            <Tag>live · testnet</Tag>
+          </>
+        ) : (
+          <>
+            <span>local copy of the contract rule on genesis state</span>
+            <Sim />
+          </>
+        )
+      }
     >
-      <div className="relative w-full max-w-xl rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[92dvh]">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--edge)] pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--accent-dk)] font-semibold">
-                ADR-30 Autonomous NPCs
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="font-mono text-[10px] text-[var(--ink)]">
-                {mode === "demo" ? "simulated state" : "on-chain view"}
-              </span>
-            </div>
-            <h2
-              id="npc-panel-title"
-              className="mt-0.5 text-base sm:text-lg font-bold text-[var(--ink-hi)] capitalize font-serif"
-            >
-              {skin === "biolab" ? "Alchemist Guild Spore Merchants" : "Institutional Market Maker Desks"}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="close modal"
-            className="keycap min-h-[36px] min-w-[36px] px-2 text-sm text-[var(--ink)] hover:text-[var(--ink-hi)] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
-          >
-            ✕
-          </button>
-        </div>
+      <div className="fd-stack">
+        <Tabs
+          label="NPC merchant"
+          idBase={idBase}
+          value={selected}
+          onChange={(id) => {
+            setSelected(id);
+            setFeedback(null);
+          }}
+          tabs={NPC_IDS.map((id) => ({ id, label: NPC_SKIN[id][skin].name }))}
+        />
+        <TabPanel idBase={idBase} id={selected}>
+          <p className="fd-sub">
+            {NPC_SKIN[selected][skin].role} · <code>{selected}</code> · sells mt:spore-ignis
+          </p>
+          {live && liveNpcs === null ? (
+            <Empty icon="eye">reading get_npc from {CONTRACT_ID}…</Empty>
+          ) : !npc ? (
+            <Empty icon="warn">Could not read get_npc(&quot;{selected}&quot;) from {CONTRACT_ID}. No numbers are shown instead.</Empty>
+          ) : (
+            <dl className="fd-kv" data-testid="npc-state">
+              <div className="fd-kv__row">
+                <dt>role_archetype</dt>
+                <V>{npc.role_archetype}</V>
+              </div>
+              <div className="fd-kv__row">
+                <dt>spores_stock</dt>
+                <V>
+                  {npc.spores_stock} / target {npc.target_spores_stock}
+                </V>
+              </div>
+              <div className="fd-kv__row">
+                <dt>base_spore_price</dt>
+                <V>{String(npc.base_spore_price)}</V>
+              </div>
+              <div className="fd-kv__row">
+                <dt>snacc_reserve</dt>
+                <V>{String(npc.snacc_reserve)}</V>
+              </div>
+              <div className="fd-kv__row">
+                <dt>trades_executed</dt>
+                <V>{npc.trades_executed}</V>
+              </div>
+            </dl>
+          )}
 
-        {/* NPC Selector Tabs */}
-        <div className="mt-4 grid grid-cols-3 gap-2" role="tablist" aria-label="select NPC merchant">
-          {(Object.keys(NPC_PROFILES) as NpcId[]).map((id) => {
-            const p = NPC_PROFILES[id];
-            const pSkin = skin === "biolab" ? p.biolab : p.fintech;
-            const isSelected = id === selectedNpcId;
-            return (
-              <button
-                key={id}
-                role="tab"
-                type="button"
-                aria-selected={isSelected}
-                onClick={() => {
-                  setSelectedNpcId(id);
-                  setFeedbackMessage(null);
-                }}
-                className={`flex flex-col items-start p-2.5 rounded-xl border transition-all text-left focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${
-                  isSelected
-                    ? "border-[var(--accent-dk)] bg-[var(--body)] shadow-[0_2px_0_var(--accent-dk)]"
-                    : "border-[var(--edge)] bg-white hover:bg-[var(--panel-2)]"
-                }`}
-              >
-                <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--ink-mute)]">
-                  {p.archetype}
-                </span>
-                <span className="font-semibold text-xs text-[var(--ink-hi)] truncate w-full">
-                  {pSkin.name}
-                </span>
-                <span className="text-[10px] text-[var(--ink)] truncate w-full lowercase">
-                  {pSkin.roleTitle}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected NPC Overview */}
-        <div className="mt-4 rounded-xl border border-[var(--edge)] bg-white p-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--edge)] pb-2 mb-2">
-            <div>
-              <span className="font-bold text-sm text-[var(--ink-hi)]">{skinInfo.name}</span>
-              <span className="text-xs text-[var(--ink)] ml-2">({profile.archetype})</span>
-              <p className="text-[11px] text-[var(--ink)] mt-0.5">{skinInfo.description}</p>
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-[10px] text-[var(--ink-mute)] shrink-0">
-              <span>wallet:</span>
-              <span className="text-[var(--ink)] truncate max-w-[140px]">{profile.walletAccount}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 text-[11px]">
-            <div className="rounded-lg bg-[var(--panel-2)] p-2">
-              <span className="block font-mono text-[9px] text-[var(--ink-mute)] uppercase">Stock / Target</span>
-              <span className="font-mono font-bold text-xs text-[var(--ink-hi)]">
-                {currentNpc.sporesStock} / {currentNpc.targetSporesStock}
-              </span>
-            </div>
-            <div className="rounded-lg bg-[var(--panel-2)] p-2">
-              <span className="block font-mono text-[9px] text-[var(--ink-mute)] uppercase">Base Price</span>
-              <span className="font-mono font-bold text-xs text-[var(--ink-hi)]">
-                {currentNpc.baseSporePrice} VITA
-              </span>
-            </div>
-            <div className="rounded-lg bg-[var(--panel-2)] p-2">
-              <span className="block font-mono text-[9px] text-[var(--ink-mute)] uppercase">Executed Trades</span>
-              <span className="font-mono font-bold text-xs text-[var(--ink-hi)]">
-                {currentNpc.tradesExecuted}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Spore Trade Input & Quick Selector */}
-        <div className="mt-4 flex flex-col gap-2">
-          <label htmlFor="buy-amount-input" className="text-xs font-semibold text-[var(--ink-hi)] lowercase">
-            {skin === "biolab" ? "spores quantity to purchase:" : "catalyst coupon units to order:"}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              id="buy-amount-input"
-              type="number"
-              min="1"
-              max={currentNpc.sporesStock}
-              value={buyAmount}
-              onChange={(e) => setBuyAmount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="keycap min-h-[40px] w-24 text-center font-mono font-bold text-sm bg-white border border-[var(--line)] rounded-lg focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
-            />
-            <div className="flex flex-wrap gap-1">
-              {[1, 5, 10, 25, 50, 100].map((amt) => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setBuyAmount(amt)}
-                  className={`keycap min-h-[36px] px-2.5 text-[11px] rounded-lg ${
-                    buyAmount === amt ? "keycap--primary" : ""
-                  } focus-visible:ring-1 focus-visible:ring-[var(--accent-dk)] focus:outline-none`}
-                >
-                  +{amt}
-                </button>
+          <Field id={`${idBase}-amount`} label="buy_amount (spores)">
+            <div className="fd-row">
+              <Input
+                id={`${idBase}-amount`}
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={amount}
+                onChange={(e) => setAmount(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                style={{ maxWidth: 120 }}
+              />
+              {QUICK_AMOUNTS.map((n) => (
+                <KeycapButton key={n} mono aria-pressed={amount === n} onClick={() => setAmount(n)}>
+                  {n}
+                </KeycapButton>
               ))}
             </div>
-          </div>
-        </div>
+          </Field>
 
-        {/* Dynamic Quote Box */}
-        <div className="mt-4 rounded-xl border border-[var(--edge)] bg-[var(--deck)] p-3 text-[11px]">
-          <div className="flex items-center justify-between font-mono mb-1 text-[10px] text-[var(--ink-mute)]">
-            <span>Algorithmic Quote</span>
-            <span>rule I-15</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 py-1 font-mono">
-            <div>
-              <span className="block text-[10px] text-[var(--ink)]">Unit Price</span>
-              <span className="font-bold text-xs text-[var(--ink-hi)]">{quote.unitPriceVita} VITA</span>
+          {live && liveQuote === "loading" ? (
+            <Empty icon="eye">reading npc_quote_spores…</Empty>
+          ) : !quote ? (
+            <Empty icon="warn">The contract did not return a quote for this amount (the view rejects amounts it cannot fill).</Empty>
+          ) : (
+            <>
+              <dl className="fd-kv" data-testid="npc-quote">
+                <div className="fd-kv__row">
+                  <dt>unit_price_vita</dt>
+                  <V>{String(quote.unit_price_vita)}</V>
+                </div>
+                <div className="fd-kv__row">
+                  <dt>total_cost_snacc</dt>
+                  <V>
+                    {String(quote.total_cost_snacc)} {live ? <Tag>raw yocto units</Tag> : null}
+                  </V>
+                </div>
+                <div className="fd-kv__row">
+                  <dt>stock after</dt>
+                  <V>{quote.npc_spores_stock_after}</V>
+                </div>
+                <div className="fd-kv__row">
+                  <dt>crucible_temp_mk</dt>
+                  <V>{quote.crucible_temp_mk}</V>
+                </div>
+              </dl>
+              <NpcReasoningTooltip quote={quote} npcName={name} source={live ? "contract" : "simulation"} stockBefore={npc?.spores_stock ?? 0} />
+            </>
+          )}
+
+          {live ? (
+            <div className="fd-stack">
+              <p className="fd-note">
+                Buying calls <code>npc_buy_spores(strain_id, npc_id, buy_amount)</code>, a signed change call. This app has no wallet
+                connection, so live mode is read-only.
+              </p>
+              <div className="fd-row">
+                <CopyButton label="copy call template" text={`npc_buy_spores(${JSON.stringify({ strain_id: "<your strain id>", npc_id: selected, buy_amount: amount })})`} />
+              </div>
             </div>
-            <div>
-              <span className="block text-[10px] text-[var(--ink)]">Total Cost</span>
-              <span className="font-bold text-xs text-[var(--accent-dk)]">{quote.totalCostSnacc} $SNACC</span>
-            </div>
-            <div>
-              <span className="block text-[10px] text-[var(--ink)]">Stock After</span>
-              <span className="font-bold text-xs text-[var(--ink-hi)]">{quote.npcSporesStockAfter} units</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ADR-30 Reasoning Tooltip Card */}
-        <div className="mt-4">
-          <NpcReasoningTooltip quote={quote} profile={profile} skin={skin} />
-        </div>
-
-        {/* Feedback message */}
-        {feedbackMessage && (
-          <div
-            className="mt-3 rounded-lg border border-[var(--line)] bg-[var(--accent-dim)] p-2 text-xs text-[var(--accent-ink)] font-semibold"
-            role="status"
-          >
-            {feedbackMessage}
-          </div>
-        )}
-
-        {/* Action Button */}
-        <div className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--edge)] pt-3">
-          <div className="flex items-center gap-1.5 text-xs text-[var(--ink)]">
-            <IconSnacc className="h-4 w-4" />
-            <span>Balance:</span>
-            <span className="font-mono font-bold text-[var(--ink-hi)]">{userSnaccBalance} $SNACC</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleExecuteTrade}
-            disabled={!canAfford || !isStockAvailable}
-            className={`keycap min-h-[44px] px-5 text-xs font-bold rounded-xl focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${
-              canAfford && isStockAvailable
-                ? "keycap--primary cursor-pointer"
-                : "opacity-50 cursor-not-allowed"
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <IconSpore className="h-4 w-4" />
-              <span>
-                {mode === "demo"
-                  ? skin === "biolab"
-                    ? `buy ${buyAmount} spores (${quote.totalCostSnacc} $SNACC)`
-                    : `order ${buyAmount} coupons (${quote.totalCostSnacc} $SNACC)`
-                  : "preview quote on-chain"}
+          ) : (
+            <div className="fd-row">
+              <KeycapButton variant="primary" icon="spark" onClick={buyDemo}>
+                buy in simulation
+              </KeycapButton>
+              <span className="fd-field__hint">
+                balance {userSnaccBalance.toLocaleString("en-US")} <Sim />
               </span>
             </div>
-          </button>
-        </div>
+          )}
+          {feedback ? (
+            <p className="fd-field__hint" role="status">
+              {feedback}
+            </p>
+          ) : null}
+        </TabPanel>
       </div>
-    </div>
+    </Modal>
   );
-};
+}
+
+export default NpcPanel;

@@ -1,5 +1,5 @@
 import { LINKS } from "./chapters.ts";
-import { Icon, type IconName } from "./fd.tsx";
+import { Icon, type IconName } from "../ui/fd.tsx";
 import { explorerAccount } from "./lib/chain.ts";
 import { Wordmark } from "./Wordmark.tsx";
 

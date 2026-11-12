@@ -1,196 +1,108 @@
 /**
- * Autonomous AI Alchemist NPCs and on-chain spore pricing models (ADR-30).
+ * The three on-chain NPC spore merchants (ADR-30). Live mode reads them with the contract views
+ * `get_npc` and `npc_quote_spores`; demo mode reproduces the contract's quote rule locally and is
+ * labelled as a simulation. Every NPC sells `mt:spore-ignis` (`npc_buy_spores`).
  *
- * Implements the exact pricing formula and reasoning tooltips specified in:
- * - contracts/snacc/src/lib.rs (npc_quote_spores / I-15)
- * - snacc-vault/04 Arsitektur/Snacc - Model Data.md
- * - snacc-vault/04 Arsitektur/Snacc - Keputusan Desain.md (ADR-30)
- *
- * Pricing rule (I-15):
- * unit_price = max(1, floor(P_base * S_target / max(S_after, 1)))
- * total_cost = unit_price * buy_amount
+ * Quote rule (I-15, `npc_quote_internal`): unit = max(1, floor(P_base × S_target / max(S_after, 1))),
+ * total = unit × buy_amount. Prices are raw contract integers (P_BASE = 100).
  */
-
 import type { SkinMode } from "../config/constants.ts";
+import { viewCall } from "./nearView.ts";
 
 export type NpcId = "npc-extractor" | "npc-central-arb" | "npc-vulture-ma";
+export const NPC_IDS: readonly NpcId[] = ["npc-extractor", "npc-central-arb", "npc-vulture-ma"];
 
-export interface NpcProfile {
-  id: NpcId;
-  archetype: string;
-  walletAccount: string;
-  targetSporesStock: number;
-  baseSporePrice: number;
-  biolab: {
-    name: string;
-    roleTitle: string;
-    description: string;
-    sporeType: string;
-    motto: string;
-  };
-  fintech: {
-    name: string;
-    roleTitle: string;
-    description: string;
-    sporeType: string;
-    motto: string;
-  };
+/** `NpcMerchantAgent` as returned by `get_npc` (u128 fields may arrive as strings). */
+export interface NpcAgent {
+  npc_id: string;
+  wallet_account?: string;
+  role_archetype: string;
+  snacc_reserve: number | string;
+  spores_stock: number;
+  target_spores_stock: number;
+  base_spore_price: number | string;
+  trades_executed: number;
 }
 
-export interface NpcMerchantState {
-  id: NpcId;
-  sporesStock: number;
-  targetSporesStock: number;
-  baseSporePrice: number;
-  snaccReserve: number;
-  tradesExecuted: number;
+/** `NpcQuoteView` as returned by `npc_quote_spores`. */
+export interface NpcQuote {
+  npc_id: string;
+  unit_price_vita: number | string;
+  total_cost_snacc: number | string;
+  npc_spores_stock_after: number;
+  crucible_temp_mk: number;
+  reasoning_tooltip: string;
 }
 
-export interface NpcQuoteView {
-  npcId: NpcId;
-  buyAmount: number;
-  sporesStockBefore: number;
-  npcSporesStockAfter: number;
-  unitPriceVita: number;
-  totalCostSnacc: number;
-  crucibleTempMk: number;
-  reasoningTooltip: string;
-}
-
-/** Official baseline archetypes and profiles (ADR-30). */
-export const NPC_PROFILES: Record<NpcId, NpcProfile> = {
+/** Display names per skin (ADR-31). `role_archetype` itself comes from the contract. */
+export const NPC_SKIN: Record<NpcId, { archetype: string; biolab: { name: string; role: string }; fintech: { name: string; role: string } }> = {
   "npc-extractor": {
-    id: "npc-extractor",
     archetype: "Pyre-X",
-    walletAccount: "npc-extractor.snacc-v001.near",
-    targetSporesStock: 500,
-    baseSporePrice: 100,
-    biolab: {
-      name: "Pyre-X",
-      roleTitle: "Extractor Alchemist",
-      description: "Extracts volatile Spore-Ignis from raw thermal vents in the deep crucible.",
-      sporeType: "Spore-Ignis",
-      motto: "Scarcity is my leverage.",
-    },
-    fintech: {
-      name: "Pyre-X Capital",
-      roleTitle: "Asset Originator",
-      description: "Originates primary catalyst coupons to backstop initial protocol liquidity.",
-      sporeType: "Primary Catalyst",
-      motto: "Dynamic bonding curve liquidity.",
-    },
+    biolab: { name: "Pyre-X", role: "extractor alchemist" },
+    fintech: { name: "Pyre-X Capital", role: "asset originator" },
   },
   "npc-central-arb": {
-    id: "npc-central-arb",
     archetype: "Myco-7",
-    walletAccount: "npc-central-arb.snacc-v001.near",
-    targetSporesStock: 1000,
-    baseSporePrice: 100,
-    biolab: {
-      name: "Myco-7",
-      roleTitle: "Central Spore Arb",
-      description: "Maintains balanced spore circulation across interconnected microbial strains.",
-      sporeType: "Spore-Amalgam",
-      motto: "Equilibrium is stability.",
-    },
-    fintech: {
-      name: "Myco-7 Arbitrage",
-      roleTitle: "Liquidity Provision",
-      description: "Automated market maker balancing secondary liquidity depths and order flows.",
-      sporeType: "Secondary Clearing Unit",
-      motto: "Equilibrium stabilizes market depth.",
-    },
+    biolab: { name: "Myco-7", role: "central spore arb" },
+    fintech: { name: "Myco-7 Arbitrage", role: "liquidity provision" },
   },
   "npc-vulture-ma": {
-    id: "npc-vulture-ma",
     archetype: "Void-0",
-    walletAccount: "npc-vulture-ma.snacc-v001.near",
-    targetSporesStock: 300,
-    baseSporePrice: 100,
-    biolab: {
-      name: "Void-0",
-      roleTitle: "Scavenger Guild",
-      description: "Hoards rare spores and targets dying colonies for predatory biomass absorption.",
-      sporeType: "Spore-Necro",
-      motto: "Survival belongs to the solvent.",
-    },
-    fintech: {
-      name: "Void-0 Distressed M&A",
-      roleTitle: "Chapter 11 Liquidator",
-      description: "Specialized vulture fund executing distressed corporate buyouts and asset salvage.",
-      sporeType: "Distressed Debt Voucher",
-      motto: "Capital reallocates to solvent balance sheets.",
-    },
+    biolab: { name: "Void-0", role: "scavenger guild" },
+    fintech: { name: "Void-0 Distressed M&A", role: "distressed buyouts" },
   },
 };
 
-/** Default initial state matching contracts/snacc/src/lib.rs:302-320 */
-export function createDefaultNpcStates(): Record<NpcId, NpcMerchantState> {
+export function npcName(id: NpcId, skin: SkinMode): string {
+  return NPC_SKIN[id][skin].name;
+}
+
+/** Genesis state from the contract's `spawn_npcs`: stock = target, reserve 0, base price P_BASE. */
+export const NPC_GENESIS: Record<NpcId, NpcAgent> = {
+  "npc-extractor": { npc_id: "npc-extractor", role_archetype: "Pyre-X", snacc_reserve: 0, spores_stock: 500, target_spores_stock: 500, base_spore_price: 100, trades_executed: 0 },
+  "npc-central-arb": { npc_id: "npc-central-arb", role_archetype: "Myco-7", snacc_reserve: 0, spores_stock: 1000, target_spores_stock: 1000, base_spore_price: 100, trades_executed: 0 },
+  "npc-vulture-ma": { npc_id: "npc-vulture-ma", role_archetype: "Void-0", snacc_reserve: 0, spores_stock: 300, target_spores_stock: 300, base_spore_price: 100, trades_executed: 0 },
+};
+
+export function createGenesisNpcs(): Record<NpcId, NpcAgent> {
   return {
-    "npc-extractor": {
-      id: "npc-extractor",
-      sporesStock: 500,
-      targetSporesStock: 500,
-      baseSporePrice: 100,
-      snaccReserve: 0,
-      tradesExecuted: 0,
-    },
-    "npc-central-arb": {
-      id: "npc-central-arb",
-      sporesStock: 1000,
-      targetSporesStock: 1000,
-      baseSporePrice: 100,
-      snaccReserve: 0,
-      tradesExecuted: 0,
-    },
-    "npc-vulture-ma": {
-      id: "npc-vulture-ma",
-      sporesStock: 300,
-      targetSporesStock: 300,
-      baseSporePrice: 100,
-      snaccReserve: 0,
-      tradesExecuted: 0,
-    },
+    "npc-extractor": { ...NPC_GENESIS["npc-extractor"] },
+    "npc-central-arb": { ...NPC_GENESIS["npc-central-arb"] },
+    "npc-vulture-ma": { ...NPC_GENESIS["npc-vulture-ma"] },
   };
 }
 
-/**
- * Calculates a spore quote from an NPC using rule I-15:
- * unit = max(1, floor(P_base * S_target / max(S_after, 1)))
- * total = unit * buy_amount
- */
-export function calculateNpcQuote(
-  npc: NpcMerchantState,
-  buyAmount: number,
-  crucibleTempMk: number,
-  skin: SkinMode = "biolab"
-): NpcQuoteView {
-  const safeAmount = Math.max(1, Math.floor(buyAmount));
-  const sAfter = Math.max(0, npc.sporesStock - safeAmount);
-  const denominator = Math.max(sAfter, 1);
-  const unitPrice = Math.max(
-    1,
-    Math.floor((npc.baseSporePrice * npc.targetSporesStock) / denominator)
-  );
-  const totalCost = unitPrice * safeAmount;
-
-  const profile = NPC_PROFILES[npc.id];
-  const sporeType = skin === "biolab" ? profile.biolab.sporeType : profile.fintech.sporeType;
-  const motto = skin === "biolab" ? profile.biolab.motto : profile.fintech.motto;
-
-  const reasoningTooltip =
-    skin === "biolab"
-      ? `I hold ${npc.sporesStock} ${sporeType} (target ${npc.targetSporesStock}). Selling ${safeAmount} drops my stock to ${sAfter} — unit price rises to ${unitPrice} (P_base ${npc.baseSporePrice}). ${motto}`
-      : `Market inventory: ${npc.sporesStock} ${sporeType} units (target ${npc.targetSporesStock}). Execution of ${safeAmount} reduces reserves to ${sAfter} — unit quote adjusts to ${unitPrice} (P_base ${npc.baseSporePrice}). ${motto}`;
-
+/** The contract's quote, computed locally for the demo simulation (same formula and tooltip text). */
+export function simulateNpcQuote(npc: NpcAgent, buyAmount: number, crucibleTempMk: number): NpcQuote {
+  const amount = Math.max(1, Math.floor(buyAmount));
+  const sAfter = Math.max(0, npc.spores_stock - amount);
+  const pBase = BigInt(npc.base_spore_price);
+  const raw = (pBase * BigInt(npc.target_spores_stock)) / BigInt(Math.max(sAfter, 1));
+  const unit = raw > 1n ? raw : 1n;
   return {
-    npcId: npc.id,
-    buyAmount: safeAmount,
-    sporesStockBefore: npc.sporesStock,
-    npcSporesStockAfter: sAfter,
-    unitPriceVita: unitPrice,
-    totalCostSnacc: totalCost,
-    crucibleTempMk,
-    reasoningTooltip,
+    npc_id: npc.npc_id,
+    unit_price_vita: unit.toString(),
+    total_cost_snacc: (unit * BigInt(amount)).toString(),
+    npc_spores_stock_after: sAfter,
+    crucible_temp_mk: crucibleTempMk,
+    reasoning_tooltip: `I hold ${npc.spores_stock} Spore-Ignis (target ${npc.target_spores_stock}). Selling ${amount} drops my stock to ${sAfter} — unit price rises to ${unit} (P_base ${npc.base_spore_price}). Scarcity is my leverage.`,
   };
+}
+
+export function fetchNpc(id: NpcId, signal?: AbortSignal): Promise<NpcAgent | null> {
+  return viewCall<NpcAgent>("get_npc", { npc_id: id }, signal);
+}
+
+export function fetchNpcQuote(id: NpcId, buyAmount: number, signal?: AbortSignal): Promise<NpcQuote | null> {
+  return viewCall<NpcQuote>("npc_quote_spores", { npc_id: id, buy_amount: Math.max(1, Math.floor(buyAmount)) }, signal);
+}
+
+export async function fetchAllNpcs(signal?: AbortSignal): Promise<Partial<Record<NpcId, NpcAgent>>> {
+  const rows = await Promise.all(NPC_IDS.map((id) => fetchNpc(id, signal)));
+  const out: Partial<Record<NpcId, NpcAgent>> = {};
+  NPC_IDS.forEach((id, i) => {
+    const row = rows[i];
+    if (row) out[id] = row;
+  });
+  return out;
 }

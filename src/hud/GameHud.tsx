@@ -47,7 +47,7 @@ export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources, skin 
         </span>
       ) : (
         <span className="label-plate max-sm:hidden">
-          <span className="lp-label">live · on-chain</span>
+          <span className="lp-label">live · testnet</span>
         </span>
       )}
       {pills.map(({ key, label, value, Icon }) => (

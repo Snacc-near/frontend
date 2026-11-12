@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Icon } from "./fd.tsx";
+import { Icon } from "../ui/fd.tsx";
 
 const INK = "#16181a";
 const MARI = "#f8aa06";

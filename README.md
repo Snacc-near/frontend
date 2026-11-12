@@ -126,16 +126,30 @@ npm run dev
 Screenshots under [`docs/img/`](docs/img/) were taken from a production
 build served locally on a static gzip server.
 
-## Swap & Liquidity Terminal (RES-107 & RES-108)
+## Tool windows
 
-The UI includes an integrated DEX display and swap quote widget (`SwapPanel.tsx`):
-- **Ref / Rhea price indexer (RES-107)**: Fetches public indexer prices for reference assets (wNEAR) and $SNACC. When $SNACC is not yet listed on a liquidity pool, the UI honestly renders `—` with a `not listed yet on dex pool` note and never fabricates prices. External market prices are display only and do not feed any game mechanics. Direct deep link: "open in Rhea Finance".
-- **NEAR Intents / 1Click quote (RES-108)**: Fetches dry-run quotes for cross-chain swaps (`exact_amount_in` → `amount_out`, `min_amount_out`, expiration) across supported assets (NEAR, USDC on NEAR/Ethereum, SOL, BTC). Preview only: no on-chain transactions or wallet keys are used by this UI.
+One toolbar under the plate opens six windows (below 900 px they fold into a
+**tools** sheet). They share the landing's look (`src/ui/`: square 1 px ink
+windows, dithered shadows, line icons) and behave as modal dialogs: Escape and
+a backdrop click close them, Tab stays inside, focus returns to the opener,
+and under 640 px they open as bottom sheets. Each loads on first open.
 
-Configuration (`.env`):
-- `VITE_SNACC_TOKEN_ID` — contract id of the $SNACC token.
-- `VITE_REF_INDEXER_URL` — Ref / Rhea indexer API base URL.
-- `VITE_INTENTS_API_URL` — NEAR Intents 1Click API base URL.
+| Window | What it shows | Data source |
+|---|---|---|
+| NPC merchants (ADR-30) | The three contract NPCs, their stock and a spore quote with the contract's `reasoning_tooltip` | **live:** views `get_npc`, `npc_quote_spores` on `snacc-v001.testnet`; buying needs the signed call `npc_buy_spores`, which this wallet-less app cannot make. **demo:** the same rule on genesis state, every number labelled SIMULATION |
+| Swap quote | Rhea reference price and a NEAR Intents 1Click **dry** quote between listed assets | public APIs in both modes (`api.rhea.finance/list-token-price`, `POST 1click.chaindefuser.com/v0/quote` with `dry: true`, no API key). `$SNACC` is a testnet token and is listed on neither |
+| Great Feast | Epoch, zone, feast volume and the top-3 feeders, plus a near.social markdown post to copy | **live:** backend `/api/appetite`, else views `get_appetite_meter` + `get_top_feeder`; empty state when both are empty. **demo:** invented feeders, labelled SIMULATION |
+| Thesis | Four numbers from the testnet rehearsal of 2026-11-09, each linked to its tx (or named view); live mode adds a fresh view read. SQL **query templates — not executed** (Snacc is testnet-only) | `src/data/evidence.ts` (copied from the umbrella repo's evidence pack), views `get_macro_state`, `get_global_solvency`, `get_crucible_temp` |
+| Recipes | **Local recipe search (keyword)** over the recipes the contract implements, with each method's real signature and a JSON call template to copy | in-browser word match; no model, no network |
+| Guest label | **Guest label — local only, no on-chain account, nothing is signed.** A valid `.testnet` account, if typed, only highlights its strains. near.email and Auth0 are shown as disabled "planned" options | `localStorage` (label and optional account only) |
+
+Amounts are `$SNACC` with 24 decimals. Nothing in these windows signs a
+transaction, and nothing feeds a game mechanic.
+
+Optional configuration (`.env`):
+- `VITE_REF_INDEXER_URL` — Rhea price list base URL (default `https://api.rhea.finance`).
+- `VITE_INTENTS_API_URL` — 1Click API base URL (default `https://1click.chaindefuser.com`).
+- `VITE_SNACC_TOKEN_ID` — a mainnet `$SNACC` token id, if one ever exists; unset today.
 
 ## Tests
 
@@ -143,10 +157,14 @@ Configuration (`.env`):
 npm test
 ```
 
-136 tests across 17 files (`vitest run`) — bridge message validation, keycap
-busy state, live placeholders (`—` vs fabricated values), simulation,
-poller, optimistic vitality, zones, isometric plate geometry, Ref price indexer,
-NEAR Intents cross-chain quotes, and word guards. All green.
+Run `npx vitest run` for the current count. The suite covers bridge message
+validation, keycap busy state, live placeholders (`—` vs fabricated values),
+simulation, poller, optimistic vitality, zones, isometric plate geometry, the
+Rhea price client, the 1Click dry-quote request and response handling, the NPC
+quote rule against a real contract response, the tool windows' dialog
+semantics and keyboard logic, and word guards over all of `src`. Tests run in
+node without a DOM, so Escape, focus trap and focus return are covered through
+the shared keyboard logic (`src/ui/a11y.ts`) and checked by hand in a browser.
 
 ## Lighthouse (static gzip server, production build)
 

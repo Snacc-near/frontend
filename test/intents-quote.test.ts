@@ -1,88 +1,87 @@
 import { describe, it, expect } from "vitest";
 import {
-  toBaseUnits,
-  fromBaseUnits,
+  QUOTE_ASSETS,
+  buildQuotePayload,
   fetchIntentsQuote,
-  PRESET_INPUT_ASSETS,
+  fromBaseUnits,
+  toBaseUnits,
 } from "../src/swap/intentsQuote.ts";
 import { readSwapConfig } from "../src/swap/config.ts";
+import type { FetchLike } from "../src/swap/http.ts";
 
-describe("RES-108: NEAR Intents (1Click) quote client", () => {
-  it("converts human amounts to base integer units accurately", () => {
-    // 24 decimals (NEAR)
+const config = readSwapConfig({});
+const NEAR = QUOTE_ASSETS[0];
+const USDC = QUOTE_ASSETS[1];
+
+function reply(status: number, body: unknown): { fetchImpl: FetchLike; calls: { url: string; init?: RequestInit }[] } {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const fetchImpl: FetchLike = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify(body), { status });
+  };
+  return { fetchImpl, calls };
+}
+
+describe("1Click dry quote client (POST /v0/quote)", () => {
+  it("converts amounts to and from base units", () => {
     expect(toBaseUnits("1", 24)).toBe("1000000000000000000000000");
-    expect(toBaseUnits("0.5", 24)).toBe("500000000000000000000000");
-    // 6 decimals (USDC)
-    expect(toBaseUnits("10.25", 6)).toBe("10250000");
-    expect(toBaseUnits("0", 6)).toBe("0");
+    expect(toBaseUnits("1.5", 6)).toBe("1500000");
     expect(toBaseUnits("abc", 6)).toBeNull();
+    expect(fromBaseUnits("3503343", 6)).toBe("3.503343");
+    expect(fromBaseUnits("1000000", 6)).toBe("1");
   });
 
-  it("converts base units back to human readable numbers", () => {
-    expect(fromBaseUnits("1000000000000000000000000", 24)).toBe("1");
-    expect(fromBaseUnits("1500000000000000000000000", 24)).toBe("1.5");
-    expect(fromBaseUnits("10250000", 6)).toBe("10.25");
-    expect(fromBaseUnits("0", 6)).toBe("0");
+  it("builds the request with the fields the 1Click schema requires", () => {
+    const p = buildQuotePayload({ assetIn: NEAR, assetOut: USDC, amountIn: "1" }, "1000000000000000000000000", 0);
+    for (const k of ["dry", "swapType", "slippageTolerance", "originAsset", "depositType", "destinationAsset", "amount", "refundTo", "refundType", "recipient", "recipientType", "deadline"]) {
+      expect(p).toHaveProperty(k);
+    }
+    expect(p.dry).toBe(true);
+    expect(p.swapType).toBe("EXACT_INPUT");
+    expect(p.originAsset).toBe("nep141:wrap.near");
+    expect(p.deadline).toBe(new Date(600_000).toISOString());
+    expect(JSON.stringify(p)).not.toContain("defuse_asset_identifier");
   });
 
-  it("returns ready status with valid dry quote response", async () => {
-    const cfg = readSwapConfig({
-      VITE_INTENTS_API_URL: "https://1click.chaindefuser.com",
-      VITE_INTENTS_DEST_ASSET_ID: "nep141:snacc.near",
-      VITE_SNACC_TOKEN_ID: "snacc.near",
+  it("lists only real 1Click asset ids and no $SNACC", () => {
+    for (const a of QUOTE_ASSETS) expect(a.id).toMatch(/^nep141:[a-z0-9.-]+$/);
+    expect(QUOTE_ASSETS.some((a) => /snacc/i.test(a.id + a.symbol))).toBe(false);
+  });
+
+  it("parses quote.amountOut from a 201 response", async () => {
+    const { fetchImpl, calls } = reply(201, {
+      quote: { amountIn: "1000000000000000000000000", amountOut: "3503343", minAmountOut: "3468309", timeEstimate: 12 },
+      quoteRequest: { dry: true },
     });
-
-    const mockFetch = async () =>
-      new Response(
-        JSON.stringify({
-          amount_out: "5000000000000000000000000",
-          min_amount_out: "4950000000000000000000000",
-          expiration_time: "60s",
-        }),
-        { status: 200 },
-      );
-
-    const res = await fetchIntentsQuote(
-      { assetIn: PRESET_INPUT_ASSETS[0], amountIn: "2" },
-      cfg,
-      { fetchImpl: mockFetch },
-    );
-
-    expect(res.status).toBe("ready");
-    expect(res.estimatedOut).toBe("5");
-    expect(res.minAmountOut).toBe("4.95");
-    expect(res.destSymbol).toBe("$SNACC");
+    const r = await fetchIntentsQuote({ assetIn: NEAR, assetOut: USDC, amountIn: "1" }, config, { fetchImpl });
+    expect(r.status).toBe("ready");
+    expect(r.amountOut).toBe("3.503343");
+    expect(r.minAmountOut).toBe("3.468309");
+    expect(r.timeEstimateSec).toBe(12);
+    expect(calls[0].url).toBe("https://1click.chaindefuser.com/v0/quote");
+    expect(calls[0].init?.method).toBe("POST");
   });
 
-  it("returns no_route status when pair is not routed on intents", async () => {
-    const cfg = readSwapConfig({
-      VITE_INTENTS_API_URL: "https://1click.chaindefuser.com",
-    });
-
-    const mockFetch = async () =>
-      new Response(
-        JSON.stringify({ message: "No route found for token pair" }),
-        { status: 404 },
-      );
-
-    const res = await fetchIntentsQuote(
-      { assetIn: PRESET_INPUT_ASSETS[0], amountIn: "10" },
-      cfg,
-      { fetchImpl: mockFetch },
-    );
-
-    expect(res.status).toBe("no_route");
-    expect(res.estimatedOut).toBe("—");
-    expect(res.errorMessage).toBe("pair not routed on intents yet");
+  it("reports HTTP 400 as an error with the service message, not as 'no route'", async () => {
+    const { fetchImpl } = reply(400, { message: ["swapType should not be empty"], error: "Bad Request" });
+    const r = await fetchIntentsQuote({ assetIn: NEAR, assetOut: USDC, amountIn: "1" }, config, { fetchImpl });
+    expect(r.status).toBe("error");
+    expect(r.message).toContain("400");
+    expect(r.message).toContain("swapType should not be empty");
+    expect(r.message).not.toMatch(/route/i);
   });
 
-  it("returns idle status when input amount is zero or empty", async () => {
-    const cfg = readSwapConfig({});
-    const res = await fetchIntentsQuote(
-      { assetIn: PRESET_INPUT_ASSETS[0], amountIn: "0" },
-      cfg,
-    );
-    expect(res.status).toBe("idle");
-    expect(res.estimatedOut).toBe("—");
+  it("says plainly when the service wants an API key", async () => {
+    const { fetchImpl } = reply(401, { message: "Unauthorized" });
+    const r = await fetchIntentsQuote({ assetIn: NEAR, assetOut: USDC, amountIn: "1" }, config, { fetchImpl });
+    expect(r.status).toBe("needs_key");
+    expect(r.message).toBe("quote preview unavailable without an API key");
+  });
+
+  it("does not call the network for a zero amount or the same asset twice", async () => {
+    const { fetchImpl, calls } = reply(201, {});
+    expect((await fetchIntentsQuote({ assetIn: NEAR, assetOut: USDC, amountIn: "0" }, config, { fetchImpl })).status).toBe("idle");
+    expect((await fetchIntentsQuote({ assetIn: NEAR, assetOut: NEAR, amountIn: "1" }, config, { fetchImpl })).status).toBe("idle");
+    expect(calls).toHaveLength(0);
   });
 });

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CHAPTERS } from "./chapters.ts";
 import { AppetiteDemo, ColonyDemo, EnclaveDemo, FeedDemo, MetabolismDemo } from "./demos.tsx";
-import { Accent, Cap, Chip, Win } from "./fd.tsx";
+import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 import { HeroBlock, Loader, Ruler, Ticker } from "./Hero.tsx";
 import { DEFAULT_ANCHORS, FIGURE_SVG_URL, type FigureSource } from "./lib/figure.ts";
 import { LiveCrop } from "./LiveCrop.tsx";

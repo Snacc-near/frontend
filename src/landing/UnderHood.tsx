@@ -1,5 +1,5 @@
 import { LINKS } from "./chapters.ts";
-import { Accent, Cap, Chip, Icon, Win } from "./fd.tsx";
+import { Accent, Cap, Chip, Icon, Win } from "../ui/fd.tsx";
 
 const REPOS = ["contracts", "oracle-tee", "sdk", "backend", "frontend", "scripts"] as const;
 

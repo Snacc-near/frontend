@@ -26,6 +26,11 @@ function safeMessage(body: unknown): string | undefined {
   if (body && typeof body === "object" && "message" in body) {
     const m = (body as { message?: unknown }).message;
     if (typeof m === "string" && m.trim()) return m.trim().slice(0, MAX_MESSAGE_CHARS);
+    // validation errors arrive as a list of strings
+    if (Array.isArray(m)) {
+      const joined = m.filter((x): x is string => typeof x === "string").join("; ").trim();
+      if (joined) return joined.slice(0, MAX_MESSAGE_CHARS);
+    }
   }
   return undefined;
 }

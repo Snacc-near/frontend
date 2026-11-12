@@ -4,6 +4,7 @@ import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS } from "../config/constants.ts";
+import { Icon } from "../ui/fd.tsx";
 import type { HudMode } from "./GameHud.tsx";
 import type { LabAction } from "../game/simulation.ts";
 import type { OrganelleLevels } from "../game/simulation.ts";
@@ -402,10 +403,11 @@ export const CellLab: React.FC<CellLabProps> = ({
                   <button
                     type="button"
                     onClick={onOpenNpcMarket}
-                    className="keycap text-[10px] px-2 py-0.5 rounded-lg flex items-center gap-1 font-semibold text-[var(--accent-dk)] focus-visible:ring-1 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
+                    aria-haspopup="dialog"
+                    className="keycap inline-flex min-h-[40px] items-center gap-1.5 px-3 text-[11px] font-semibold focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
                   >
-                    <span>⚖️</span>
-                    <span>{skin === "fintech" ? "market makers ↗" : "alchemists ↗"}</span>
+                    <Icon name="scale" />
+                    <span>{skin === "fintech" ? "market makers" : "npc merchants"}</span>
                   </button>
                 )}
               </div>

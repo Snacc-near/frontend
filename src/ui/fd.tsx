@@ -1,15 +1,39 @@
 /**
- * Small UI language shared by the landing sections: square "window" panels with a striped title
- * bar, bordered caption boxes with an icon, and callout chips. Purely presentational.
+ * Shared UI language for the landing and the game: square "window" panels with a striped title
+ * bar, bordered caption boxes with an icon, callout chips and line icons. Purely presentational;
+ * styles live in `fd.css`.
  */
 import type { ReactNode } from "react";
 
-export type IconName = "ring" | "lines" | "cell" | "flask" | "split" | "gauge" | "lock" | "eye" | "chain" | "spark" | "doc" | "grid";
+export type IconName =
+  | "ring"
+  | "lines"
+  | "cell"
+  | "flask"
+  | "split"
+  | "gauge"
+  | "lock"
+  | "eye"
+  | "chain"
+  | "spark"
+  | "doc"
+  | "grid"
+  | "close"
+  | "search"
+  | "copy"
+  | "swap"
+  | "podium"
+  | "user"
+  | "more"
+  | "ext"
+  | "check"
+  | "warn"
+  | "scale";
 
 /** 12×12 line icons drawn in currentColor. */
-export function Icon({ name }: { name: IconName }) {
+export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
   return (
-    <svg className="fd-ico" viewBox="0 0 12 12" aria-hidden="true">
+    <svg className={className ? `fd-ico ${className}` : "fd-ico"} viewBox="0 0 12 12" aria-hidden="true">
       {ICONS[name]}
     </svg>
   );
@@ -53,6 +77,33 @@ const ICONS: Record<IconName, ReactNode> = {
   spark: <path d="M6 1v3M6 8v3M1 6h3M8 6h3M2.6 2.6l1.6 1.6M7.8 7.8l1.6 1.6M2.6 9.4l1.6-1.6M7.8 4.2l1.6-1.6" />,
   doc: <path d="M3 1.5h4l2 2v7H3ZM7 1.5v2h2M4.5 6h3M4.5 8h3" />,
   grid: <path d="M1.5 1.5h9v9h-9ZM1.5 6h9M6 1.5v9" />,
+  close: <path d="M2.8 2.8l6.4 6.4M9.2 2.8 2.8 9.2" />,
+  search: (
+    <>
+      <circle cx="5" cy="5" r="3.2" />
+      <path d="M7.4 7.4 10.6 10.6" />
+    </>
+  ),
+  copy: <path d="M4 4h6.5v6.5H4ZM8 4V1.5H1.5V8H4" />,
+  swap: <path d="M1.5 4h8M7.5 2l2 2-2 2M10.5 8h-8M4.5 6l-2 2 2 2" />,
+  podium: <path d="M1 10.5h10M4.2 10.5V4.5h3.6v6M1 10.5V7h3.2M7.8 10.5V8.2H11v2.3" />,
+  user: (
+    <>
+      <circle cx="6" cy="3.9" r="2.1" />
+      <path d="M1.8 10.6c.6-2.3 2.2-3.5 4.2-3.5s3.6 1.2 4.2 3.5" />
+    </>
+  ),
+  more: (
+    <>
+      <circle cx="2.3" cy="6" r="1" className="fd-ico__fill" />
+      <circle cx="6" cy="6" r="1" className="fd-ico__fill" />
+      <circle cx="9.7" cy="6" r="1" className="fd-ico__fill" />
+    </>
+  ),
+  ext: <path d="M5 2.5H2v7.5h7.5V7M7 1.5h3.5V5M10.5 1.5 5.5 6.5" />,
+  check: <path d="M2.2 6.3 4.8 8.8 9.8 3.2" />,
+  warn: <path d="M6 1.5 11 10.5H1ZM6 4.8v2.7M6 8.6v.9" />,
+  scale: <path d="M6 1.5v9M3.5 10.5h5M2 3.2h8M2 3.2 .8 6.6h2.4ZM10 3.2 8.8 6.6h2.4Z" />,
 };
 
 /** Retro window panel: `====  title  ====` bar with square buttons, content below. */
@@ -68,7 +119,7 @@ export function Win({
   title: string;
   children: ReactNode;
   className?: string;
-  as?: "div" | "article" | "li" | "figure";
+  as?: "div" | "article" | "li" | "figure" | "section";
   labelledBy?: string;
   bodyClass?: string;
   /** Marks the panel as the chapter card the theatre leader line attaches to. */
@@ -124,5 +175,8 @@ export function Accent({ text, accent }: { text: string; accent?: string }) {
   );
 }
 
-/** Mono "simulation" / "illustration" label. */
+/** Mono "simulation" / "illustration" label (rendered uppercase). */
 export const Sim = ({ kind = "simulation" }: { kind?: "simulation" | "illustration" }) => <span className="fd-sim">{kind}</span>;
+
+/** Solid mono tag, e.g. `testnet` or `view`. */
+export const Tag = ({ children }: { children: ReactNode }) => <span className="fd-tag">{children}</span>;
