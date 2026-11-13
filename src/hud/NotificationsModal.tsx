@@ -2,7 +2,8 @@
  * Notifications window (UI-149): the signed-in player's alerts, newest first, live through Realtime.
  * Mark one or all as read; a starving or distressed alert opens that Snacc's detail and (UI-159) shows
  * an urgency line plus a "Feed now" button that opens the signed feed window for that Snacc. The
- * Settings window holds a toggle per kind (`notification_prefs_snacc`) and the optional browser alerts.
+ * Settings window holds a toggle per kind (`notification_prefs_snacc`), the optional browser alerts (tab open)
+ * and "Push to this device" (UI-160: Web Push, reaches a closed tab).
  */
 import { useEffect, useState } from "react";
 import { useNotifications, type BrowserAlertState } from "../account/notifications.tsx";
@@ -18,6 +19,7 @@ import {
   type NotificationPrefs,
   type NotificationRow,
 } from "../account/model.ts";
+import { PushToggle } from "../push/PushToggle.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
@@ -121,8 +123,8 @@ export function NotificationsModal({
 
 const ALERT_TEXT: Record<BrowserAlertState, string> = {
   unsupported: "This browser has no notification support.",
-  off: "Browser alerts are off. Turning them on asks the browser for permission; alerts show only while this tab is open.",
-  on: "Browser alerts are on while this tab is open. There is no background push.",
+  off: "Browser alerts are off. Turning them on asks the browser for permission; alerts show only while this tab is open. To be notified when Snacc is closed, use push to this device below.",
+  on: "Browser alerts are on while this tab is open. To be notified when Snacc is closed, use push to this device below.",
   blocked: "The browser blocks notifications for this site. Allow them in the site settings to use browser alerts.",
 };
 
@@ -143,6 +145,7 @@ export function BrowserAlertsToggle() {
         ) : null}
       </div>
       <p className="fd-field__hint">{ALERT_TEXT[n.browserAlerts]}</p>
+      <PushToggle />
     </div>
   );
 }

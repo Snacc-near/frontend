@@ -2,7 +2,7 @@
  * Notifications (UI-149): the signed-in player's `notifications_snacc` rows, kept live through a
  * Supabase Realtime subscription on that table filtered to the player. Optional browser alerts use
  * the `Notification` API only after the player clicks to turn them on, and only while this tab is
- * open (there is no service worker and no push).
+ * open. Notifications for a closed tab are Web Push (UI-160, `src/push/`), opted in separately.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { useAccount } from "./session.tsx";
