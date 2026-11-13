@@ -31,6 +31,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { Empty, Field, KeycapButton, Select } from "../ui/controls.tsx";
 import { Icon, Tag } from "../ui/fd.tsx";
 import { StrainDetailModal } from "./StrainDetailModal.tsx";
+import type { GameActionKey } from "./GameActions.tsx";
 import { useWallet } from "../chain/wallet.tsx";
 
 export interface MyCollectionProps {
@@ -41,6 +42,8 @@ export interface MyCollectionProps {
   onClose: () => void;
   /** Opens the signed feed for a strain the connected wallet owns (`feed_strain`). */
   onFeedStrain?: (strainId: number) => void;
+  /** UI-150: opens another signed action (allocate, divide, produce, give…) for an owned strain. */
+  onStrainAction?: (key: GameActionKey, strainId: number) => void;
   /** Bumped by the app after a signed action succeeds: the list is read again. */
   refreshKey?: number;
 }
@@ -140,7 +143,7 @@ function Row({ item, onOpen }: { item: CollectionItem; onOpen: (id: number) => v
   );
 }
 
-export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose, onFeedStrain, refreshKey = 0 }: MyCollectionProps) {
+export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose, onFeedStrain, onStrainAction, refreshKey = 0 }: MyCollectionProps) {
   const uid = useId();
   const account = normalizeAccount(accountId);
   const { state, reload } = useCollection(account);
@@ -311,6 +314,9 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
           feedEnabled={Boolean(onFeedStrain && wallet.accountId && opened.detail.owner_id === wallet.accountId)}
           feedHint={wallet.accountId ? "only the owner's connected wallet can feed this Snacc" : "connect a wallet to feed"}
           onFeedClick={() => onFeedStrain?.(opened.strainId)}
+          onAction={
+            onStrainAction && wallet.accountId && opened.detail.owner_id === wallet.accountId ? (key) => onStrainAction(key, opened.strainId) : undefined
+          }
         />
       ) : null}
     </>

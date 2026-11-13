@@ -12,6 +12,7 @@ import type { GameMode } from "../config/constants.ts";
 import { healthOf } from "../data/collection.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
+import type { GameActionKey } from "./GameActions.tsx";
 
 interface StrainDetailModalProps {
   strain: StrainDetail | null;
@@ -28,7 +29,19 @@ interface StrainDetailModalProps {
   feedEnabled?: boolean;
   /** Live mode: why feeding is unavailable (e.g. "connect a wallet to feed"). */
   feedHint?: string;
+  /** UI-150: the connected wallet owns this strain; opens another signed action for it. */
+  onAction?: (key: GameActionKey) => void;
 }
+
+/** Signed actions offered on an owned strain (UI-150). */
+const DETAIL_ACTIONS: { key: GameActionKey; label: string }[] = [
+  { key: "allocate", label: "allocate ATP" },
+  { key: "divide", label: "divide" },
+  { key: "extract", label: "produce" },
+  { key: "npc", label: "buy spores" },
+  { key: "pool", label: "industrial pool" },
+  { key: "gift", label: "give away" },
+];
 
 const SVG_BOX = "h-40 w-full border border-[var(--ink-hi)] bg-[var(--paper)]";
 
@@ -44,6 +57,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   onFeedClick,
   feedEnabled = false,
   feedHint,
+  onAction,
 }) => {
   const labels = SKIN_LABELS[skin];
 
@@ -186,6 +200,15 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               <span className="fd-field__hint text-center">
                 {feedEnabled ? "feed_strain · signed in your wallet on testnet" : (feedHint ?? labels.feedDisabled)}
               </span>
+            ) : null}
+            {mode === "live" && onAction ? (
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" role="group" aria-label="more signed actions" data-testid="strain-actions">
+                {DETAIL_ACTIONS.map((a) => (
+                  <KeycapButton key={a.key} onClick={() => onAction(a.key)} data-testid={`strain-action-${a.key}`}>
+                    {a.label}
+                  </KeycapButton>
+                ))}
+              </div>
             ) : null}
           </div>
         </div>

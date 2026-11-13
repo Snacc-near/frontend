@@ -104,7 +104,7 @@ export function FaucetLine({ needYocto, info }: { needYocto: string; info: Accou
   );
 }
 
-function plan(call: ContractCall | null, accountId: string, info: AccountInfo): ContractCall[] {
+export function plan(call: ContractCall | null, accountId: string, info: AccountInfo): ContractCall[] {
   if (!call) return [];
   return withStorage(call, {
     accountId,
@@ -113,7 +113,7 @@ function plan(call: ContractCall | null, accountId: string, info: AccountInfo): 
   });
 }
 
-function useSend(wallet: WalletApi, onDone: (ok: boolean) => void) {
+export function useSend(wallet: WalletApi, onDone: (ok: boolean) => void) {
   const [phase, setPhase] = useState<TxPhase>({ kind: "idle" });
   const send = async (calls: ContractCall[]) => {
     if (calls.length === 0) return;
@@ -125,7 +125,7 @@ function useSend(wallet: WalletApi, onDone: (ok: boolean) => void) {
   return { phase, send };
 }
 
-const Footer = () => (
+export const Footer = () => (
   <>
     <span>signed in your wallet · {CONTRACT_ID} · $SNACC on testnet has no monetary value</span>
     <Tag>testnet</Tag>

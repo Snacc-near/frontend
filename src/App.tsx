@@ -52,6 +52,7 @@ import { IrisOverlay } from "./hud/IrisOverlay.tsx";
 import { useWallet } from "./chain/wallet.tsx";
 import { useAccountInfo } from "./chain/useAccountInfo.ts";
 import { WalletControl } from "./hud/WalletControl.tsx";
+import type { GameActionKey } from "./hud/GameActions.tsx";
 
 // Tool windows load on first open, outside the game's entry chunk.
 const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
@@ -64,11 +65,24 @@ const RecipeSearchModal = React.lazy(() => import("./hud/RecipeSearchModal.tsx")
 // Signed actions (UI-146) load on first open as well.
 const HatchModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) => ({ default: m.HatchModal })));
 const FeedModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) => ({ default: m.FeedModal })));
+// UI-150: the remaining player actions, one chunk loaded on first open.
+const GameActions = React.lazy(() => import("./hud/GameActions.tsx"));
 
 /** Dock key shown only in live mode with a connected wallet (UI-146). */
 const HATCH_DOCK = { key: "hatch", label: "Hatch", hint: "incubate_strain" } as const;
+/** Live-mode dock key that opens the list of every signed action (UI-150), with or without a wallet. */
+const MORE_DOCK = { key: "more", label: "Actions", hint: "every game action" } as const;
 /** Dock keys that send a real transaction when a wallet is connected in live mode. */
-const SIGNED_DOCK_KEYS = new Set(["hatch", "feed"]);
+const SIGNED_DOCK_KEYS = new Set(["hatch", "feed", "atp", "extract", "transmute", "synthesize", "divide", "harvest"]);
+/** Live dock key → UI-150 window. */
+const LIVE_DOCK_WINDOW: Record<string, GameActionKey> = {
+  atp: "allocate",
+  extract: "extract",
+  transmute: "transmute",
+  synthesize: "synthesize",
+  divide: "divide",
+  harvest: "hungry",
+};
 
 const demoSeedLogs: BreachLogItem[] = [
   {
@@ -175,13 +189,18 @@ export const App: React.FC = () => {
   const walletConnected = wallet.status === "connected" && wallet.accountId !== null;
   /** Live mode + wallet: the hatch and feed keys send real testnet transactions. */
   const signedActions = mode === "live" && walletConnected;
-  const [chainAction, setChainAction] = useState<"hatch" | "feed" | null>(null);
+  const [chainAction, setChainAction] = useState<"hatch" | "feed" | "menu" | GameActionKey | null>(null);
   /** Strain picked in My collection for the signed feed; the dock falls back to the plate selection. */
   const [feedTarget, setFeedTarget] = useState<number | null>(null);
   const closeChainAction = useCallback(() => setChainAction(null), []);
   const openFeedFor = useCallback((strainId: number) => {
     setFeedTarget(strainId);
     setChainAction("feed");
+  }, []);
+  /** UI-150: Strain Detail → a signed action window for that strain. */
+  const openActionFor = useCallback((key: GameActionKey, strainId: number) => {
+    setFeedTarget(strainId);
+    setChainAction(key);
   }, []);
 
   const matchedStrainsCount = useMemo(() => {
@@ -459,12 +478,22 @@ export const App: React.FC = () => {
   const handleDock = useCallback(
     (key: string) => {
       if (mode === "live") {
+        if (key === "more") {
+          setFeedTarget(null);
+          setChainAction("menu");
+          return;
+        }
         if (signedActions && (key === "hatch" || key === "feed")) {
           setFeedTarget(null);
           setChainAction(key);
           return;
         }
-        showToast(walletConnected ? "only hatch and feed are signed from this app so far" : "connect a wallet to hatch and feed on testnet");
+        if (signedActions && LIVE_DOCK_WINDOW[key]) {
+          setFeedTarget(null);
+          setChainAction(LIVE_DOCK_WINDOW[key]);
+          return;
+        }
+        showToast("connect a wallet to sign game actions on testnet");
         return;
       }
       const def = DOCK_DEFS.find((d) => d.key === key);
@@ -579,11 +608,11 @@ export const App: React.FC = () => {
 
   const dock: DockButton[] = useMemo(
     () =>
-      [...(signedActions ? [HATCH_DOCK] : []), ...DOCK_DEFS].map((d) => ({
+      [...(signedActions ? [HATCH_DOCK] : []), ...DOCK_DEFS, ...(mode === "live" ? [MORE_DOCK] : [])].map((d) => ({
         key: d.key,
         label: d.label,
         hint: d.hint,
-        disabled: mode === "live" && !(signedActions && SIGNED_DOCK_KEYS.has(d.key)),
+        disabled: mode === "live" && d.key !== MORE_DOCK.key && !(signedActions && SIGNED_DOCK_KEYS.has(d.key)),
       })),
     [mode, signedActions],
   );
@@ -815,6 +844,7 @@ export const App: React.FC = () => {
             mode={mode}
             onClose={closeTool}
             onFeedStrain={walletConnected ? openFeedFor : undefined}
+            onStrainAction={walletConnected ? openActionFor : undefined}
             refreshKey={chainRefresh}
           />
         ) : null}
@@ -869,6 +899,18 @@ export const App: React.FC = () => {
           <FeedModal
             wallet={wallet}
             info={accountInfo}
+            onClose={closeChainAction}
+            onDone={handleChainDone}
+            preferredStrainId={feedTarget ?? selectedId}
+          />
+        ) : null}
+        {/* UI-150: the action menu and its windows open in live mode (reads work without a wallet; signing needs one). */}
+        {chainAction !== null && chainAction !== "hatch" && chainAction !== "feed" && (mode === "live" || walletConnected) ? (
+          <GameActions
+            action={chainAction}
+            wallet={wallet}
+            info={accountInfo}
+            onPick={setChainAction}
             onClose={closeChainAction}
             onDone={handleChainDone}
             preferredStrainId={feedTarget ?? selectedId}
