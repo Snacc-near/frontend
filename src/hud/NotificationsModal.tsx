@@ -1,13 +1,23 @@
 /**
  * Notifications window (UI-149): the signed-in player's alerts, newest first, live through Realtime.
- * Mark one or all as read; a starving or distressed alert opens that Snacc's detail. The Settings
- * window holds a toggle per kind (`notification_prefs_snacc`) and the optional browser alerts.
+ * Mark one or all as read; a starving or distressed alert opens that Snacc's detail and (UI-159) shows
+ * an urgency line plus a "Feed now" button that opens the signed feed window for that Snacc. The
+ * Settings window holds a toggle per kind (`notification_prefs_snacc`) and the optional browser alerts.
  */
 import { useEffect, useState } from "react";
 import { useNotifications, type BrowserAlertState } from "../account/notifications.tsx";
 import { useAccount } from "../account/session.tsx";
 import { loadNotificationPrefs, saveNotificationPrefs } from "../account/api.ts";
-import { NOTIFICATION_KINDS, NOTIFICATION_KIND_LABELS, NOTIFICATION_KIND_TAGS, opensStrain, type NotificationPrefs, type NotificationRow } from "../account/model.ts";
+import {
+  NOTIFICATION_KINDS,
+  NOTIFICATION_KIND_LABELS,
+  NOTIFICATION_KIND_TAGS,
+  feedTargetOf,
+  opensStrain,
+  urgencyOf,
+  type NotificationPrefs,
+  type NotificationRow,
+} from "../account/model.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
@@ -15,11 +25,24 @@ import "../account/account.css";
 
 const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
-export function NotificationsModal({ onClose, onOpenStrain }: { onClose: () => void; onOpenStrain: (strainId: number) => void }) {
+export function NotificationsModal({
+  onClose,
+  onOpenStrain,
+  onFeedStrain,
+}: {
+  onClose: () => void;
+  onOpenStrain: (strainId: number) => void;
+  /** Present only while a wallet is connected (the feed is a signed transaction). */
+  onFeedStrain?: (strainId: number) => void;
+}) {
   const n = useNotifications();
   const open = (item: NotificationRow) => {
     n.markRead(item.id);
     if (opensStrain(item) && item.strain_id !== null) onOpenStrain(item.strain_id);
+  };
+  const feed = (item: NotificationRow, strainId: number) => {
+    n.markRead(item.id);
+    onFeedStrain?.(strainId);
   };
   return (
     <Modal
@@ -45,8 +68,11 @@ export function NotificationsModal({ onClose, onOpenStrain }: { onClose: () => v
           <Empty icon="warn">No notifications. Alerts about hungry Snaccs, the industrial pool and the starter pack appear here while you are signed in.</Empty>
         ) : (
           <ol className="fd-list" data-testid="notif-list">
-            {n.items.map((item) => (
-              <li key={item.id} className="acct-notif" data-unread={item.read_at ? undefined : ""}>
+            {n.items.map((item) => {
+              const feedId = feedTargetOf(item);
+              const urgency = urgencyOf(item);
+              return (
+              <li key={item.id} className="acct-notif" data-unread={item.read_at ? undefined : ""} data-urgent={urgency ? "" : undefined}>
                 <span className="acct-notif__dot" aria-hidden="true" />
                 <span className="fd-stack" style={{ gap: 2, minWidth: 0 }}>
                   {opensStrain(item) ? (
@@ -57,20 +83,36 @@ export function NotificationsModal({ onClose, onOpenStrain }: { onClose: () => v
                     <span className="acct-notif__title">{item.title}</span>
                   )}
                   {item.body ? <span className="acct-notif__body">{item.body}</span> : null}
+                  {urgency ? (
+                    <span className="acct-notif__urgent" data-testid={`notif-urgent-${item.id}`}>
+                      {urgency}
+                    </span>
+                  ) : null}
                   <span className="acct-notif__when">
                     {NOTIFICATION_KIND_TAGS[item.kind] ?? item.kind} · {when(item.created_at)}
                     {item.read_at ? " · read" : ""}
                   </span>
                 </span>
-                {item.read_at ? null : (
-                  <KeycapButton mono onClick={() => n.markRead(item.id)} aria-label={`mark "${item.title}" as read`}>
-                    read
-                  </KeycapButton>
-                )}
+                <span className="fd-stack" style={{ gap: 4, alignItems: "flex-end" }}>
+                  {feedId !== null && onFeedStrain ? (
+                    <KeycapButton mono icon="warn" onClick={() => feed(item, feedId)} data-testid={`notif-feed-${item.id}`} aria-label={`feed Snacc #${feedId} now`}>
+                      feed now
+                    </KeycapButton>
+                  ) : null}
+                  {item.read_at ? null : (
+                    <KeycapButton mono onClick={() => n.markRead(item.id)} aria-label={`mark "${item.title}" as read`}>
+                      read
+                    </KeycapButton>
+                  )}
+                </span>
               </li>
-            ))}
+              );
+            })}
           </ol>
         )}
+        {n.items.some((i) => feedTargetOf(i) !== null) && !onFeedStrain ? (
+          <span className="fd-sub" data-testid="notif-connect-hint">Connect a wallet to feed a hungry Snacc straight from here.</span>
+        ) : null}
         <BrowserAlertsToggle />
       </div>
     </Modal>

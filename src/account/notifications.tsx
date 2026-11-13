@@ -7,7 +7,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { useAccount } from "./session.tsx";
 import { loadNotifications, markNotificationsRead } from "./api.ts";
-import { notificationsReducer, unreadCount, type NotificationRow } from "./model.ts";
+import { FEED_REQUEST_EVENT, feedTargetOf, notificationsReducer, unreadCount, type NotificationRow } from "./model.ts";
 import { BROWSER_ALERTS_KEY, safeLocalStorage } from "./config.ts";
 
 export type BrowserAlertState = "unsupported" | "off" | "on" | "blocked";
@@ -75,7 +75,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           dispatch({ type: "upsert", item: row });
           if (alertsRef.current === "on" && typeof window.Notification !== "undefined" && window.Notification.permission === "granted") {
             try {
-              new window.Notification(row.title, { body: row.body ?? undefined, tag: `snacc-${row.id}` });
+              const alert = new window.Notification(row.title, { body: row.body ?? undefined, tag: `snacc-${row.id}` });
+              // UI-159: clicking an alert about a hungry Snacc opens its feed window.
+              const feedId = feedTargetOf(row);
+              if (feedId !== null) {
+                alert.onclick = () => {
+                  window.focus();
+                  window.dispatchEvent(new CustomEvent(FEED_REQUEST_EVENT, { detail: { strainId: feedId } }));
+                  alert.close();
+                };
+              }
             } catch {
               /* some browsers only allow notifications from a service worker */
             }

@@ -54,7 +54,7 @@ import { useAccountInfo } from "./chain/useAccountInfo.ts";
 import { WalletControl } from "./hud/WalletControl.tsx";
 import type { GameActionKey } from "./hud/GameActions.tsx";
 import { useAccount } from "./account/session.tsx";
-import { achievementToast } from "./account/model.ts";
+import { FEED_REQUEST_EVENT, achievementToast, feedParamOf } from "./account/model.ts";
 import { AccountChip, StarterPackButton } from "./hud/AccountChip.tsx";
 import { NotificationsBell } from "./hud/NotificationsBell.tsx";
 
@@ -228,6 +228,40 @@ export const App: React.FC = () => {
     setFeedTarget(strainId);
     setChainAction(key);
   }, []);
+  /**
+   * UI-159: `/app?feed=<id>` deep links (browser alerts, web push) and alert clicks ask to feed a Snacc.
+   * With a wallet the feed window opens; without one the Snacc is shown in My collection and the feed
+   * window opens as soon as a wallet connects.
+   */
+  const [pendingFeed, setPendingFeed] = useState<number | null>(() =>
+    typeof window === "undefined" ? null : feedParamOf(window.location.search),
+  );
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("feed")) return;
+    url.searchParams.delete("feed");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+  useEffect(() => {
+    const onRequest = (e: Event) => {
+      const id = (e as CustomEvent<{ strainId?: unknown }>).detail?.strainId;
+      if (typeof id === "number" && Number.isSafeInteger(id) && id >= 0) setPendingFeed(id);
+    };
+    window.addEventListener(FEED_REQUEST_EVENT, onRequest);
+    return () => window.removeEventListener(FEED_REQUEST_EVENT, onRequest);
+  }, []);
+  useEffect(() => {
+    if (pendingFeed === null) return;
+    if (walletConnected) {
+      setTool(null);
+      openFeedFor(pendingFeed);
+      setPendingFeed(null);
+      return;
+    }
+    if (wallet.status === "restoring" || wallet.status === "connecting") return;
+    setCollectionFocus(pendingFeed);
+    setTool("collection");
+  }, [pendingFeed, walletConnected, wallet.status, openFeedFor]);
 
   const matchedStrainsCount = useMemo(() => {
     const q = effectiveAccount.trim().toLowerCase();
@@ -918,6 +952,14 @@ export const App: React.FC = () => {
               setCollectionFocus(id);
               setTool("collection");
             }}
+            onFeedStrain={
+              walletConnected
+                ? (id) => {
+                    closeTool();
+                    openFeedFor(id);
+                  }
+                : undefined
+            }
           />
         ) : null}
         {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
