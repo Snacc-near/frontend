@@ -1,6 +1,6 @@
 /**
- * One toolbar for the game's tools: telemetry toggle plus the seven tool windows. Below 900 px the
- * tool keys fold into a "tools" key that opens a sheet.
+ * One toolbar for the game's tools: telemetry toggle plus the tool windows (the seven game tools, help
+ * and settings). Below 1140 px the tool keys fold into a "tools" key that opens a sheet.
  */
 import { useState } from "react";
 import type { SkinMode } from "../config/constants.ts";
@@ -8,7 +8,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
 
-export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest";
+export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "help" | "settings";
 
 export interface ToolDef {
   id: ToolId;
@@ -24,6 +24,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: "thesis", label: () => "thesis", icon: "doc" },
   { id: "recipes", label: () => "recipes", icon: "search" },
   { id: "guest", label: (_s, g) => (g ? `guest: ${g}` : "guest label"), icon: "user" },
+  { id: "help", label: () => "help", icon: "spark" },
+  { id: "settings", label: () => "settings", icon: "gauge" },
 ];
 
 export interface ToolsToolbarProps {

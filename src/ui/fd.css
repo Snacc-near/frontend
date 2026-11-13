@@ -925,7 +925,8 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 899.98px) {
+/* nine tool keys plus telemetry need about 1100 px; below that they fold into the "tools" sheet */
+@media (max-width: 1139.98px) {
   .tools-bar .tools-bar__tool {
     display: none;
   }
