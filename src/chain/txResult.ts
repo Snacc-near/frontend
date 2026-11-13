@@ -4,12 +4,20 @@
  * others reject with an Error (or a string). Both paths end in `TxFailure`.
  */
 
-export interface TxSuccess {
+/** RES-111: set on results of a one-tap (signless) send, and on a wallet send that replaced one. */
+interface TxExtras {
+  /** True when this browser's one-tap key signed the transaction (no wallet popup). */
+  signless?: boolean;
+  /** One line explaining why a deposit-free action fell back to the wallet. */
+  notice?: string;
+}
+
+export interface TxSuccess extends TxExtras {
   ok: true;
   txHash: string | null;
 }
 
-export interface TxFailure {
+export interface TxFailure extends TxExtras {
   ok: false;
   txHash: string | null;
   /** Plain-English reason shown to the player. */

@@ -280,7 +280,7 @@ function SignBlock({
           </KeycapButton>
         ) : (
           <KeycapButton variant="primary" icon="spark" disabled={Boolean(reason) || calls.length === 0 || busy} onClick={() => void send(calls)} data-testid={`${testId}-sign`}>
-            {busy ? "waiting for wallet…" : label}
+            {busy ? (phase.kind === "pending" && phase.oneTap ? "sending (one-tap)…" : "waiting for wallet…") : label}
           </KeycapButton>
         )}
       </div>

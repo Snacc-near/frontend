@@ -101,7 +101,7 @@ export const INTRO_STEPS: readonly IntroStep[] = [
     points: [
       "Demo is simulated on your device. No wallet, no transactions, nothing is written to the chain.",
       "Live testnet reads the real contract. You can look around without logging in.",
-      "To hatch and feed in live mode, press connect wallet and pick a NEAR wallet. If email login is switched on for this site it shows up in the same picker, powered by Privy. Either way you sign testnet transactions yourself and the app never sees your keys.",
+      "To hatch and feed in live mode, press connect wallet and pick a NEAR wallet. If email login is switched on for this site it shows up in the same picker, powered by Privy. Either way you sign testnet transactions yourself and the app never sees your wallet's keys. Optional one-tap play (Settings) adds a limited key made in this browser, so deposit-free actions need no popup.",
     ],
   },
   {

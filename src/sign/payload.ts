@@ -21,7 +21,14 @@ export function formatYocto(raw: string): string {
 
 interface ActionLike {
   type?: string;
-  params?: { methodName?: string; deposit?: string; gas?: string };
+  params?: {
+    methodName?: string;
+    deposit?: string;
+    gas?: string;
+    // AddKey / DeleteKey (RES-111 one-tap play)
+    publicKey?: string;
+    accessKey?: { permission?: "FullAccess" | { receiverId?: string; allowance?: string; methodNames?: string[] } };
+  };
   functionCall?: { methodName?: string; deposit?: string | bigint };
   transfer?: { deposit?: string | bigint };
 }
@@ -48,6 +55,14 @@ function describeAction(a: ActionLike): string {
     const d = a.functionCall.deposit?.toString();
     return `call ${a.functionCall.methodName ?? "?"}${d && d !== "0" ? `, attaches ${formatYocto(d)} NEAR` : ""}`;
   }
+  if (a.type === "AddKey") {
+    const perm = a.params?.accessKey?.permission;
+    if (!perm || perm === "FullAccess") return "add a FULL ACCESS key";
+    const n = perm.methodNames?.length ?? 0;
+    const allowance = perm.allowance ? `gas allowance ${formatYocto(perm.allowance)} NEAR` : "no allowance limit";
+    return `add a limited key for ${perm.receiverId ?? "?"} (${n ? `${n} methods` : "any method"}, ${allowance})`;
+  }
+  if (a.type === "DeleteKey") return `delete the key ${a.params?.publicKey ?? "?"}`;
   if (a.type === "Transfer" && a.params?.deposit) return `send ${formatYocto(a.params.deposit)} NEAR`;
   if (a.transfer?.deposit !== undefined) return `send ${formatYocto(a.transfer.deposit.toString())} NEAR`;
   return a.type ? `${a.type} action` : "unknown action";

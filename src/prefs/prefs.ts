@@ -19,6 +19,8 @@ export const ONBOARDING_KEY = "snacc_onboarding_seen";
 export const SOUND_KEY = "snacc_sound";
 export const MOTION_KEY = "snacc_motion";
 export const SKIN_KEY = "snacc_skin";
+/** RES-111: the one-tap play key, only when this browser cannot keep it in IndexedDB (`chain/oneTapKeys.ts`). */
+export const ONE_TAP_LOCAL_KEY = "snacc_one_tap";
 
 /** What each app-owned key holds, in the order the Settings window lists them. */
 export const APP_LOCAL_KEY_INFO: readonly { key: string; what: string }[] = [
@@ -32,6 +34,10 @@ export const APP_LOCAL_KEY_INFO: readonly { key: string; what: string }[] = [
   { key: BROWSER_ALERTS_KEY, what: "browser alerts turned on for notifications" },
   { key: TELEMETRY_KEY, what: "your choice about sharing anonymous usage stats" },
   { key: DEVICE_KEY, what: "a random id for anonymous usage stats (a new one is made after a reset)" },
+  {
+    key: ONE_TAP_LOCAL_KEY,
+    what: "the one-tap play key, only if you turned one-tap play on and this browser blocks IndexedDB (clearing it does not remove the key from your account; turn one-tap play off for that)",
+  },
 ];
 
 export const APP_LOCAL_KEYS: readonly string[] = APP_LOCAL_KEY_INFO.map((k) => k.key);
