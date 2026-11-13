@@ -139,38 +139,16 @@ export async function saveNotificationPrefs(c: SupabaseClient, userId: string, p
 
 // ------------------------------------------------------------------ delete
 
-export interface DeleteReport {
-  removed: string[];
-  failed: string[];
-}
-
 /**
- * "Delete my profile": removes the player's own rows that row-level security lets them remove
- * (follows, notification settings, notifications, profile). The sign-in user itself can only be
- * removed by the project owner, which the Profile window says plainly.
+ * "Delete my account": calls the `snacc_delete_my_account()` database function, which deletes the
+ * caller's sign-in user; every `*_snacc` row that belongs to it (profile, activity, notifications,
+ * settings, achievements, follows) goes with it. Returns null on success, or a plain message.
  */
-export async function deleteOwnRows(c: SupabaseClient, userId: string): Promise<DeleteReport> {
-  const report: DeleteReport = { removed: [], failed: [] };
-  const steps: [string, () => PromiseLike<{ error: { message: string } | null; data: unknown[] | null }>][] = [
-    ["follows", () => c.from("follows_snacc").delete().eq("follower", userId).select("follower")],
-    ["notification settings", () => c.from("notification_prefs_snacc").delete().eq("user_id", userId).select("user_id")],
-    ["notifications", () => c.from("notifications_snacc").delete().eq("user_id", userId).select("id")],
-    ["profile", () => c.from("profiles_snacc").delete().eq("user_id", userId).select("user_id")],
-  ];
-  for (const [label, run] of steps) {
-    try {
-      const { error } = await run();
-      if (error) report.failed.push(label);
-      else report.removed.push(label);
-    } catch {
-      report.failed.push(label);
-    }
+export async function deleteMyAccount(c: SupabaseClient): Promise<string | null> {
+  try {
+    const { error } = await c.rpc("snacc_delete_my_account");
+    return error ? `The database refused: ${error.message}` : null;
+  } catch (e) {
+    return `The request failed: ${e instanceof Error ? e.message : String(e)}`;
   }
-  // A delete that row-level security filters out returns no error and no rows: check the profile is gone.
-  const still = await profileByUser(c, userId).catch(() => null);
-  if (still && report.removed.includes("profile")) {
-    report.removed = report.removed.filter((l) => l !== "profile");
-    report.failed.push("profile");
-  }
-  return report;
 }

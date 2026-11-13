@@ -8,7 +8,7 @@
 import { useEffect, useId, useState } from "react";
 import { useWallet } from "../chain/wallet.tsx";
 import { useAccount } from "../account/session.tsx";
-import { achievementsOf, deleteOwnRows, recentActivity, saveProfile, streakOf } from "../account/api.ts";
+import { achievementsOf, deleteMyAccount, recentActivity, saveProfile, streakOf } from "../account/api.ts";
 import {
   ACHIEVEMENTS,
   BIO_MAX,
@@ -99,15 +99,14 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
 
   const remove = async () => {
     if (!client || !userId) return;
-    const report = await deleteOwnRows(client, userId);
-    const parts = [
-      report.removed.length ? `Removed: ${report.removed.join(", ")}.` : "",
-      report.failed.length ? `Could not remove: ${report.failed.join(", ")}.` : "",
-      "Recorded activity and the sign-in record itself can only be removed by the project owner: ask through GitHub issues.",
-    ].filter(Boolean);
-    setDeleteMsg(parts.join(" "));
+    const problem = await deleteMyAccount(client);
     setConfirmDelete(false);
-    await account.refreshProfile();
+    if (problem) {
+      setDeleteMsg(`${problem} Nothing was deleted; try again or ask through GitHub issues.`);
+      return;
+    }
+    setDeleteMsg("Your Snacc account and all its profile data were deleted. On-chain transactions stay public.");
+    await account.signOut();
   };
 
   const earned = new Map(badges.map((b) => [b.code, b.earned_at]));
@@ -282,13 +281,13 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
               Delete my profile
             </h4>
             <p className="fd-field__hint">
-              Removes your profile, follows, notification settings and notifications from the Snacc profile database, as far as the database lets you. On-chain
-              transactions stay public forever. To remove the sign-in record and recorded activity, ask through <ExtLink href={ISSUES_URL}>GitHub issues</ExtLink>.
+              Deletes your Snacc sign-in record and everything stored with it: profile, recorded activity, achievements, follows, notification settings and
+              notifications. On-chain transactions stay public forever. Problems? Ask through <ExtLink href={ISSUES_URL}>GitHub issues</ExtLink>.
             </p>
             {confirmDelete ? (
               <div className="fd-row">
                 <KeycapButton mono icon="warn" onClick={() => void remove()} data-testid="profile-delete-confirm">
-                  yes, delete my profile rows
+                  yes, delete my Snacc account
                 </KeycapButton>
                 <KeycapButton mono onClick={() => setConfirmDelete(false)}>
                   cancel

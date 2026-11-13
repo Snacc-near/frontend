@@ -156,7 +156,7 @@ export const PRIVACY: LegalDoc = {
       id: "profiles-delete",
       heading: "Deleting your profile",
       paragraphs: [
-        "The Profile window has a \"Delete my profile\" button. It removes your profile, follows, notification settings and notifications, as far as the database lets a signed-in player remove their own rows. The sign-in record and the recorded activity can only be removed by the project owner: ask for that through GitHub issues. Transactions on the NEAR blockchain stay public whatever happens to the database.",
+        "The Profile window has a \"Delete my profile\" button. It deletes your Snacc sign-in record and everything stored with it: profile, recorded activity, achievements, follows, notification settings and notifications. A starter-pack claim is kept without your user link, so the same NEAR account cannot claim twice. Transactions on the NEAR blockchain stay public whatever happens to the database.",
       ],
     },
     {
