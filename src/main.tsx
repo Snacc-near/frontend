@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { selectRoute } from "./route.ts";
+import { startTelemetry } from "./telemetry.ts";
 // Order matters: iso.css first, index.css second (index.css tokens must win the cascade, as before the
 // route split). iso.css is tiny (~2 KB gzip), so it stays in the entry chunk instead of the game chunk.
 import "./plate/iso/iso.css";
@@ -11,6 +12,9 @@ const route = selectRoute(window.location.pathname);
 // The game is a fixed full-viewport stage (no page scroll); see `html.route-app` in index.css.
 // Set before first render so the page never flashes the wrong layout.
 if (route === "app") document.documentElement.classList.add("route-app");
+
+// OPS-127: anonymous page view + error reports to Snacc's own backend (off on opt-out / DNT / no Supabase).
+startTelemetry();
 
 // Each route is its own chunk: visitors on `/` never download the game, and vice versa.
 const Game = React.lazy(() => import("./app-entry.tsx"));

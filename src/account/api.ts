@@ -59,10 +59,18 @@ export interface ProfilePatch {
   avatar_strain_id: number | null;
 }
 
+/** UI-162: plain text for the database's profile errors (taken name, moderation trigger). */
+export function profileSaveError(error: { code?: string; message: string }): string {
+  if (error.code === "23505") return "That username is taken. Pick another.";
+  if (error.message === "username_not_allowed") return "That username is reserved or contains a blocked word. Pick another.";
+  if (error.message === "bio_not_allowed") return "Your bio contains a blocked word. Change it and save again.";
+  return error.message;
+}
+
 /** Saves the player's own profile; returns a plain error message or null. */
 export async function saveProfile(c: SupabaseClient, userId: string, patch: ProfilePatch): Promise<{ row: ProfileRow | null; error: string | null }> {
   const { data, error } = await c.from("profiles_snacc").update(patch).eq("user_id", userId).select(PROFILE_COLS);
-  if (error) return { row: null, error: error.code === "23505" ? "That username is taken. Pick another." : error.message };
+  if (error) return { row: null, error: profileSaveError(error) };
   const row = (data as ProfileRow[] | null)?.[0] ?? null;
   if (!row) return { row: null, error: "No profile row was found for this sign-in. Sign out, sign in again and retry." };
   return { row, error: null };
@@ -218,3 +226,86 @@ export async function deleteMyAccount(c: SupabaseClient): Promise<string | null>
     return `The request failed: ${e instanceof Error ? e.message : String(e)}`;
   }
 }
+
+// ------------------------------------------------------------------ export (UI-163)
+
+/** The caller's own off-chain data (`snacc_export_my_data()`, format `snacc-export-v1`). */
+export async function exportMyData(c: SupabaseClient): Promise<{ data: unknown; error: string | null }> {
+  try {
+    const { data, error } = await c.rpc("snacc_export_my_data");
+    return error ? { data: null, error: `The database refused: ${error.message}` } : { data, error: null };
+  } catch (e) {
+    return { data: null, error: `The request failed: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+// ------------------------------------------------------------------ moderation + admin (UI-162, OPS-127)
+
+export interface AnnouncementRow {
+  id: number;
+  title: string;
+  body: string;
+  created_at: string;
+  expires_at: string | null;
+}
+
+/** Unexpired announcements, newest first (public read; RLS hides expired ones). */
+export async function loadAnnouncements(c: SupabaseClient, limit = 3): Promise<AnnouncementRow[]> {
+  const { data, error } = await c.from("announcements_snacc").select("id,title,body,created_at,expires_at").order("created_at", { ascending: false }).limit(limit);
+  return error ? [] : ((data as AnnouncementRow[] | null) ?? []);
+}
+
+export async function amIAdmin(c: SupabaseClient): Promise<boolean> {
+  const { data, error } = await c.rpc("snacc_is_admin");
+  return !error && data === true;
+}
+
+async function adminRpc<T>(c: SupabaseClient, fn: string, args: Record<string, unknown>): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const { data, error } = await c.rpc(fn, args);
+    if (error) return { data: null, error: error.message === "admin_only" ? "Only admins can do this." : error.message };
+    return { data: data as T, error: null };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/** Sends an announcement + a system notification to every profile; returns how many were notified. */
+export const adminBroadcast = (c: SupabaseClient, title: string, body: string, days: number) =>
+  adminRpc<number>(c, "snacc_admin_broadcast", { p_title: title, p_body: body, p_days: days });
+export const adminResetProfileText = (c: SupabaseClient, account: string) =>
+  adminRpc<boolean>(c, "snacc_admin_reset_profile_text", { p_account: account });
+export const adminBlockTerm = (c: SupabaseClient, term: string, kind: "abusive" | "reserved") =>
+  adminRpc<null>(c, "snacc_admin_block_term", { p_term: term, p_kind: kind });
+
+export interface FunnelDay {
+  day: string;
+  landing: number;
+  app: number;
+  onboarding_done: number;
+  wallet_connected: number;
+  signed_in: number;
+  tx_succeeded: number;
+  errors: number;
+}
+export interface RetentionRow {
+  cohort: string;
+  devices: number;
+  d1: number;
+  d7: number;
+}
+export interface TopError {
+  name: string;
+  message: string | null;
+  route: string;
+  n: number;
+  last_seen: string;
+}
+export interface AdminMetrics {
+  since: string;
+  funnel: FunnelDay[];
+  retention: RetentionRow[];
+  top_errors: TopError[];
+}
+/** OPS-127 aggregates (admins only). */
+export const adminMetrics = (c: SupabaseClient, days = 14) => adminRpc<AdminMetrics>(c, "snacc_admin_metrics", { p_days: days });

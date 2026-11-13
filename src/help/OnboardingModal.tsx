@@ -5,7 +5,8 @@
  * by reduce motion (see `guide.css`).
  */
 import type { KeyboardEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { track } from "../telemetry.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import { Cap } from "../ui/fd.tsx";
@@ -20,6 +21,7 @@ export interface OnboardingModalProps {
 
 export function OnboardingModal({ onDone }: OnboardingModalProps) {
   const [index, setIndex] = useState(0);
+  useEffect(() => track("onboarding_started"), []);
   const total = INTRO_STEPS.length;
   const step = INTRO_STEPS[index];
   const last = index === total - 1;

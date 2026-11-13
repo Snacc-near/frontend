@@ -16,6 +16,7 @@ import { hasStoredSession, supabaseConfig, type SupabaseConfig } from "./config.
 import { AccountError, signInWithNear } from "./signIn.ts";
 import { recordTx as postRecordTx, type ProfileRow } from "./model.ts";
 import { profileByUser } from "./api.ts";
+import { track } from "../telemetry.ts";
 
 export type AccountStatus = "off" | "idle" | "loading" | "signing" | "signed-in";
 
@@ -201,6 +202,7 @@ export function SessionProvider({ children, config }: { children: ReactNode; con
       setSignedAs(who);
       setSession((data.session as SessionLike | null) ?? null);
       setStatus(data.session ? "signed-in" : "idle");
+      if (data.session) track("signed_in");
       return Boolean(data.session);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

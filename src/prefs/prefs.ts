@@ -10,6 +10,7 @@
 import type { SkinMode } from "../config/constants.ts";
 import { GUEST_LABEL_KEY, LEGACY_SESSION_KEY } from "../auth/guestLabel.ts";
 import { BROWSER_ALERTS_KEY, SESSION_STORAGE_KEY } from "../account/config.ts";
+import { DEVICE_KEY, TELEMETRY_KEY, track } from "../telemetry.ts";
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -28,6 +29,8 @@ export const APP_LOCAL_KEY_INFO: readonly { key: string; what: string }[] = [
   { key: LEGACY_SESSION_KEY, what: "a leftover key from an earlier build" },
   { key: SESSION_STORAGE_KEY, what: "your profile sign-in session, only after you sign in to a profile" },
   { key: BROWSER_ALERTS_KEY, what: "browser alerts turned on for notifications" },
+  { key: TELEMETRY_KEY, what: "your choice about sharing anonymous usage stats" },
+  { key: DEVICE_KEY, what: "a random id for anonymous usage stats (a new one is made after a reset)" },
 ];
 
 export const APP_LOCAL_KEYS: readonly string[] = APP_LOCAL_KEY_INFO.map((k) => k.key);
@@ -62,6 +65,7 @@ export function hasSeenOnboarding(store: StorageLike | null = appStorage()): boo
 }
 
 export function markOnboardingSeen(store: StorageLike | null = appStorage()): void {
+  if (!seenInMemory) track("onboarding_done");
   seenInMemory = true;
   if (!store) return;
   try {

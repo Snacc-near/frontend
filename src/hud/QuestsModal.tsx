@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from "react";
 import { useAccount } from "../account/session.tsx";
+import { track } from "../telemetry.ts";
 import { myQuests, playerXpOf } from "../account/api.ts";
 import {
   DAILY_XP_ACTION_CAP,
@@ -93,6 +94,7 @@ export function XpRules() {
 }
 
 export function QuestsModal({ onClose }: QuestsModalProps) {
+  useEffect(() => track("quest_opened"), []);
   const account = useAccount();
   const { client, userId } = account;
   const signedIn = account.status === "signed-in" && client !== null && userId !== null;

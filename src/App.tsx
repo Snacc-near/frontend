@@ -54,6 +54,7 @@ import { useAccountInfo } from "./chain/useAccountInfo.ts";
 import { WalletControl } from "./hud/WalletControl.tsx";
 import type { GameActionKey } from "./hud/GameActions.tsx";
 import { useAccount } from "./account/session.tsx";
+import { AnnouncementBanner } from "./account/AnnouncementBanner.tsx";
 import { FEED_REQUEST_EVENT, achievementToast, feedParamOf } from "./account/model.ts";
 import { AccountChip, StarterPackButton } from "./hud/AccountChip.tsx";
 import { NotificationsBell } from "./hud/NotificationsBell.tsx";
@@ -722,6 +723,8 @@ export const App: React.FC = () => {
 
       <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between gap-2 p-2.5 select-none sm:p-4">
         <div className="flex flex-col gap-2">
+          {/* UI-162: newest admin announcement (only once the profile client is loaded). */}
+          <AnnouncementBanner />
           <header className="hidden flex-wrap items-start justify-between gap-2 sm:flex">
             <div className="pointer-events-auto flex flex-col gap-1.5">
               <span className="label-plate">

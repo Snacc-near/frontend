@@ -95,7 +95,7 @@ export const TERMS: LegalDoc = {
 export const PRIVACY: LegalDoc = {
   title: "Privacy",
   file: "privacy.md",
-  lead: "Short version: Snacc runs no analytics or ads and keeps a few settings in your browser. An optional profile database stores your username, bio, avatar, recorded activity and notifications only if you sign in to a profile.",
+  lead: "Short version: Snacc runs no ads and no third-party analytics, keeps a few settings in your browser, and sends anonymous usage counts and error reports to its own backend unless you turn that off. An optional profile database stores your username, bio, avatar, recorded activity and notifications only if you sign in to a profile.",
   sections: [
     {
       id: "wallet-id",
@@ -124,7 +124,7 @@ export const PRIVACY: LegalDoc = {
       id: "requests",
       heading: "Who your browser talks to",
       paragraphs: [
-        "Like any website, the services below can see your IP address and the request you make. Snacc itself sets no cookies and has no analytics, advertising or tracking scripts; the libraries and services below may keep their own browser storage.",
+        "Like any website, the services below can see your IP address and the request you make. Snacc itself sets no cookies and loads no third-party analytics, advertising or tracking scripts; the libraries and services below may keep their own browser storage.",
       ],
       items: [
         "The web host that serves this site, which keeps ordinary server logs (IP address, requested address, browser) under its own policy.",
@@ -134,6 +134,16 @@ export const PRIVACY: LegalDoc = {
         "Rhea Finance and NEAR Intents (1Click) price and quote services, only when you open the swap quote window. Quotes are for display and do not feed the game.",
         "testnet.nearblocks.io, only when you follow an explorer link.",
         "Supabase (supabase.co), which hosts the optional profile database, only once a wallet is connected or you have signed in to a profile, and on public profile pages.",
+      ],
+    },
+    {
+      id: "usage-stats",
+      heading: "Anonymous usage stats and error reports",
+      paragraphs: [
+        "To see where new players get stuck and to fix crashes, the app sends short reports to Snacc's own backend on Supabase (the `track` function). There is no third-party analytics service.",
+        "A report holds: a step name from a fixed list (page view, intro started or finished, wallet connect clicked or connected, profile sign-in, transaction sent, succeeded or failed with its method name, quests opened, share clicked, starter pack received); the page, with ids replaced (/snacc/:id, /p/:account); a random device id kept in your browser and a random id for the current tab; and, for errors, the error text and stack with keys, tokens, emails, URL queries and NEAR account ids removed.",
+        "It never holds your account id, wallet address, keys, balances or your IP address (only a one-way hash of the IP is kept, to limit spam).",
+        "It is off when you turn off \"Share anonymous usage stats\" in Settings, and it is off by default when your browser sends Do Not Track or Global Privacy Control. Reset local data in Settings also replaces the device id.",
       ],
     },
     {
@@ -157,6 +167,8 @@ export const PRIVACY: LegalDoc = {
       heading: "Deleting your profile",
       paragraphs: [
         "The Profile window has a \"Delete my profile\" button. It deletes your Snacc sign-in record and everything stored with it: profile, recorded activity, achievements, follows, notification settings and notifications. A starter-pack claim is kept without your user link, so the same NEAR account cannot claim twice. Transactions on the NEAR blockchain stay public whatever happens to the database.",
+        "Settings has a \"Download my data\" button that saves everything the profile database holds about you as one JSON file.",
+        "Usernames and bios are checked against a list of reserved and abusive words. Moderators can reset a username or bio that breaks the rules, and you get a notification when they do. Moderators can also send announcements, which appear as a banner and a notification.",
       ],
     },
     {

@@ -13,6 +13,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { CONTRACT_ID, toWalletActions, type ContractCall } from "./actions.ts";
 import { readOutcome, readThrown, type TxResult } from "./txResult.ts";
 import { privyManifestFromEnv } from "./privy.ts";
+import { track } from "../telemetry.ts";
 
 export const NETWORK = "testnet" as const;
 /**
@@ -189,6 +190,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async () => {
     setError(null);
     setStatus("connecting");
+    track("wallet_connect_click");
     try {
       const connector = await loadConnector();
       attach(connector);
@@ -198,6 +200,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setAccountId(id);
       setWalletName(wallet.manifest.name);
       setStatus(id ? "connected" : "idle");
+      if (id) track("wallet_connected", { wallet: wallet.manifest.name });
     } catch (e) {
       const msg = messageOf(e);
       if (/user rejected/i.test(msg)) {
@@ -226,6 +229,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!signer) return notConnected();
     // The game call is the last action (a storage registration may come first).
     const method = calls[calls.length - 1]?.methodName;
+    const report = (r: TxResult): TxResult => {
+      track(r.ok ? "tx_succeeded" : "tx_failed", { method: method ?? "unknown", rejected: !r.ok && Boolean(r.rejected) });
+      return r;
+    };
+    track("tx_submitted", { method: method ?? "unknown" });
     try {
       const connector = await loadConnector();
       const wallet = await connector.wallet();
@@ -235,9 +243,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         receiverId: CONTRACT_ID,
         actions: toWalletActions(calls),
       });
-      return readOutcome(outcome, method);
+      return report(readOutcome(outcome, method));
     } catch (e) {
-      return readThrown(e, method);
+      return report(readThrown(e, method));
     }
   }, []);
 
