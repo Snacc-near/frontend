@@ -16,7 +16,7 @@ export interface ModalProps {
   children: ReactNode;
   /** Bottom strip (status / provenance line). */
   footer?: ReactNode;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
   /** Element to focus on open; defaults to `[data-autofocus]`, then the first control. */
   initialFocus?: RefObject<HTMLElement | null>;
   testId?: string;
@@ -79,7 +79,7 @@ export function Modal({ title, heading, onClose, children, footer, size = "md", 
         aria-modal="true"
         aria-labelledby={heading ? `${titleId} ${headingId}` : titleId}
         tabIndex={-1}
-        className={`fd-win fd-win--modal fd-modal__win${size === "lg" ? " fd-modal__win--lg" : ""}`}
+        className={`fd-win fd-win--modal fd-modal__win${size === "lg" ? " fd-modal__win--lg" : size === "xl" ? " fd-modal__win--xl" : ""}`}
       >
         <div className="fd-win__bar">
           <span className="fd-win__btn" aria-hidden="true" />

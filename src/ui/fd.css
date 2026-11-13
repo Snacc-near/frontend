@@ -360,6 +360,12 @@
   background: var(--warm);
 }
 
+/* full-width bar inside a panel */
+.fd-meter--wide {
+  display: block;
+  width: 100%;
+}
+
 .fd-meter::after {
   content: "";
   position: absolute;
@@ -758,6 +764,11 @@
   width: min(100%, 760px);
 }
 
+/* the cell lab: figure beside the organelle cards */
+.fd-modal__win--xl {
+  width: min(100%, 1180px);
+}
+
 .fd-modal__win > .fd-win__body {
   min-height: 0;
   overflow: auto;
@@ -835,7 +846,8 @@
   }
 
   .fd-modal__win,
-  .fd-modal__win--lg {
+  .fd-modal__win--lg,
+  .fd-modal__win--xl {
     width: 100%;
     max-height: 88dvh;
     border-left: 0;
