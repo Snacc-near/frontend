@@ -145,7 +145,7 @@ interface ActionDockProps {
 
 export const ActionDock: React.FC<ActionDockProps> = ({ dock, onDock }) => (
   <nav
-    className="plate-panel pointer-events-auto flex w-full items-end gap-1 overflow-x-auto p-1.5"
+    className="plate-panel pointer-events-auto flex w-full items-end gap-1 overflow-x-auto p-1.5 max-sm:flex-wrap max-sm:overflow-x-visible"
     aria-label="colony actions"
   >
     {dock.map((button) => (
@@ -156,7 +156,7 @@ export const ActionDock: React.FC<ActionDockProps> = ({ dock, onDock }) => (
         onClick={() => onDock(button.key)}
         title={button.hint}
         data-testid={`dock-${button.key}`}
-        className={`keycap flex min-h-[52px] min-w-[72px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[11px] max-sm:min-w-0 max-sm:px-1 max-sm:text-[10px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${
+        className={`keycap flex min-h-[52px] min-w-[72px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[11px] max-sm:min-h-[44px] max-sm:min-w-0 max-sm:basis-[calc(25%-4px)] max-sm:px-1 focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${
           button.key === "atp" ? "keycap--primary" : ""
         }`}
       >

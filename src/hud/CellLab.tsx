@@ -1,10 +1,14 @@
-/** Cell Lab sheet: cutaway figure iframe, action keycaps, organelle cards, production chain, on-chain SVG. */
+/**
+ * Cell Lab window (the shared `Modal`): cutaway figure iframe, action keycaps, organelle cards,
+ * production chain, on-chain SVG. Escape, the focus trap and focus return come from `Modal`.
+ */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS } from "../config/constants.ts";
-import { Icon } from "../ui/fd.tsx";
+import { Icon, Tag } from "../ui/fd.tsx";
+import { Modal } from "../ui/Modal.tsx";
 import type { HudMode } from "./GameHud.tsx";
 import type { LabAction } from "../game/simulation.ts";
 import type { OrganelleLevels } from "../game/simulation.ts";
@@ -223,54 +227,41 @@ export const CellLab: React.FC<CellLabProps> = ({
   const upgradeNote = "on-chain transactions need a wallet — outside this demo";
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-stretch justify-center bg-[rgba(22,24,26,0.35)] p-0 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="cell-lab-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      title="cell-lab.fig"
+      heading={`cell lab${strain ? ` — strain #${strain.strain_id}` : ""}`}
+      onClose={onClose}
+      size="xl"
+      testId="cell-lab"
+      footer={
+        <>
+          <span aria-live="polite">
+            {ready
+              ? `figure connected${keysLocked ? " · playing…" : lastDone ? ` · last: ${lastDone}` : ""}`
+              : "waiting for figure (snacc:ready)…"}
+          </span>
+          <span className="hidden sm:inline">origin validated · same-origin iframe</span>
+        </>
+      }
     >
-      <div
-        className="flex w-full max-w-7xl flex-col overflow-hidden rounded-none border border-[var(--line)] bg-[var(--panel)] text-[var(--ink-hi)] sm:rounded-2xl"
-        data-testid="cell-lab"
-      >
-        <div className="fig-frame__head">
-          <span className="fig-frame__fig">Fig 01</span>
-          <span className="fig-frame__title">
-            {mode === "demo" ? "demo · simulated" : "live · mechanism preview"}
+      <div className="fd-stack">
+        <div className="fd-row fd-row--between">
+          <p className="fd-sub">
+            {strain
+              ? `status ${strain.status} · vitality ${strain.vitality.toLocaleString("en-US")} · zone ${zone}`
+              : isLoading
+                ? "loading strain"
+                : "no strain selected"}
+          </p>
+          <span className="fd-row">
+            <Tag>Fig 01</Tag>
+            <Tag>{mode === "demo" ? "demo · simulated" : "live · mechanism preview"}</Tag>
           </span>
         </div>
-        <header className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <h2 id="cell-lab-title" className="truncate text-lg font-bold">
-              cell lab{strain ? ` — strain #${strain.strain_id}` : ""}
-            </h2>
-            <span className="block text-xs lowercase text-[var(--ink)]">
-              {strain
-                ? `status ${strain.status} · vitality ${strain.vitality.toLocaleString("en-US")} · zone ${zone}`
-                : isLoading
-                  ? "loading strain"
-                  : "no strain selected"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="close cell lab"
-            className="keycap flex min-h-[44px] min-w-[44px] items-center justify-center px-4 text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
-          >
-            close
-          </button>
-        </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 overflow-y-auto lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)] lg:overflow-hidden">
-          <section
-            className="flex min-w-0 flex-col border-b border-[var(--edge)] lg:min-h-0 lg:border-b-0 lg:border-r"
-            aria-label="cell figure"
-          >
-            <div className="lab-figure relative aspect-[4/3] min-h-[260px] w-full flex-none border-b border-[var(--edge)] lg:aspect-auto lg:min-h-0 lg:flex-1">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
+          <section className="flex min-w-0 flex-col gap-3" aria-label="cell figure">
+            <div className="lab-figure relative aspect-[4/3] min-h-[260px] w-full flex-none border border-[var(--ink-hi)] lg:aspect-[3/2]">
               <iframe
                 ref={iframeRef}
                 src={CELL_LAB_SRC}
@@ -303,7 +294,7 @@ export const CellLab: React.FC<CellLabProps> = ({
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-2 px-3 py-3 lg:px-4" data-testid="lab-keycaps-wrap">
+            <div className="flex flex-col gap-2" data-testid="lab-keycaps-wrap">
               <div
                 className="flex snap-x gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-6 lg:overflow-visible lg:pb-0"
                 role="group"
@@ -340,17 +331,9 @@ export const CellLab: React.FC<CellLabProps> = ({
               </p>
             </div>
 
-            <div className="fig-frame__foot">
-              <span className="fig-frame__hint" aria-live="polite">
-                {ready
-                  ? `figure connected${keysLocked ? " · playing…" : lastDone ? ` · last: ${lastDone}` : ""}`
-                  : "waiting for figure (snacc:ready)…"}
-              </span>
-              <span className="fig-frame__readout hidden sm:inline">origin validated · same-origin iframe</span>
-            </div>
           </section>
 
-          <aside className="flex min-h-0 flex-col gap-3 p-4 lg:overflow-y-auto" aria-label="cell details">
+          <aside className="flex min-w-0 flex-col gap-4" aria-label="cell details">
             <section className="plate-panel p-3" aria-label="organelle upgrades">
               <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">organelles</h3>
               <div className="flex flex-col gap-2">
@@ -454,6 +437,6 @@ export const CellLab: React.FC<CellLabProps> = ({
           </aside>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
