@@ -72,6 +72,7 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
   const feeders = (board?.topFeeders ?? []).filter((f) => !only || only.has(f.account_id)).slice(0, 3);
   const names = useNames(players && live ? client : null, feeders.map((f) => f.account_id));
   const tabsId = useId();
+  const boardSource = players && tab === "active" ? "activity_snacc, last 7 days" : players && tab === "streaks" ? "streaks_snacc" : null;
 
   return (
     <Modal
@@ -81,8 +82,8 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
       testId="social-modal"
       footer={
         <>
-          <span>source: {source}</span>
-          {live ? <Tag>live · testnet</Tag> : <Sim />}
+          <span>source: {boardSource ?? source}</span>
+          {boardSource ? <Tag>profile database</Tag> : live ? <Tag>live · testnet</Tag> : <Sim />}
         </>
       }
     >
