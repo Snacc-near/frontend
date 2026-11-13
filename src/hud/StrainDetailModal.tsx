@@ -13,6 +13,7 @@ import { healthOf } from "../data/collection.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
 import type { GameActionKey } from "./GameActions.tsx";
+import { StrainChain } from "./ChainSections.tsx";
 
 interface StrainDetailModalProps {
   strain: StrainDetail | null;
@@ -31,6 +32,8 @@ interface StrainDetailModalProps {
   feedHint?: string;
   /** UI-150: the connected wallet owns this strain; opens another signed action for it. */
   onAction?: (key: GameActionKey) => void;
+  /** UI-155: opens another Snacc's detail (a parent, child or sibling in the lineage section); ids are plain text without it. */
+  onOpenStrain?: (strainId: number) => void;
 }
 
 /** Signed actions offered on an owned strain (UI-150). */
@@ -58,6 +61,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   feedEnabled = false,
   feedHint,
   onAction,
+  onOpenStrain,
 }) => {
   const labels = SKIN_LABELS[skin];
 
@@ -183,6 +187,9 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
             </span>
             <span className="fd-field__hint lowercase">generation #{strain.generation}</span>
           </div>
+
+          {/* UI-155: lineage and history from the chain index (live mode only: demo strains have no chain history) */}
+          {mode === "live" ? <StrainChain strainId={strain.strain_id} generation={strain.generation} onOpenStrain={onOpenStrain} /> : null}
 
           {/* Feed action button */}
           <div className="fd-stack border-t border-dashed border-[var(--rule-dash)] pt-3" style={{ gap: 6 }}>
