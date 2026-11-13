@@ -1,0 +1,147 @@
+/* UI-147 My collection: banner, filter row and the strain rows. Built on the fd.css primitives. */
+
+.coll-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--warm);
+  background: var(--warm-bg);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--warm);
+}
+
+.coll-banner .fd-ico {
+  margin-top: 2px;
+}
+
+.coll-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 230px);
+  align-items: end;
+  gap: 10px;
+}
+
+.coll-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.coll-filters .fd-key[aria-pressed="true"] {
+  background: var(--accent);
+}
+
+.coll-list > li {
+  padding: 0;
+}
+
+.coll-row {
+  appearance: none;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.coll-row:hover {
+  background: var(--paper);
+}
+
+.coll-row:focus-visible {
+  outline: 2px solid var(--accent-dk);
+  outline-offset: -2px;
+}
+
+.coll-thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper);
+  object-fit: contain;
+}
+
+.coll-thumb--none {
+  display: grid;
+  place-items: center;
+  font: 500 10px/1 var(--mono);
+  color: var(--ink);
+}
+
+.coll-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.coll-id {
+  font: 600 13px/1.2 var(--mono);
+  color: var(--ink-hi);
+}
+
+.coll-flag {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--warm);
+  background: var(--warm-bg);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--warm);
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.coll-vit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 11px/1 var(--mono);
+  color: var(--ink);
+}
+
+.coll-vit .fd-meter {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 48px;
+  max-width: 180px;
+}
+
+.coll-gen {
+  font: 500 11px/1.2 var(--mono);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+@media (max-width: 639.98px) {
+  .coll-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .coll-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .coll-thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .coll-gen {
+    grid-column: 2;
+  }
+}
