@@ -46,6 +46,8 @@ export interface OneTapStore {
   get(scope: string): Promise<OneTapRecord | null>;
   put(scope: string, rec: OneTapRecord): Promise<void>;
   remove(scope: string): Promise<void>;
+  /** Closes an open connection (IndexedDB), so the database can be deleted. */
+  close?(): void;
 }
 
 const isRecord = (v: unknown): v is OneTapRecord =>
@@ -107,13 +109,21 @@ function idbRequest<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-function openDb(idb: IDBFactory): Promise<IDBDatabase> {
+function openDb(idb: IDBFactory, onClosed: () => void = () => undefined): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = idb.open(ONE_TAP_DB, 1);
     req.onupgradeneeded = () => {
       if (!req.result.objectStoreNames.contains(ONE_TAP_DB_STORE)) req.result.createObjectStore(ONE_TAP_DB_STORE);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // Let "Reset local data" (deleteDatabase) and other tabs' upgrades through instead of blocking them.
+      db.onversionchange = () => {
+        db.close();
+        onClosed();
+      };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error ?? new Error("IndexedDB is not available"));
     req.onblocked = () => reject(new Error("IndexedDB is blocked"));
   });
@@ -123,10 +133,16 @@ function openDb(idb: IDBFactory): Promise<IDBDatabase> {
 export function indexedDbStore(idb: IDBFactory): OneTapStore {
   let db: Promise<IDBDatabase> | null = null;
   const tx = async <T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> => {
-    db ??= openDb(idb).catch((e) => {
-      db = null;
-      throw e;
-    });
+    if (!db) {
+      const opening: Promise<IDBDatabase> = openDb(idb, () => {
+        // Closed for a delete or an upgrade elsewhere: the next use opens a fresh connection.
+        if (db === opening) db = null;
+      }).catch((e) => {
+        if (db === opening) db = null;
+        throw e;
+      });
+      db = opening;
+    }
     const store = (await db).transaction(ONE_TAP_DB_STORE, mode).objectStore(ONE_TAP_DB_STORE);
     return idbRequest(run(store));
   };
@@ -141,6 +157,11 @@ export function indexedDbStore(idb: IDBFactory): OneTapStore {
     },
     async remove(scope) {
       await tx("readwrite", (s) => s.delete(scope));
+    },
+    close() {
+      const open = db;
+      db = null;
+      void open?.then((d) => d.close()).catch(() => undefined);
     },
   };
 }
@@ -206,41 +227,53 @@ export function newRecord(input: { network: string; accountId: string; key: NewO
 }
 
 /**
- * Picks where one-tap keys live in this browser: IndexedDB when it can store and return a
- * `CryptoKey` (probed once), else localStorage, else nowhere (null).
+ * Where one-tap keys live in this browser, in order. The first entry is where a new key is saved:
+ * IndexedDB when it can store and return a `CryptoKey` (probed once per page load), else
+ * localStorage. Every entry is searched when a key is loaded, so a key saved in the other store on
+ * an earlier visit (say IndexedDB failed once) is still found and never silently replaced. An
+ * IndexedDB that failed the probe stays in the list as a lookup-only last entry. Empty = nowhere.
  */
-export async function pickOneTapStore(env: { indexedDB?: IDBFactory | null; localStorage?: StorageLike | null; subtle: SubtleCrypto }): Promise<OneTapStore | null> {
+export async function pickOneTapStores(env: { indexedDB?: IDBFactory | null; localStorage?: StorageLike | null; subtle: SubtleCrypto }): Promise<OneTapStore[]> {
+  let idb: OneTapStore | null = null;
+  let idbWorks = false;
   if (env.indexedDB) {
     try {
-      const store = indexedDbStore(env.indexedDB);
+      idb = indexedDbStore(env.indexedDB);
       const kp = (await env.subtle.generateKey(ED25519, false, ["sign", "verify"])) as CryptoKeyPair;
       const probe = "__probe__";
-      await store.put(probe, { v: 1, network: "probe", accountId: probe, contractId: CONTRACT_ID, publicKey: "probe", methodNames: [], allowanceYocto: "0", createdAt: 0, storage: "indexeddb", privateKey: kp.privateKey });
-      const back = await store.get(probe);
-      await store.remove(probe);
-      if (back?.privateKey) return store;
+      await idb.put(probe, { v: 1, network: "probe", accountId: probe, contractId: CONTRACT_ID, publicKey: "probe", methodNames: [], allowanceYocto: "0", createdAt: 0, storage: "indexeddb", privateKey: kp.privateKey });
+      const back = await idb.get(probe);
+      await idb.remove(probe);
+      idbWorks = Boolean(back?.privateKey);
     } catch {
-      // fall through to localStorage
+      idbWorks = false;
     }
   }
+  let ls: OneTapStore | null = null;
   if (env.localStorage) {
     try {
       env.localStorage.getItem(ONE_TAP_LOCAL_KEY);
-      return webStorageStore(env.localStorage);
+      ls = webStorageStore(env.localStorage);
     } catch {
-      return null;
+      ls = null;
     }
   }
-  return null;
+  const out: OneTapStore[] = [];
+  if (idb && idbWorks) out.push(idb);
+  if (ls) out.push(ls);
+  if (idb && !idbWorks && out.length > 0) out.push(idb);
+  return out;
 }
 
 /** Settings → Reset local data: removes every one-tap key from this browser (not from the account on chain). */
-export async function wipeOneTapDevice(env: { indexedDB?: IDBFactory | null; localStorage?: StorageLike | null }): Promise<void> {
+export async function wipeOneTapDevice(env: { indexedDB?: IDBFactory | null; localStorage?: StorageLike | null; stores?: readonly OneTapStore[] }): Promise<void> {
   try {
     env.localStorage?.removeItem(ONE_TAP_LOCAL_KEY);
   } catch {
     /* ignore */
   }
+  // Close this page's own connection first; `onversionchange` closes any other one.
+  for (const s of env.stores ?? []) s.close?.();
   if (!env.indexedDB) return;
   await new Promise<void>((resolve) => {
     try {

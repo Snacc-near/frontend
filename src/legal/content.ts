@@ -67,8 +67,8 @@ export const TERMS: LegalDoc = {
       id: "wallet",
       heading: "Your wallet, your responsibility",
       paragraphs: [
-        "You sign every transaction yourself in your own NEAR wallet or through the optional email login. The app never sees or stores your wallet's private keys. You are responsible for your account and for what you sign. Transactions are public and cannot be undone.",
-        "One-tap play is optional and off until you turn it on in Settings. Then your wallet adds a separate, limited key that the app makes in your browser: it can only call the deposit-free game actions on the Snacc contract, cannot attach NEAR, and can spend at most its gas allowance from your account. You can delete it from Settings or from your wallet at any time.",
+        "Every transaction is signed on your behalf only with keys you control: by your own NEAR wallet or the optional email login, or, if you turn on one-tap play, by a limited key in your browser that your wallet added once at your request. The app never sees or stores your wallet's private keys. You are responsible for your account and for what you sign. Transactions are public and cannot be undone.",
+        "One-tap play is optional and off until you turn it on in Settings. Then your wallet adds a separate, limited key that the app makes in your browser: it can only call the deposit-free game actions that do not pay another player, on the Snacc contract, cannot attach NEAR, and can spend at most its gas allowance from your account. Disconnecting the wallet does not remove it; turn one-tap play off in Settings or delete the key in your wallet.",
       ],
     },
     {

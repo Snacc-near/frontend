@@ -403,16 +403,20 @@ NEAR function-call access key, so they go through without a wallet popup each ti
 - **Turning it on** makes an Ed25519 key pair in the browser (Web Crypto) and asks the wallet for ONE
   transaction to your own account: `AddKey` with a function-call permission, receiver
   `snacc-v001.testnet`, allowance 0.25 NEAR (`ONE_TAP_ALLOWANCE_NEAR`), methods exactly
-  `ONE_TAP_METHODS`: `adopt`, `allocate_atp`, `claim_industrial_dividend`, `divide_strain`,
-  `feed_strain`, `harvest_starving_strain`, `hostile_takeover_splice`, `npc_buy_spores`,
-  `splice_strains`, `synthesize_and_redeem_aether`. These are the deposit-free methods the app sends
-  (not `#[payable]` in `contracts/snacc/src/lib.rs`, or payable only to refund a stray deposit), a
-  subset of the SDK's `SIGNLESS_METHODS`.
+  `ONE_TAP_METHODS` (8): `allocate_atp`, `claim_industrial_dividend`, `divide_strain`,
+  `feed_strain`, `harvest_starving_strain`, `npc_buy_spores`, `splice_strains`,
+  `synthesize_and_redeem_aether`. These are the deposit-free methods the app sends (not `#[payable]`
+  in `contracts/snacc/src/lib.rs`, or payable only to refund a stray deposit) that do not pay a
+  counterparty the caller picks; a subset of the SDK's `SIGNLESS_METHODS`.
 - **Still the wallet:** anything that attaches NEAR, because NEAR refuses a deposit on a
   function-call key: `incubate_strain` (stake), `extract_spores`, `transmute_spores_to_enzyme`,
   `synthesize_elixir` (catalyst fee), `storage_deposit` (and any action sent together with it),
-  `nft_transfer`, `nft_transfer_call`, `ft_transfer` (1 yoctoNEAR) and every market call. No relayer
-  and no gas station: the player's own account pays the gas, capped by the allowance.
+  `nft_transfer`, `nft_transfer_call`, `ft_transfer` (1 yoctoNEAR) and every market call. Also
+  `adopt` and `hostile_takeover_splice` (rule `pays_other` in `CONTRACT_METHOD_DEPOSIT`): no deposit,
+  but they pay `$SNACC` from your strain to the owner of a target the caller picks, so a script on the
+  site could drain a strain with a popup-free key. A key from an older build that still lists them is
+  treated as outdated: never used, and Settings offers to replace it (DeleteKey, then AddKey). No
+  relayer and no gas station: the player's own account pays the gas, capped by the allowance.
 - **Signing path:** `view_access_key` (final) gives the nonce, a recent block hash and the remaining
   allowance; the transaction (one `FunctionCall`) is Borsh-encoded by hand, its sha256 signed with the
   Web Crypto key, and sent with `send_tx` (`EXECUTED_OPTIMISTIC`) to FastNEAR, then
@@ -425,8 +429,11 @@ NEAR function-call access key, so they go through without a wallet popup each ti
   not asked again.
 - **The key** stays in this browser only, per network and account (`testnet:<account>`): IndexedDB
   `snacc_one_tap` as a non-extractable `CryptoKey`; only when IndexedDB cannot hold one, localStorage
-  `snacc_one_tap` with the raw PKCS#8 bytes (Settings says so). It is never sent anywhere. Without
-  Ed25519 in Web Crypto the section says one-tap play is not available in this browser.
+  `snacc_one_tap` with the raw PKCS#8 bytes (Settings says so). Both stores are searched when a key
+  is loaded, and turning on refuses to add a second key while one found in either store is still on
+  the account. It is never sent anywhere. Disconnecting the wallet keeps it (here and on the account)
+  until one-tap play is turned off. Without Ed25519 in Web Crypto the section says one-tap play is not
+  available in this browser.
 - **Turning it off** checks on chain that the key is this game's function-call key, then asks the
   wallet for ONE `DeleteKey` of that key (to your own account) and wipes it here. "Forget on this
   device" only wipes it here. The wallet allowlist (`checkWalletTx`) accepts exactly these two extra

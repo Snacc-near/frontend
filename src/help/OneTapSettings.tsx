@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { CONTRACT_ID, formatYocto } from "../chain/actions.ts";
-import { ONE_TAP_ALLOWANCE_NEAR, ONE_TAP_METHODS, WALLET_ONLY_METHODS } from "../chain/oneTap.ts";
+import { ATTACHES_NEAR_METHODS, ONE_TAP_ALLOWANCE_NEAR, ONE_TAP_METHODS, PAYS_OTHER_METHODS } from "../chain/oneTap.ts";
 import { useOneTap, type OneTapStatus } from "../chain/oneTapSession.ts";
 import { useWallet } from "../chain/wallet.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
@@ -42,11 +42,24 @@ function StatusLine({ status, accountId }: { status: OneTapStatus; accountId: st
               This key is no longer on your account (deleted elsewhere, or the add did not land). Deposit-free actions use your wallet again; forget
               the key here and turn one-tap play on again if you want it back.
             </p>
+          ) : status.outdated ? (
+            <p className="fd-field__hint fd-field__hint--bad" data-testid="one-tap-outdated">
+              This key was made by an older version of the game and allows a different list of actions, so one-tap play does not use it: every
+              action goes through your wallet. Replace it (2 wallet popups: delete the old key, add the new one) or turn it off.
+            </p>
           ) : null}
         </div>
       );
   }
 }
+
+const codeList = (methods: readonly string[]) =>
+  methods.map((m, i) => (
+    <span key={m}>
+      {i ? ", " : ""}
+      <code>{m}</code>
+    </span>
+  ));
 
 export function OneTapSettings() {
   const wallet = useWallet();
@@ -65,30 +78,22 @@ export function OneTapSettings() {
         every wallet.
       </p>
       <p className="fd-field__hint" data-testid="one-tap-methods">
-        One-tap actions:{" "}
-        {ONE_TAP_METHODS.map((m, i) => (
-          <span key={m}>
-            {i ? ", " : ""}
-            <code>{m}</code>
-          </span>
-        ))}
-        .
+        One-tap actions ({ONE_TAP_METHODS.length}): {codeList(ONE_TAP_METHODS)}.
       </p>
       <p className="fd-field__hint" data-testid="one-tap-wallet-only">
-        Still in your wallet, because they attach NEAR (a stake, a catalyst fee, the storage deposit or 1 yoctoNEAR):{" "}
-        {WALLET_ONLY_METHODS.map((m, i) => (
-          <span key={m}>
-            {i ? ", " : ""}
-            <code>{m}</code>
-          </span>
-        ))}
-        ; also every market call and any action sent together with the first storage registration.
+        Still in your wallet: the actions that attach NEAR (a stake, a catalyst fee, the storage deposit or 1 yoctoNEAR), {codeList(ATTACHES_NEAR_METHODS)};
+        the actions that pay $SNACC to another player or take over their Snacc, {codeList(PAYS_OTHER_METHODS)}; every market call; and any action
+        sent together with the first storage registration.
       </p>
       <p className="fd-field__hint">
-        Turning it on asks your wallet once to add a limited key to your own account. That key can only call the actions above on{" "}
+        Turning it on asks your wallet once to add a limited key to your own account. That key can only call the one-tap actions above on{" "}
         <code>{CONTRACT_ID}</code>, cannot attach NEAR, and can spend at most {ONE_TAP_ALLOWANCE_NEAR} NEAR of gas (its allowance), paid from your
         account. The private key is made in this browser and stays here; it is never sent anywhere, only its public key goes on chain. Anyone who
         could run code on this site in this browser could use it for those actions until you turn it off.
+      </p>
+      <p className="fd-field__hint" data-testid="one-tap-sign-out">
+        Disconnecting the wallet does not remove the key: it stays in this browser and on your account until you turn one-tap play off. To remove
+        it, connect the same account and press &quot;turn off&quot; here, or delete the key in your wallet&apos;s list of access keys.
       </p>
 
       <StatusLine status={status} accountId={accountId} />
@@ -114,6 +119,11 @@ export function OneTapSettings() {
       {connected && status.kind === "on" ? (
         <>
           <div className="fd-row">
+            {status.chain !== "missing" && status.outdated ? (
+              <KeycapButton mono variant="primary" icon="spark" disabled={busy !== null} onClick={() => void oneTap.replace()} data-testid="one-tap-replace">
+                {busy ? "waiting for wallet…" : "replace the key (2 wallet popups)"}
+              </KeycapButton>
+            ) : null}
             {status.chain !== "missing" ? (
               <KeycapButton mono icon="close" disabled={busy !== null} onClick={() => void oneTap.disable()} data-testid="one-tap-disable">
                 {busy === "disabling" ? "waiting for wallet…" : "turn off (delete the key, 1 wallet popup)"}

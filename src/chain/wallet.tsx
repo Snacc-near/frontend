@@ -19,7 +19,7 @@ import { readOutcome, readThrown, type TxResult } from "./txResult.ts";
 import { privyManifestFromEnv } from "./privy.ts";
 import { track } from "../telemetry.ts";
 import { ONE_TAP_RPCS, checkWalletTx, type WalletAction, type WalletTx } from "./oneTap.ts";
-import { ed25519Available, pickOneTapStore } from "./oneTapKeys.ts";
+import { ed25519Available, pickOneTapStores, wipeOneTapDevice } from "./oneTapKeys.ts";
 import { OneTapContext, OneTapController, sendWithOneTap, type OneTapHandle } from "./oneTapSession.ts";
 import { appStorage } from "../prefs/prefs.ts";
 
@@ -45,6 +45,14 @@ export function resolveReceiver(receiverId?: string): string | null {
 
 export type WalletStatus = "idle" | "restoring" | "connecting" | "connected" | "error";
 
+export interface SignAndSendOptions {
+  /**
+   * RES-111: called right before the wallet popup is requested (a one-tap action that fell back,
+   * or any action one-tap does not cover), so a "sending with one-tap" status can switch.
+   */
+  onWalletPrompt?: () => void;
+}
+
 export interface WalletApi {
   status: WalletStatus;
   accountId: string | null;
@@ -58,7 +66,7 @@ export interface WalletApi {
    * Signs and sends one transaction with the given calls, in order. The receiver is the Snacc
    * contract unless `receiverId` names the testnet market (UI-164); any other receiver is refused.
    */
-  signAndSend: (calls: ContractCall[], receiverId?: string) => Promise<TxResult>;
+  signAndSend: (calls: ContractCall[], receiverId?: string, opts?: SignAndSendOptions) => Promise<TxResult>;
   /**
    * NEP-413 message signing (UI-148 sign-in to the optional profile). Rejects when no wallet is
    * connected, the player cancels, or the wallet cannot sign messages.
@@ -269,7 +277,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 
   const signAndSend = useCallback(
-    async (calls: ContractCall[], receiverId?: string): Promise<TxResult> => {
+    async (calls: ContractCall[], receiverId?: string, opts?: SignAndSendOptions): Promise<TxResult> => {
       const signer = accountRef.current;
       if (!signer) return notConnected();
       // The game call is the last action (a storage registration may come first).
@@ -283,10 +291,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return r;
       };
       // RES-111: deposit-free calls try the one-tap key first (it tracks its own `signless: true` events).
-      return sendWithOneTap(oneTap, signer, calls, receiver, async () => {
-        track("tx_submitted", { method: method ?? "unknown" });
-        return report(await walletTx({ signerId: signer, receiverId: receiver, actions: toWalletActions(calls) }, method));
-      });
+      return sendWithOneTap(
+        oneTap,
+        signer,
+        calls,
+        receiver,
+        async () => {
+          track("tx_submitted", { method: method ?? "unknown" });
+          return report(await walletTx({ signerId: signer, receiverId: receiver, actions: toWalletActions(calls) }, method));
+        },
+        { onWallet: opts?.onWalletPrompt },
+      );
     },
     [oneTap, walletTx],
   );
@@ -298,8 +313,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       covers: oneTap.covers,
       enable: () => oneTap.enable((tx) => walletTx(tx)),
       disable: () => oneTap.disable((tx) => walletTx(tx)),
+      replace: () => oneTap.replace((tx) => walletTx(tx)),
       forget: () => oneTap.forget(),
       refresh: () => oneTap.refresh(),
+      wipeDevice: async () => {
+        const stores = await oneTap.closeStores();
+        await wipeOneTapDevice({ indexedDB: browserIndexedDb(), localStorage: appStorage(), stores });
+      },
     }),
     [oneTap, walletTx],
   );
@@ -325,20 +345,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 }
 
 /** Browser wiring of the one-tap controller: FastNEAR RPC with a fallback, Web Crypto, IndexedDB (localStorage fallback). */
+function browserIndexedDb(): IDBFactory | null {
+  try {
+    return typeof indexedDB !== "undefined" ? indexedDB : null;
+  } catch {
+    return null;
+  }
+}
+
 function defaultOneTapDeps(): ConstructorParameters<typeof OneTapController>[0] {
-  const idb = (): IDBFactory | null => {
-    try {
-      return typeof indexedDB !== "undefined" ? indexedDB : null;
-    } catch {
-      return null;
-    }
-  };
   return {
     network: NETWORK,
     rpc: { urls: ONE_TAP_RPCS, fetch: (input, init) => fetch(input, init) },
     subtle: () => (typeof crypto !== "undefined" && crypto.subtle ? crypto.subtle : null),
     ed25519: (subtle) => ed25519Available(subtle),
-    pickStore: (subtle) => pickOneTapStore({ indexedDB: idb(), localStorage: appStorage(), subtle }),
+    pickStores: (subtle) => pickOneTapStores({ indexedDB: browserIndexedDb(), localStorage: appStorage(), subtle }),
     track: (name, props) => track(name, props),
   };
 }

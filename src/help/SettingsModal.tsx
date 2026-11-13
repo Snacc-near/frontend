@@ -18,8 +18,8 @@ import {
 } from "../prefs/prefs.ts";
 import { bioSound } from "../sound.ts";
 import { NotificationSettings } from "../hud/NotificationsModal.tsx";
-import { ONE_TAP_DB, wipeOneTapDevice } from "../chain/oneTapKeys.ts";
-import { appStorage } from "../prefs/prefs.ts";
+import { ONE_TAP_DB } from "../chain/oneTapKeys.ts";
+import { useOneTap } from "../chain/oneTapSession.ts";
 import { OneTapSettings } from "./OneTapSettings.tsx";
 import { AdminTools, MyDataSettings, UsageStatsSettings } from "../account/AccountSettings.tsx";
 import { Modal } from "../ui/Modal.tsx";
@@ -48,6 +48,7 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
   const [sound, setSound] = useState(() => readSoundPrefs());
   const [motion, setMotion] = useState<MotionPref>(() => readMotionPref());
   const [confirmReset, setConfirmReset] = useState(false);
+  const oneTap = useOneTap();
   const volumePct = Math.round(sound.volume * 100);
 
   const toggleSound = () => {
@@ -176,8 +177,8 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
                 icon="warn"
                 onClick={() => {
                   resetLocalData();
-                  const idb = typeof indexedDB !== "undefined" ? indexedDB : null;
-                  void wipeOneTapDevice({ indexedDB: idb, localStorage: appStorage() }).finally(() => window.location.reload());
+                  // Closes this page's key database connection, then deletes the database.
+                  void oneTap.wipeDevice().finally(() => window.location.reload());
                 }}
                 data-testid="settings-reset-confirm"
               >

@@ -131,14 +131,24 @@ export function plan(call: ContractCall | null, accountId: string, info: Account
   });
 }
 
+/**
+ * The send step of `useSend`: pending ("sending with one-tap" when the one-tap key is expected to
+ * sign) → back to "waiting for your wallet" the moment the wallet is asked after all (a one-tap
+ * fallback) → done.
+ */
+export async function runSend(wallet: Pick<WalletApi, "signAndSend">, calls: ContractCall[], oneTapLikely: boolean, setPhase: (p: TxPhase) => void): Promise<TxResult> {
+  setPhase({ kind: "pending", oneTap: oneTapLikely });
+  const result = await wallet.signAndSend(calls, undefined, { onWalletPrompt: () => setPhase({ kind: "pending", oneTap: false }) });
+  setPhase({ kind: "done", result });
+  return result;
+}
+
 export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string | null) => void) {
   const [phase, setPhase] = useState<TxPhase>({ kind: "idle" });
   const oneTap = useOneTap();
   const send = async (calls: ContractCall[]) => {
     if (calls.length === 0) return;
-    setPhase({ kind: "pending", oneTap: oneTap.covers(calls) });
-    const result = await wallet.signAndSend(calls);
-    setPhase({ kind: "done", result });
+    const result = await runSend(wallet, calls, oneTap.covers(calls), setPhase);
     // UI-148: the hash goes along so the app can record the activity (fire and forget).
     onDone(result.ok, result.txHash);
   };
@@ -147,7 +157,7 @@ export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string
 
 export function Footer() {
   const st = useOneTap().snapshot.status;
-  const oneTapOn = st.kind === "on" && st.chain !== "missing";
+  const oneTapOn = st.kind === "on" && st.chain !== "missing" && !st.outdated;
   return (
     <>
       <span>

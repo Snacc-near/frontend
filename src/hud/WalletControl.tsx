@@ -24,7 +24,7 @@ export interface WalletControlProps {
 /** RES-111: a small "one-tap on" tag while this browser holds a working one-tap key (Settings → One-tap play). */
 function OneTapTag() {
   const st = useOneTap().snapshot.status;
-  if (st.kind !== "on" || st.chain === "missing") return null;
+  if (st.kind !== "on" || st.chain === "missing" || st.outdated) return null;
   return (
     <span title="Deposit-free actions are signed in this browser without a wallet popup. Settings → One-tap play." data-testid="wallet-one-tap">
       <Tag>one-tap on</Tag>

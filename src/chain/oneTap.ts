@@ -23,8 +23,11 @@ import { humanizeTxError, readOutcome, type TxResult } from "./txResult.ts";
 
 // ---------------------------------------------------------------------------- the method list
 
-/** How a Snacc-contract method the app sends handles NEAR attached to the call. */
-export type DepositRule = "none" | "stake" | "fee" | "storage" | "one_yocto";
+/**
+ * How a Snacc-contract method the app sends handles NEAR attached to the call, and whether it may
+ * go out with the one-tap key. Only `none` may.
+ */
+export type DepositRule = "none" | "pays_other" | "stake" | "fee" | "storage" | "one_yocto";
 
 /**
  * Every Snacc-contract method the app sends (the `GAS` table plus the market listing call), with its
@@ -35,6 +38,11 @@ export type DepositRule = "none" | "stake" | "fee" | "storage" | "one_yocto";
  * - `stake` / `fee` / `storage`: `#[payable]` and the attached NEAR is the stake, the catalyst fee or
  *   the NEP-145 storage deposit.
  * - `one_yocto`: `assert_one_yocto()` (NEP-141 / NEP-171 transfers).
+ * - `pays_other`: no deposit, but the call pays `$SNACC` from your strain to a counterparty the
+ *   caller picks, or moves a Snacc's ownership (`adopt`: book value to the target's owner;
+ *   `hostile_takeover_splice`: book value + 15% to the target's owner). A script running on the
+ *   site could use a popup-free key to drain a strain into its own distressed one, so these keep
+ *   the wallet popup.
  */
 export const CONTRACT_METHOD_DEPOSIT = {
   incubate_strain: "stake",
@@ -49,8 +57,8 @@ export const CONTRACT_METHOD_DEPOSIT = {
   allocate_atp: "none",
   divide_strain: "none",
   splice_strains: "none",
-  hostile_takeover_splice: "none",
-  adopt: "none",
+  hostile_takeover_splice: "pays_other",
+  adopt: "pays_other",
   harvest_starving_strain: "none",
   npc_buy_spores: "none",
   synthesize_and_redeem_aether: "none",
@@ -69,14 +77,22 @@ export function deriveOneTapMethods(table: Readonly<Record<string, DepositRule>>
  * The exact `method_names` of the one-tap key. A subset of the SDK's `SIGNLESS_METHODS`: the SDK
  * also lists methods the app never sends (`commit_genome_experiment`, `apply_tee_mutation_zero_trust`,
  * `conjugate_traits`, `advance_epoch`, `ft_burn`), which are left out so the key can do no more
- * than the app needs.
+ * than the app needs, and `adopt` / `hostile_takeover_splice` stay wallet-only (`pays_other`).
  */
 export const ONE_TAP_METHODS: readonly string[] = deriveOneTapMethods(CONTRACT_METHOD_DEPOSIT);
 
-/** The methods that keep the wallet popup because they attach NEAR. */
+/** The methods that keep the wallet popup: they attach NEAR, or pay another player (`pays_other`). */
 export const WALLET_ONLY_METHODS: readonly string[] = Object.entries(CONTRACT_METHOD_DEPOSIT)
   .filter(([, rule]) => rule !== "none")
   .map(([m]) => m);
+
+/** The zero-deposit methods kept in the wallet because they pay a counterparty the caller picks. */
+export const PAYS_OTHER_METHODS: readonly string[] = Object.entries(CONTRACT_METHOD_DEPOSIT)
+  .filter(([, rule]) => rule === "pays_other")
+  .map(([m]) => m);
+
+/** The wallet-only methods that attach NEAR (everything wallet-only except `pays_other`). */
+export const ATTACHES_NEAR_METHODS: readonly string[] = WALLET_ONLY_METHODS.filter((m) => !PAYS_OTHER_METHODS.includes(m));
 
 /** Gas allowance of the one-tap key (ADR-08 default). Change here to change what the wallet is asked for. */
 export const ONE_TAP_ALLOWANCE_NEAR = "0.25";
@@ -135,6 +151,9 @@ export function buildDeleteKeyAction(publicKey: string): DeleteKeyWalletAction {
 }
 
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && [...a].sort().join(",") === [...b].sort().join(",");
+
+/** True when a key's method list is exactly this version's `ONE_TAP_METHODS` (any order). */
+export const isCurrentMethodList = (methods: readonly string[]) => sameList(methods, ONE_TAP_METHODS);
 
 /** `ed25519:` + base58 of exactly 32 bytes. */
 export function isEd25519PublicKey(key: unknown): key is string {
@@ -443,23 +462,58 @@ export type SendErrorClass =
   | { included: "yes" }
   | { included: "maybe" };
 
+/** True when `name` is a key anywhere inside `v` (nearcore puts error variants in nested object keys). */
+function hasKey(v: unknown, name: string, depth = 0): boolean {
+  if (depth > 12 || v === null || typeof v !== "object") return false;
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (k === name || hasKey(val, name, depth + 1)) return true;
+  }
+  return false;
+}
+
+/** The object stored under the key `name` anywhere inside `v`, or undefined. */
+function findKey(v: unknown, name: string, depth = 0): unknown {
+  if (depth > 12 || v === null || typeof v !== "object") return undefined;
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (k === name) return val;
+    const inner = findKey(val, name, depth + 1);
+    if (inner !== undefined) return inner;
+  }
+  return undefined;
+}
+
 /**
  * Reads a `send_tx` error. `no`: an invalid transaction (it cannot land). `yes`: it ran and failed.
  * `maybe`: anything else (a timeout, an unknown error); the transaction may still land.
+ * Matches the RPC's structured fields (`name`, `cause.name`, variant keys under `data`), not free
+ * text, so an account id or a message that happens to contain "timeout" changes nothing. Old nodes
+ * that send `data` as a string are matched on whole CamelCase variant names only.
  */
 export function classifySendError(error: unknown): SendErrorClass {
-  const t = textOf(error);
-  if (/TIMEOUT_ERROR|timed? ?out/i.test(t)) return { included: "maybe" };
-  if (/ActionError/.test(t)) return { included: "yes" };
-  if (/InvalidNonce/.test(t)) return { included: "no", reason: "nonce" };
-  if (/NotEnoughAllowance/.test(t)) return { included: "no", reason: "allowance" };
-  if (/AccessKeyNotFound/.test(t)) return { included: "no", reason: "key-missing" };
-  if (/MethodNameMismatch/.test(t)) return { included: "no", reason: "method" };
-  if (/ReceiverMismatch/.test(t)) return { included: "no", reason: "receiver" };
-  if (/DepositWithFunctionCall/.test(t)) return { included: "no", reason: "deposit" };
-  if (/NotEnoughBalance|LackBalanceForState/.test(t)) return { included: "no", reason: "balance" };
-  if (/INVALID_TRANSACTION|InvalidTxError/.test(t)) return { included: "no", reason: "invalid" };
+  const e = error !== null && typeof error === "object" ? (error as { name?: unknown; cause?: { name?: unknown } | null; data?: unknown }) : null;
+  const names = [e?.cause?.name, e?.name].filter((n): n is string => typeof n === "string");
+  if (names.includes("TIMEOUT_ERROR")) return { included: "maybe" };
+  const textual = typeof error === "string" ? error : typeof e?.data === "string" ? e.data : "";
+  const has = (variant: string) => hasKey(error, variant) || new RegExp(`\\b${variant}\\b`).test(textual);
+  if (has("ActionError")) return { included: "yes" };
+  if (has("InvalidNonce")) return { included: "no", reason: "nonce" };
+  if (has("NotEnoughAllowance")) return { included: "no", reason: "allowance" };
+  if (has("AccessKeyNotFound")) return { included: "no", reason: "key-missing" };
+  if (has("MethodNameMismatch")) return { included: "no", reason: "method" };
+  if (has("ReceiverMismatch")) return { included: "no", reason: "receiver" };
+  if (has("DepositWithFunctionCall")) return { included: "no", reason: "deposit" };
+  if (has("NotEnoughBalance") || has("LackBalanceForState")) return { included: "no", reason: "balance" };
+  if (names.includes("INVALID_TRANSACTION") || has("InvalidTxError")) return { included: "no", reason: "invalid" };
   return { included: "maybe" };
+}
+
+/** The access key's nonce reported by an `InvalidNonce` error (`ak_nonce`), when present. */
+export function invalidNonceAk(error: unknown): bigint | null {
+  const v = findKey(error, "InvalidNonce") as { ak_nonce?: unknown } | undefined;
+  const ak = v && typeof v === "object" ? v.ak_nonce : undefined;
+  if (typeof ak === "number" && Number.isSafeInteger(ak) && ak >= 0) return BigInt(ak);
+  if (typeof ak === "string" && /^\d+$/.test(ak)) return BigInt(ak);
+  return null;
 }
 
 // ---------------------------------------------------------------------------- signless send
@@ -470,7 +524,18 @@ export interface OneTapSigner {
   sign(message: Uint8Array): Promise<Uint8Array>;
 }
 
-export type FallbackReason = "key-missing" | "allowance" | "method" | "receiver" | "deposit" | "balance" | "nonce" | "invalid" | "rpc-unreachable" | "load-failed";
+export type FallbackReason =
+  | "key-missing"
+  | "allowance"
+  | "method"
+  | "receiver"
+  | "deposit"
+  | "balance"
+  | "nonce"
+  | "invalid"
+  | "rpc-unreachable"
+  | "load-failed"
+  | "outdated";
 
 /** One-line notices shown when a deposit-free action falls back to the wallet. */
 export const FALLBACK_NOTICE: Record<FallbackReason, string> = {
@@ -484,6 +549,7 @@ export const FALLBACK_NOTICE: Record<FallbackReason, string> = {
   invalid: "Testnet refused the one-tap transaction, so your wallet signs this one.",
   "rpc-unreachable": "Could not reach NEAR testnet for one-tap play, so your wallet signs this one.",
   "load-failed": "Could not load the one-tap key in this browser, so your wallet signs this one.",
+  outdated: "Your one-tap key is from an older version of the game, so your wallet signs this one. Replace it in Settings → One-tap play.",
 };
 
 export type SignlessOutcome =
@@ -508,6 +574,11 @@ export interface SignlessInput {
   /** Called once, right before the first broadcast (telemetry `tx_submitted`). */
   onBroadcast?: () => void;
   gasPriceYocto?: bigint;
+  /**
+   * When set, the on-chain key must allow exactly these methods; any other list (e.g. a key made by
+   * an older version that still allows `adopt`) is not used (`outdated`).
+   */
+  requireMethods?: readonly string[];
 }
 
 /**
@@ -526,18 +597,21 @@ export async function sendSignless(input: SignlessInput): Promise<SignlessOutcom
   let maybeSent = false;
   let broadcast = false;
   let hash = "";
+  // The nonce goes above everything known: the chain's (final, may lag a block or two), the highest
+  // this browser used, and, after an InvalidNonce refusal, the `ak_nonce` the node reported.
+  let knownFloor = input.lastNonce ?? 0n;
   for (let attempt = 0; attempt < 2; attempt++) {
     if (key.kind === "missing") return fallback("key-missing", broadcast);
     // A retry only happens after a clean refusal, so nothing can have landed yet at this point.
     if (key.kind === "unreachable") return fallback("rpc-unreachable", broadcast);
     const perm = key.permission;
     if (perm.kind !== "FunctionCall" || perm.receiverId !== CONTRACT_ID) return fallback("receiver", broadcast);
+    if (input.requireMethods && !sameList(perm.methodNames, input.requireMethods)) return fallback("outdated", broadcast);
     if (perm.methodNames.length > 0 && !perm.methodNames.includes(method)) return fallback("method", broadcast);
     const cost = BigInt(call.gas) * (input.gasPriceYocto ?? GAS_PRICE_FLOOR_YOCTO);
     if (perm.allowance !== null && perm.allowance < cost) return fallback("allowance", broadcast);
 
-    const floor = attempt === 0 && input.lastNonce !== undefined && input.lastNonce > key.nonce ? input.lastNonce : key.nonce;
-    const nonce = floor + 1n;
+    const nonce = (key.nonce > knownFloor ? key.nonce : knownFloor) + 1n;
     const txBytes = encodeFunctionCallTx({
       signerId: accountId,
       publicKey: base58Decode(signer.publicKey.slice("ed25519:".length)),
@@ -571,7 +645,11 @@ export async function sendSignless(input: SignlessInput): Promise<SignlessOutcom
     }
     if (c.included === "maybe" || maybeSent) return notConfirmed(hash, raw, nonce);
     if (c.reason === "nonce" && attempt === 0) {
-      // The tx was refused before it could land: read a fresh nonce and sign again, once.
+      // The tx was refused before it could land: sign again once, above the node's `ak_nonce`,
+      // the nonce just tried, and a fresh read.
+      const ak = invalidNonceAk(a.error);
+      if (ak !== null && ak > knownFloor) knownFloor = ak;
+      if (nonce > knownFloor) knownFloor = nonce;
       key = await readAccessKey(rpc, accountId, signer.publicKey);
       continue;
     }
