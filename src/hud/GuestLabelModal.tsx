@@ -1,6 +1,6 @@
 /**
  * Guest label: a name kept in this browser only. No NEAR account is created, no key is made and
- * nothing is signed; the app has no wallet connection. A valid `.testnet` account id, if typed,
+ * nothing is signed; the label is separate from the wallet (`src/chain/wallet.tsx`). A valid `.testnet` account id, if typed,
  * only highlights that account's strains.
  */
 import { useState } from "react";
@@ -41,7 +41,7 @@ export function GuestLabelModal({ current, onSave, onClear, onClose, skin = "bio
       <div className="fd-stack">
         <p className="fd-note">
           <strong>Guest label — local only, no on-chain account, nothing is signed.</strong> The label is saved in this browser and
-          nowhere else. This app has no wallet connection.
+          nowhere else. It is separate from the wallet: to sign testnet transactions, use connect wallet in the header.
         </p>
         <form
           className="fd-stack"
@@ -101,7 +101,7 @@ export function GuestLabelModal({ current, onSave, onClear, onClose, skin = "bio
             </KeycapButton>
           </div>
           <p id="guest-planned-note" className="fd-field__hint">
-            Account sign-in is not built. These options do nothing today.
+            These two sign-in options are not built and do nothing today.
           </p>
         </div>
       </div>

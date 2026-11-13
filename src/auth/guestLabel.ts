@@ -1,6 +1,6 @@
 /**
  * Guest label: a display name kept in this browser only. It creates no NEAR account, holds no key
- * and signs nothing (the app has no wallet connection). If the player also types a valid
+ * and signs nothing (signing is the wallet's job, see `src/chain/wallet.tsx`). If the player also types a valid
  * `.testnet` account id, the app uses it only to highlight that account's strains.
  */
 
