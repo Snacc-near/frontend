@@ -142,13 +142,13 @@ export function snaccCardSvg(data, opts = {}) {
     `<rect x="${RIGHT_X}" y="288" width="${chipW}" height="46" rx="23" fill="${good ? C.okBg : C.warmBg}" stroke="${tone}" stroke-width="2"/>` +
     `<circle cx="${RIGHT_X + 26}" cy="311" r="7" fill="${tone}"/>` +
     text({ x: RIGHT_X + 44, y: 320, size: 25, weight: 700, fill: tone, content: chipText, maxWidth: chipW - 60, min: 16 }) +
-    text({ x: RIGHT_X, y: 394, size: 18, family: MONO, fill: C.faint, content: "VITALITY" }) +
-    `<rect x="${RIGHT_X}" y="408" width="${RIGHT_W}" height="24" rx="12" fill="${C.edge}"/>` +
-    (barW > 0 ? `<rect x="${RIGHT_X}" y="408" width="${Math.max(barW, 24)}" height="24" rx="12" fill="${tone}"/>` : "") +
-    text({ x: RIGHT_X, y: 478, size: 38, weight: 700, content: pct === null ? "vitality unknown" : `${pct}% effective`, maxWidth: 330, min: 22 }) +
-    text({ x: RIGHT_X + RIGHT_W, y: 476, size: 26, family: MONO, fill: C.mute, anchor: "end", content: data.generation === null ? "" : `generation ${data.generation}` }) +
-    text({ x: RIGHT_X, y: 514, size: 18, family: MONO, fill: C.faint, content: "OWNER" }) +
-    text({ x: RIGHT_X, y: 542, size: 26, family: MONO, fill: C.ink, content: data.owner ?? "unknown", maxWidth: RIGHT_W, min: 16 });
+    text({ x: RIGHT_X, y: 380, size: 18, family: MONO, fill: C.faint, content: "VITALITY" }) +
+    `<rect x="${RIGHT_X}" y="394" width="${RIGHT_W}" height="24" rx="12" fill="${C.edge}"/>` +
+    (barW > 0 ? `<rect x="${RIGHT_X}" y="394" width="${Math.max(barW, 24)}" height="24" rx="12" fill="${tone}"/>` : "") +
+    text({ x: RIGHT_X, y: 464, size: 38, weight: 700, content: pct === null ? "vitality unknown" : `${pct}% effective`, maxWidth: 330, min: 22 }) +
+    text({ x: RIGHT_X + RIGHT_W, y: 462, size: 26, family: MONO, fill: C.mute, anchor: "end", content: data.generation === null ? "" : `generation ${data.generation}` }) +
+    text({ x: RIGHT_X, y: 500, size: 18, family: MONO, fill: C.faint, content: "OWNER" }) +
+    text({ x: RIGHT_X, y: 528, size: 26, family: MONO, fill: C.ink, content: data.owner ?? "unknown", maxWidth: RIGHT_W, min: 16 });
   return frame(body, "living NFT");
 }
 
@@ -181,8 +181,9 @@ export function profileCardSvg(data) {
     text({ x: RIGHT_X, y: 232, size: 18, family: MONO, fill: C.faint, content: "PLAYER" }) +
     text({ x: RIGHT_X, y: 318, size: 88, weight: 700, content: name, maxWidth: RIGHT_W, min: 36 }) +
     (data.username ? text({ x: RIGHT_X, y: 366, size: 28, family: MONO, fill: C.mute, content: data.account, maxWidth: RIGHT_W, min: 16 }) : "") +
-    lines.map((l, i) => text({ x: RIGHT_X, y: 442 + i * 54, size: 38, weight: 700, content: l, maxWidth: RIGHT_W, min: 22 })).join("") +
-    (hasLevel ? text({ x: RIGHT_X, y: 442 + lines.length * 54 + 4, size: 18, family: MONO, fill: C.faint, content: "XP is cosmetic and off-chain" }) : "");
+    lines.map((l, i) => text({ x: RIGHT_X, y: 424 + i * 50, size: 38, weight: 700, content: l, maxWidth: RIGHT_W, min: 22 })).join("") +
+    // The note sits 44 px under the last line; with two lines its baseline is 518, leaving ~38 px above the footer rule (y=556).
+    (hasLevel ? text({ x: RIGHT_X, y: 424 + (lines.length - 1) * 50 + 44, size: 18, family: MONO, fill: C.faint, content: "XP is cosmetic and off-chain" }) : "");
   return frame(body, "player profile");
 }
 
