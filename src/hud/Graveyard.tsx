@@ -18,11 +18,29 @@ import "./collection.css";
 export const GRAVE_PAGE = 10;
 export const GRAVE_PENDING = "The graveyard fills once the chain index has caught up with the contract's history.";
 
-/** The Snacc's on-chain SVG when the backend serves one (loaded lazily, one request per visible row), a plain tile otherwise. */
+/**
+ * What one row's thumbnail shows: the image when there is a `src`, the plain "no svg" tile otherwise. `onImageError` fires when the
+ * browser cannot decode the image; the caller then drops `src`, so a row never keeps a broken-image icon.
+ */
+export function GraveThumbView({ strainId, src, onImageError }: { strainId: number; src: string | null; onImageError?: () => void }) {
+  return src ? (
+    <img className="grave-thumb" src={src} alt={`on-chain svg of strain ${strainId}`} loading="lazy" onError={onImageError} />
+  ) : (
+    <span className="grave-thumb" role="img" aria-label={`no on-chain svg for strain ${strainId}`}>
+      no svg
+    </span>
+  );
+}
+
+/**
+ * The Snacc's on-chain SVG when the backend serves one (loaded lazily, one request per visible row), a plain tile otherwise: no SVG
+ * from the backend, an SVG that does not validate, or an image the browser fails to load (`onError`).
+ */
 export function GraveThumb({ strainId }: { strainId: number }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
+    setSrc(null);
     void fetchStrainSvg(strainId).then((r) => {
       if (alive && r.svg) setSrc(svgToSafeDataUri(r.svg));
     });
@@ -30,13 +48,7 @@ export function GraveThumb({ strainId }: { strainId: number }) {
       alive = false;
     };
   }, [strainId]);
-  return src ? (
-    <img className="grave-thumb" src={src} alt={`on-chain svg of strain ${strainId}`} loading="lazy" />
-  ) : (
-    <span className="grave-thumb" role="img" aria-label={`no on-chain svg for strain ${strainId}`}>
-      no svg
-    </span>
-  );
+  return <GraveThumbView strainId={strainId} src={src} onImageError={() => setSrc(null)} />;
 }
 
 export function GraveyardList({ rows, nowMs }: { rows: readonly GraveRow[]; nowMs: number }) {

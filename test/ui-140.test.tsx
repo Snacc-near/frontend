@@ -160,7 +160,10 @@ describe("honesty guards over all of src", () => {
 
   it("puts no API key in a VITE_ variable", () => {
     // UI-148: the Supabase publishable key is public by design (row-level security guards the data).
-    const hits = SOURCES.filter((f) => /VITE_[A-Z_]*(KEY|SECRET|TOKEN_SECRET|JWT)/.test(fs.readFileSync(f, "utf8").replace(/VITE_SUPABASE_PUBLISHABLE_KEY/g, ""))).map(rel);
+    // SEC-119: so is the Cloudflare Turnstile SITE key (it is rendered in the page); its secret stays on the backend.
+    const hits = SOURCES.filter((f) =>
+      /VITE_[A-Z_]*(KEY|SECRET|TOKEN_SECRET|JWT)/.test(fs.readFileSync(f, "utf8").replace(/VITE_SUPABASE_PUBLISHABLE_KEY/g, "").replace(/VITE_TURNSTILE_SITE_KEY/g, "")),
+    ).map(rel);
     expect(hits).toEqual([]);
   });
 });

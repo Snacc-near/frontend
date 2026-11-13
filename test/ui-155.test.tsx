@@ -4,6 +4,7 @@
  * mapping tests are copied from real snacc-v001.testnet / snacc-market.testnet transactions (hashes in the comments).
  */
 import { describe, expect, it } from "vitest";
+import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -29,7 +30,7 @@ import {
 } from "../src/account/chain.ts";
 import { AccountContext, ACCOUNT_OFF, type AccountApi } from "../src/account/session.tsx";
 import { HistoryView, INDEX_PENDING, LineageView, NOT_CONFIGURED, StrainLink } from "../src/hud/ChainSections.tsx";
-import { GRAVE_PENDING, GraveyardList, GraveyardPanel } from "../src/hud/Graveyard.tsx";
+import { GRAVE_PENDING, GraveThumbView, GraveyardList, GraveyardPanel } from "../src/hud/Graveyard.tsx";
 import { SocialLeaderboardModal } from "../src/hud/SocialLeaderboardModal.tsx";
 import { StrainDetailModal } from "../src/hud/StrainDetailModal.tsx";
 import type { StrainDetail } from "../src/data/types.ts";
@@ -389,6 +390,29 @@ describe("UI-156 graveyard", () => {
     expect(html).toContain('href="https://testnet.nearblocks.io/txns/4o4qwoGZtR7HE5E3VnjQZpXwDicpa9QVBzXHS1YP2v4f"');
     expect(html).toContain('aria-label="no on-chain svg for strain 9"');
     expect(renderToStaticMarkup(<GraveyardList rows={[grave({ owner_before: null })]} nowMs={NOW} />)).toContain("owner not recorded");
+  });
+
+  it("falls back to the plain tile when there is no SVG or the image fails to load, so a row never shows a broken image", () => {
+    const tile = renderToStaticMarkup(<GraveThumbView strainId={9} src={null} />);
+    expect(tile).toContain('aria-label="no on-chain svg for strain 9"');
+    expect(tile).toContain("no svg");
+    expect(tile).not.toContain("<img");
+
+    const src = "data:image/svg+xml;base64,PHN2Zy8+";
+    const shown = renderToStaticMarkup(<GraveThumbView strainId={9} src={src} />);
+    expect(shown).toContain("<img");
+    expect(shown).toContain(`src="${src}"`);
+    expect(shown).not.toContain("no svg");
+
+    // `onError` is wired: when the browser cannot decode the image the parent drops `src` and the tile above is shown instead.
+    let failed = 0;
+    const img = GraveThumbView({ strainId: 9, src, onImageError: () => (failed += 1) }) as ReactElement<{ onError?: () => void }>;
+    expect(img.type).toBe("img");
+    expect(typeof img.props.onError).toBe("function");
+    img.props.onError?.();
+    expect(failed).toBe(1);
+    // The rows in the list use the same thumbnail component.
+    expect(renderToStaticMarkup(<GraveyardList rows={[rows[0] as GraveRow]} nowMs={NOW} />)).toContain('class="grave-thumb"');
   });
 
   it("starts in the reading state with all four filters, and says it is real history in demo mode", () => {
