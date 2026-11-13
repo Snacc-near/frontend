@@ -2,9 +2,14 @@
  * Scroll-theatre staging per chapter: which figure anchor the camera frames, on which side the
  * text card sits, and which part the leader line points at (first id found wins).
  */
+import { en } from "../i18n/messages/en/index.ts";
 import type { Box } from "./lib/camera.ts";
 
 export type Side = "hero" | "left" | "right";
+
+/** Key of a figure part's name in the `landing.parts` dictionary. */
+export type PartKey = keyof typeof en.landing.parts;
+const P = en.landing.parts;
 
 export interface StageCue {
   /** cam.json anchor the camera frames. */
@@ -15,17 +20,19 @@ export interface StageCue {
   margin: number;
   /** Leader-line target candidates (figure ids). */
   targets: string[];
-  /** Name of the part the leader line points at. */
+  /** English name of the part the leader line points at (tests, non-React callers). */
   part: string;
+  /** Same name as a dictionary key: show it with `t(`landing.parts.${partKey}`)`. */
+  partKey: PartKey;
 }
 
 export const STAGE_CUES: readonly StageCue[] = [
-  { anchor: "ch-incubator", side: "hero", margin: 1.02, targets: [], part: "incubator" },
-  { anchor: "ch-cell", side: "left", margin: 1.3, targets: ["ch-cell-stomach", "ch-cell"], part: "stomach" },
-  { anchor: "ch-mito", side: "right", margin: 1.45, targets: ["ch-mito-atp", "ch-mito"], part: "mitochondrion" },
-  { anchor: "ch-colony", side: "left", margin: 1.12, targets: ["cell-hungry", "ch-colony"], part: "hungry cell" },
-  { anchor: "ch-thermo", side: "right", margin: 1.18, targets: ["thermo-fill", "thermo-level", "ch-thermo"], part: "appetite meter" },
-  { anchor: "ch-enclave", side: "left", margin: 0.86, targets: ["enclave-stamp", "capsule", "ch-enclave"], part: "enclave" },
+  { anchor: "ch-incubator", side: "hero", margin: 1.02, targets: [], part: P.incubator, partKey: "incubator" },
+  { anchor: "ch-cell", side: "left", margin: 1.3, targets: ["ch-cell-stomach", "ch-cell"], part: P.stomach, partKey: "stomach" },
+  { anchor: "ch-mito", side: "right", margin: 1.45, targets: ["ch-mito-atp", "ch-mito"], part: P.mitochondrion, partKey: "mitochondrion" },
+  { anchor: "ch-colony", side: "left", margin: 1.12, targets: ["cell-hungry", "ch-colony"], part: P.hungryCell, partKey: "hungryCell" },
+  { anchor: "ch-thermo", side: "right", margin: 1.18, targets: ["thermo-fill", "thermo-level", "ch-thermo"], part: P.appetiteMeter, partKey: "appetiteMeter" },
+  { anchor: "ch-enclave", side: "left", margin: 0.86, targets: ["enclave-stamp", "capsule", "ch-enclave"], part: P.enclave, partKey: "enclave" },
 ];
 
 /** Space the hero copy takes from the stage: its right edge and the strip kept free at the bottom (px). */
@@ -141,12 +148,12 @@ export function cardOpacity(map: TheatreMap, i: number, y: number): number {
 export const SCALE_LEVEL_ANCHORS = ["ch-incubator", "ch-dish", "ch-colony", "ch-cell", "ch-mito"] as const;
 
 /** Parts the microscope lens can name, smallest first. */
-export const LENS_PARTS: ReadonlyArray<[string, string]> = [
+export const LENS_PARTS: ReadonlyArray<[string, PartKey]> = [
   ["ch-mito", "mitochondrion"],
   ["ch-cell", "cell"],
   ["ch-colony", "colony"],
-  ["ch-dish", "petri dish"],
-  ["ch-thermo", "appetite meter"],
+  ["ch-dish", "petriDish"],
+  ["ch-thermo", "appetiteMeter"],
   ["ch-enclave", "enclave"],
   ["ch-door", "window"],
 ];

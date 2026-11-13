@@ -1,41 +1,56 @@
+import { tEn, type MessageKey } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
 import { LINKS } from "./chapters.ts";
 import { Icon, type IconName } from "../ui/fd.tsx";
 import { explorerAccount } from "./lib/chain.ts";
 import { Wordmark } from "./Wordmark.tsx";
 
+/**
+ * A footer link. `label` and `note` hold the English text (tests, non-React callers). When `labelKey`
+ * or `noteKey` is set the page shows that dictionary entry in the reader's language; links without
+ * one carry a verbatim name (repository, account, standard) that is never translated.
+ */
 export interface FooterLink {
   label: string;
+  labelKey?: MessageKey;
   href: string;
   /** Small mono note after the label. */
   note?: string;
+  noteKey?: MessageKey;
 }
 
 export interface FooterColumn {
+  /** English title. */
   title: string;
+  titleKey: MessageKey;
   icon: IconName;
   links: readonly FooterLink[];
 }
 
 const repo = (name: string) => `${LINKS.github}/${name}`;
+const words = (labelKey: MessageKey) => ({ label: tEn(labelKey), labelKey });
+const note = (noteKey: MessageKey) => ({ note: tEn(noteKey), noteKey });
 
 /** Real destinations only: in-page sections, the app, the Snacc-near repos, the testnet contract, NEAR. */
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
-    title: "Product",
+    title: tEn("landing.footer.product.title"),
+    titleKey: "landing.footer.product.title",
     icon: "cell",
     links: [
-      { label: "Launch app", href: LINKS.app, note: "testnet" },
-      { label: "The story", href: "#ch-02" },
-      { label: "Live colony", href: "#live" },
-      { label: "Under the hood", href: "#hood" },
-      { label: "Questions", href: "#faq" },
+      { ...words("landing.footer.product.launch"), href: LINKS.app, ...note("landing.footer.product.launchNote") },
+      { ...words("landing.footer.product.story"), href: "#ch-02" },
+      { ...words("landing.footer.product.live"), href: "#live" },
+      { ...words("landing.footer.product.hood"), href: "#hood" },
+      { ...words("landing.footer.product.faq"), href: "#faq" },
     ],
   },
   {
-    title: "Build",
+    title: tEn("landing.footer.build.title"),
+    titleKey: "landing.footer.build.title",
     icon: "doc",
     links: [
-      { label: "Snacc-near", href: LINKS.github, note: "GitHub" },
+      { label: "Snacc-near", href: LINKS.github, ...note("landing.footer.build.githubNote") },
       { label: "contracts", href: repo("contracts") },
       { label: "sdk", href: repo("sdk") },
       { label: "backend", href: repo("backend") },
@@ -43,27 +58,30 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     ],
   },
   {
-    title: "Proof",
+    title: tEn("landing.footer.proof.title"),
+    titleKey: "landing.footer.proof.title",
     icon: "chain",
     links: [
-      { label: "snacc-v001.testnet", href: explorerAccount("snacc-v001.testnet"), note: "nearblocks" },
-      { label: "oracle-tee", href: repo("oracle-tee"), note: "TEE oracle" },
-      { label: "scripts", href: repo("scripts"), note: "evidence + replay" },
+      { label: "snacc-v001.testnet", href: explorerAccount("snacc-v001.testnet"), ...note("landing.footer.proof.nearblocksNote") },
+      { label: "oracle-tee", href: repo("oracle-tee"), ...note("landing.footer.proof.oracleNote") },
+      { label: "scripts", href: repo("scripts"), ...note("landing.footer.proof.scriptsNote") },
     ],
   },
   {
-    title: "NEAR",
+    title: tEn("landing.footer.near.title"),
+    titleKey: "landing.footer.near.title",
     icon: "spark",
     links: [
-      { label: "NEAR docs", href: "https://docs.near.org" },
-      { label: "NEP-171", href: "https://github.com/near/NEPs/blob/master/neps/nep-0171.md", note: "NFT" },
-      { label: "NEP-245", href: "https://github.com/near/NEPs/blob/master/neps/nep-0245.md", note: "multi token" },
-      { label: "Testnet explorer", href: "https://testnet.nearblocks.io" },
+      { ...words("landing.footer.near.docs"), href: "https://docs.near.org" },
+      { label: "NEP-171", href: "https://github.com/near/NEPs/blob/master/neps/nep-0171.md", ...note("landing.footer.near.nftNote") },
+      { label: "NEP-245", href: "https://github.com/near/NEPs/blob/master/neps/nep-0245.md", ...note("landing.footer.near.multiNote") },
+      { ...words("landing.footer.near.explorer"), href: "https://testnet.nearblocks.io" },
     ],
   },
 ];
 
-export const FOOTER_DISCLAIMER = "Testnet only. $SNACC has no monetary value. Not financial advice.";
+/** English disclaimer; the page shows `t("landing.footer.disclaimer")`. */
+export const FOOTER_DISCLAIMER = tEn("landing.footer.disclaimer");
 
 const external = (href: string) => /^https?:\/\//.test(href);
 
@@ -72,6 +90,7 @@ const LEGAL_LINK_STYLE = { textDecoration: "underline", textUnderlineOffset: "3p
 
 /** Docs-style footer: colophon + four link columns, the dot-matrix wordmark, and a base line. */
 export function SiteFooter() {
+  const { t } = useT();
   return (
     <footer className="ln-footer" aria-labelledby="ln-footer-title">
       <h2 id="ln-footer-title" className="ln-vh">
@@ -81,56 +100,61 @@ export function SiteFooter() {
         <div className="ln-footer__about">
           <p className="ln-footer__k">
             <Icon name="ring" />
-            colophon.md
+            {t("landing.footer.colophon")}
           </p>
-          <p className="ln-footer__blurb">
-            NFTs that eat a memecoin. An on-chain economic game on NEAR testnet, drawn as a lab culture.
-          </p>
+          <p className="ln-footer__blurb">{t("landing.footer.blurb")}</p>
           <a className="fd-btn fd-btn--primary ln-footer__cta" href={LINKS.app}>
-            Enter the lab
+            {t("landing.footer.cta")}
           </a>
         </div>
-        {FOOTER_COLUMNS.map((col) => (
-          <nav key={col.title} className="ln-footer__col" aria-label={col.title}>
-            <p className="ln-footer__k">
-              <Icon name={col.icon} />
-              {col.title}
-            </p>
-            <ul>
-              {col.links.map((l) => (
-                <li key={l.href}>
-                  <a href={l.href} {...(external(l.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
-                    {l.label}
-                    {external(l.href) ? (
-                      <span className="ln-footer__ext" aria-hidden="true">
-                        ↗
-                      </span>
-                    ) : null}
-                  </a>
-                  {l.note ? <small>{l.note}</small> : null}
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))}
+        {FOOTER_COLUMNS.map((col) => {
+          const title = t(col.titleKey);
+          return (
+            <nav key={col.titleKey} className="ln-footer__col" aria-label={title}>
+              <p className="ln-footer__k">
+                <Icon name={col.icon} />
+                {title}
+              </p>
+              <ul>
+                {col.links.map((l) => {
+                  const text = l.noteKey ? t(l.noteKey) : l.note;
+                  return (
+                    <li key={l.href}>
+                      <a href={l.href} {...(external(l.href) ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                        {l.labelKey ? t(l.labelKey) : l.label}
+                        {external(l.href) ? (
+                          <span className="ln-footer__ext" aria-hidden="true">
+                            ↗
+                          </span>
+                        ) : null}
+                      </a>
+                      {text ? <small>{text}</small> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          );
+        })}
       </div>
       <Wordmark text="Snacc" />
       <div className="ln-footer__base">
         <p className="ln-footer__note">
-          {FOOTER_DISCLAIMER}{" "}
+          {t("landing.footer.disclaimer")}{" "}
           <a href="/terms" data-testid="footer-terms" style={LEGAL_LINK_STYLE}>
-            Terms
+            {t("landing.footer.terms")}
           </a>
           <span aria-hidden="true"> · </span>
           <a href="/privacy" data-testid="footer-privacy" style={LEGAL_LINK_STYLE}>
-            Privacy
+            {t("landing.footer.privacy")}
           </a>
         </p>
         <p className="ln-footer__legal">
           <a href={`${repo("frontend")}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">
-            MIT License
+            {t("landing.footer.license")}
           </a>
-          <span aria-hidden="true">·</span>© 2026 Snacc contributors
+          <span aria-hidden="true">·</span>
+          {t("landing.footer.copyright")}
         </p>
       </div>
     </footer>

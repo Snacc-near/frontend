@@ -410,6 +410,41 @@ html {
   background: var(--accent);
 }
 
+/* EN | ID switch in the header (UI-161), see src/i18n/LanguageToggle.tsx */
+.lang-toggle {
+  display: inline-flex;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper-hi);
+}
+
+.lang-toggle__opt {
+  appearance: none;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.lang-toggle__opt + .lang-toggle__opt {
+  border-left: 1px solid var(--ink-hi);
+}
+
+.lang-toggle__opt:hover {
+  background: #fff;
+}
+
+.lang-toggle__opt[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--ink-hi);
+}
+
 .ln-dot {
   width: 8px;
   height: 8px;

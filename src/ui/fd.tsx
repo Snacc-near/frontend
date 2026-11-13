@@ -4,6 +4,7 @@
  * styles live in `fd.css`.
  */
 import type { ReactNode } from "react";
+import { useT } from "../i18n/react.tsx";
 
 export type IconName =
   | "ring"
@@ -175,8 +176,11 @@ export function Accent({ text, accent }: { text: string; accent?: string }) {
   );
 }
 
-/** Mono "simulation" / "illustration" label (rendered uppercase). */
-export const Sim = ({ kind = "simulation" }: { kind?: "simulation" | "illustration" }) => <span className="fd-sim">{kind}</span>;
+/** Mono "simulation" / "illustration" label (rendered uppercase), in the reader's language. */
+export function Sim({ kind = "simulation" }: { kind?: "simulation" | "illustration" }) {
+  const { t } = useT();
+  return <span className="fd-sim">{t(`common.sim.${kind}`)}</span>;
+}
 
 /** Solid mono tag, e.g. `testnet` or `view`. */
 export const Tag = ({ children }: { children: ReactNode }) => <span className="fd-tag">{children}</span>;

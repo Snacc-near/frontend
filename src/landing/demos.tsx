@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as RPointerEvent } from "react";
+import { useT } from "../i18n/react.tsx";
 import { bioSound } from "../sound.ts";
 import { Icon, Sim } from "../ui/fd.tsx";
-import { OFFICIAL, gaugeToTemp, tempToGauge, zoneFromTemp, type ZoneKey } from "./lib/live.ts";
+import { OFFICIAL, gaugeToTemp, tempToGauge, zoneFromTemp, zoneLabel, zoneRate, type ZoneKey } from "./lib/live.ts";
 import { TEE_TX, explorerTx, CONTRACT_ID } from "./lib/chain.ts";
 import { worldBus } from "./world.ts";
 import type { LiveState } from "./useLive.ts";
@@ -43,7 +44,11 @@ export function hungerState(f: number): "Fed" | "Starving" | "Fainted" {
   return f <= 0 ? "Fainted" : f <= 20 ? "Starving" : "Fed";
 }
 
+/** Dictionary key (`common.hunger.*`) of each hunger state. */
+const HUNGER_KEY = { Fed: "fed", Starving: "starving", Fainted: "fainted" } as const;
+
 export function FeedDemo() {
+  const { t, rich } = useT();
   const [full, setFull] = useState(34);
   const [burned, setBurned] = useState(0);
   const [bites, setBites] = useState(0);
@@ -81,27 +86,25 @@ export function FeedDemo() {
   return (
     <div className="ln-demo" ref={ref}>
       <dl className="fd-kv">
-        <Row k="fullness">
+        <Row k={t("demos.feed.fullness")}>
           <Meter v={full / 100} tone={state === "Fed" ? "accent" : "warm"} />
           <span className="fd-kv__num">{full}%</span>
         </Row>
-        <Row k="state">
-          <State tone={state === "Fed" ? "ok" : state === "Starving" ? "warn" : "bad"}>{state}</State>
+        <Row k={t("demos.feed.state")}>
+          <State tone={state === "Fed" ? "ok" : state === "Starving" ? "warn" : "bad"}>{t(`common.hunger.${HUNGER_KEY[state]}`)}</State>
         </Row>
-        <Row k="bites">
+        <Row k={t("demos.feed.bites")}>
           <span className="fd-kv__num">{bites}</span>
         </Row>
-        <Row k="burned">
+        <Row k={t("demos.feed.burned")}>
           <span className="fd-kv__num">{burned.toFixed(2)} $SNACC</span>
         </Row>
       </dl>
       <div className="ln-demo__bar">
         <button type="button" className="fd-btn fd-btn--primary fd-btn--sm" onClick={feed}>
-          <Icon name="cell" /> Feed
+          <Icon name="cell" /> {t("demos.feed.button")}
         </button>
-        <span className="ln-demo__note">
-          one bite = {BITE} $SNACC, {OFFICIAL.frenzyBurnPct} burns in a Feeding Frenzy <Sim />
-        </span>
+        <span className="ln-demo__note">{rich("demos.feed.note", { bite: BITE, burn: OFFICIAL.frenzyBurnPct, sim: <Sim /> })}</span>
       </div>
     </div>
   );
@@ -109,13 +112,11 @@ export function FeedDemo() {
 
 /* ---------------------------------------------------------------- 03 metabolism */
 
-const STAGES = [
-  { key: "spores", label: "Spores", role: "Extractor", note: "Extractors pull raw spores out of the medium." },
-  { key: "enzymes", label: "Enzymes", role: "Fermenter", note: "Fermenters refine spores into enzymes." },
-  { key: "elixirs", label: "Elixirs", role: "Synthesizer", note: "Synthesizers brew enzymes into elixirs. Every job costs ATP." },
-] as const;
+/** Production stages in order; the words of each are in `demos.metabolism.<key>`. */
+const STAGES = ["spores", "enzymes", "elixirs"] as const;
 
 export function MetabolismDemo() {
+  const { t } = useT();
   const [sel, setSel] = useState(0);
   const pick = (i: number) => {
     setSel(i);
@@ -124,23 +125,23 @@ export function MetabolismDemo() {
   };
   return (
     <div className="ln-demo">
-      <div className="fd-tabs" role="group" aria-label="Production stage">
+      <div className="fd-tabs" role="group" aria-label={t("demos.metabolism.group")}>
         {STAGES.map((s, i) => (
-          <button key={s.key} type="button" className="fd-tab" aria-pressed={i === sel} onClick={() => pick(i)}>
-            {s.label}
+          <button key={s} type="button" className="fd-tab" aria-pressed={i === sel} onClick={() => pick(i)}>
+            {t(`demos.metabolism.${s}.label`)}
           </button>
         ))}
       </div>
       <ol className="fd-flow" aria-hidden="true">
         {STAGES.map((s, i) => (
-          <li key={s.key} className="fd-flow__node" data-on={i === sel ? "" : undefined} data-done={i < sel ? "" : undefined}>
-            <span className="fd-flow__k">{s.role}</span>
-            <span className="fd-flow__v">{s.label.toLowerCase()}</span>
+          <li key={s} className="fd-flow__node" data-on={i === sel ? "" : undefined} data-done={i < sel ? "" : undefined}>
+            <span className="fd-flow__k">{t(`demos.metabolism.${s}.role`)}</span>
+            <span className="fd-flow__v">{t(`demos.metabolism.${s}.label`).toLowerCase()}</span>
           </li>
         ))}
       </ol>
       <p className="ln-demo__note" aria-live="polite">
-        {STAGES[sel]!.note} <span className="fd-tag">NEP-245</span>
+        {t(`demos.metabolism.${STAGES[sel]!}.note`)} <span className="fd-tag">NEP-245</span>
       </p>
     </div>
   );
@@ -149,6 +150,7 @@ export function MetabolismDemo() {
 /* ---------------------------------------------------------------- 04 colony: snack + merge */
 
 export function ColonyDemo() {
+  const { t, rich } = useT();
   const [snacked, setSnacked] = useState(false);
   const [merged, setMerged] = useState(false);
   const snack = () => {
@@ -171,37 +173,39 @@ export function ColonyDemo() {
   return (
     <div className="ln-demo">
       <dl className="fd-kv" aria-live="polite">
-        <Row k="hungry cell">{snacked ? <State tone="bad">snacked</State> : <State tone="warn">Fainted · open to anyone</State>}</Row>
-        <Row k="split">
+        <Row k={t("demos.colony.hungry")}>
+          {snacked ? <State tone="bad">{t("demos.colony.snacked")}</State> : <State tone="warn">{t("demos.colony.open")}</State>}
+        </Row>
+        <Row k={t("demos.colony.split")}>
           <span className="fd-split" data-on={snacked ? "" : undefined}>
             <span className="fd-split__a" style={{ flexGrow: 1 }}>
               {OFFICIAL.lysisBountyPct}
             </span>
             <span className="fd-split__b" style={{ flexGrow: 9 }}>
-              {OFFICIAL.lysisPantryPct} to The Pantry
+              {t("demos.colony.toPantry", { pct: OFFICIAL.lysisPantryPct })}
             </span>
           </span>
         </Row>
-        <Row k="merge pair">{merged ? <State tone="ok">merged · generation +1</State> : <State tone="idle">two healthy cells</State>}</Row>
-        <Row k="merge tax">
+        <Row k={t("demos.colony.mergePair")}>
+          {merged ? <State tone="ok">{t("demos.colony.merged")}</State> : <State tone="idle">{t("demos.colony.healthy")}</State>}
+        </Row>
+        <Row k={t("demos.colony.mergeTax")}>
           <span className="fd-kv__num">{OFFICIAL.mergeTaxPct}</span>
         </Row>
       </dl>
       <div className="ln-demo__bar">
         <button type="button" className="fd-btn fd-btn--primary fd-btn--sm" onClick={snack} disabled={snacked}>
-          <Icon name="split" /> Snack it
+          <Icon name="split" /> {t("demos.colony.snack")}
         </button>
         <button type="button" className="fd-btn fd-btn--sm" onClick={merge} disabled={merged}>
-          <Icon name="cell" /> Merge
+          <Icon name="cell" /> {t("demos.colony.merge")}
         </button>
         {snacked || merged ? (
           <button type="button" className="fd-link" onClick={reset}>
-            reset
+            {t("demos.colony.reset")}
           </button>
         ) : null}
-        <span className="ln-demo__note">
-          {OFFICIAL.lysisBountyPct} bounty to the hunter <Sim />
-        </span>
+        <span className="ln-demo__note">{rich("demos.colony.note", { bounty: OFFICIAL.lysisBountyPct, sim: <Sim /> })}</span>
       </div>
     </div>
   );
@@ -210,6 +214,7 @@ export function ColonyDemo() {
 /* ---------------------------------------------------------------- 05 appetite: draggable meter */
 
 export function AppetiteDemo({ live }: { live: LiveState }) {
+  const { t, rich } = useT();
   const liveTemp = live.status === "live" && live.macro ? live.macro.crucibleTemp : null;
   const [g, setG] = useState(() => tempToGauge(liveTemp ?? 605));
   const touched = useRef(false);
@@ -270,11 +275,11 @@ export function AppetiteDemo({ live }: { live: LiveState }) {
           ref={trackRef}
           role="slider"
           tabIndex={0}
-          aria-label="Appetite Meter (CrucibleTemp)"
+          aria-label={t("demos.appetite.slider")}
           aria-valuemin={0}
           aria-valuemax={1400}
           aria-valuenow={temp}
-          aria-valuetext={`${temp} mK, ${zone.label}`}
+          aria-valuetext={t("demos.appetite.valueText", { temp, zone: zoneLabel(t, zone.key) })}
           aria-orientation="vertical"
           onPointerDown={onDown}
           onPointerMove={onMove}
@@ -285,29 +290,25 @@ export function AppetiteDemo({ live }: { live: LiveState }) {
           <span className="ln-thermo__band ln-thermo__band--famine" style={{ bottom: 0, height: `${famineTop * 100}%` }} />
           <span className="ln-thermo__fill" style={{ transform: `scaleY(${g.toFixed(3)})` }} />
           <span className="ln-thermo__knob" style={{ bottom: `calc(${(g * 100).toFixed(2)}% - 7px)` }} />
-          {liveTemp != null ? <span className="ln-thermo__live" style={{ bottom: `${tempToGauge(liveTemp) * 100}%` }} title={`live ${liveTemp} mK`} /> : null}
+          {liveTemp != null ? <span className="ln-thermo__live" style={{ bottom: `${tempToGauge(liveTemp) * 100}%` }} title={t("demos.appetite.liveMarker", { temp: liveTemp })} /> : null}
         </div>
         <dl className="fd-kv ln-appetite__kv">
-          <Row k="CrucibleTemp">
+          <Row k={t("demos.appetite.rows.temp")}>
             <span className="fd-kv__num">{temp.toLocaleString("en-US")} mK</span>
           </Row>
-          <Row k="zone">
-            <State tone={zone.key === "frenzy" ? "accent" : zone.key === "famine" ? "idle" : "ok"}>{zone.label}</State>
+          <Row k={t("demos.appetite.rows.zone")}>
+            <State tone={zone.key === "frenzy" ? "accent" : zone.key === "famine" ? "idle" : "ok"}>{zoneLabel(t, zone.key)}</State>
           </Row>
-          <Row k="rate">
-            <span className="fd-kv__num">{zone.rate}</span>
+          <Row k={t("demos.appetite.rows.rate")}>
+            <span className="fd-kv__num">{zoneRate(t, zone.key)}</span>
           </Row>
-          <Row k="frenzy">
-            <span className="fd-kv__num">
-              &gt; {OFFICIAL.frenzyAboveMk} mK · {OFFICIAL.frenzyBurnPct} burn
-            </span>
+          <Row k={t("demos.appetite.rows.frenzy")}>
+            <span className="fd-kv__num">{t("demos.appetite.frenzyValue", { mk: OFFICIAL.frenzyAboveMk, burn: OFFICIAL.frenzyBurnPct })}</span>
           </Row>
-          <Row k="famine">
-            <span className="fd-kv__num">
-              &lt; {OFFICIAL.famineBelowMk} mK · {OFFICIAL.famineReliefPct} relief
-            </span>
+          <Row k={t("demos.appetite.rows.famine")}>
+            <span className="fd-kv__num">{t("demos.appetite.famineValue", { mk: OFFICIAL.famineBelowMk, relief: OFFICIAL.famineReliefPct })}</span>
           </Row>
-          <Row k="live">
+          <Row k={t("demos.appetite.rows.live")}>
             {liveTemp != null ? (
               <span className="fd-kv__num">
                 {liveTemp.toLocaleString("en-US")} mK{" "}
@@ -319,19 +320,19 @@ export function AppetiteDemo({ live }: { live: LiveState }) {
                     setG(tempToGauge(liveTemp));
                   }}
                 >
-                  snap to live
+                  {t("demos.appetite.snap")}
                 </button>
               </span>
             ) : (
-              <State tone="idle">{live.status === "offline" ? "offline" : "reading…"}</State>
+              <State tone="idle">{live.status === "offline" ? t("demos.appetite.offline") : t("demos.appetite.reading")}</State>
             )}
           </Row>
         </dl>
       </div>
       <div className="ln-demo__bar">
         <span className="ln-demo__note">
-          drag the meter: the needle, the thermometer, the medium and the dew on the glass follow <Sim />
-          {liveTemp != null ? <> · marker = live CrucibleTemp from {CONTRACT_ID}</> : null}
+          {rich("demos.appetite.note", { sim: <Sim /> })}
+          {liveTemp != null ? rich("demos.appetite.markerNote", { contract: CONTRACT_ID }) : null}
         </span>
       </div>
     </div>
@@ -357,6 +358,7 @@ export function fakeHex(seed: string, len: number): string {
 }
 
 export function EnclaveDemo() {
+  const { t, rich } = useT();
   const [k, setK] = useState(0);
   const [sealed, setSealed] = useState(false);
   const [run, setRun] = useState(1);
@@ -407,32 +409,36 @@ export function EnclaveDemo() {
   return (
     <div className="ln-demo ln-enclave" data-sealed={sealed ? "" : undefined}>
       <dl className="fd-kv fd-kv--steps">
-        <Row k="1 · request">
+        <Row k={t("demos.enclave.steps.request")}>
           <span className="fd-kv__num" data-on={step >= 0 ? "" : undefined}>
             {step >= 0 ? `0x${req.slice(0, 10)}…${req.slice(-6)}` : "—"}
           </span>
         </Row>
-        <Row k="2 · enclave">
-          {step >= 1 ? <State tone={step >= 2 ? "ok" : "accent"}>{step >= 2 ? "signed in TEE" : "computing plan…"}</State> : <span className="fd-kv__num">—</span>}
+        <Row k={t("demos.enclave.steps.enclave")}>
+          {step >= 1 ? (
+            <State tone={step >= 2 ? "ok" : "accent"}>{step >= 2 ? t("demos.enclave.signed") : t("demos.enclave.computing")}</State>
+          ) : (
+            <span className="fd-kv__num">—</span>
+          )}
         </Row>
-        <Row k="3 · signature">
+        <Row k={t("demos.enclave.steps.signature")}>
           <span className="fd-kv__num" data-on={step >= 2 ? "" : undefined}>
             {step >= 2 ? `${sig.slice(0, 12)}…${sig.slice(-6)}` : "—"}
           </span>
         </Row>
-        <Row k="4 · contract">{step >= 3 ? <State tone="ok">verified ✓</State> : <span className="fd-kv__num">—</span>}</Row>
+        <Row k={t("demos.enclave.steps.contract")}>{step >= 3 ? <State tone="ok">{t("demos.enclave.verified")}</State> : <span className="fd-kv__num">—</span>}</Row>
       </dl>
       <div className="ln-demo__bar">
         {sealed ? (
           <>
             <a className="fd-btn fd-btn--primary fd-btn--sm" href={explorerTx(TEE_TX.hash)} target="_blank" rel="noopener noreferrer">
-              <Icon name="chain" /> See the verified tx ↗
+              <Icon name="chain" /> {t("demos.enclave.seeTx")}
             </a>
             <button type="button" className="fd-link" onClick={reset}>
-              again
+              {t("demos.enclave.again")}
             </button>
             <span className="ln-demo__note">
-              rows are an <Sim kind="illustration" />; the link is the real testnet tx <code>{TEE_TX.action}</code>
+              {rich("demos.enclave.noteSealed", { sim: <Sim kind="illustration" />, action: <code>{TEE_TX.action}</code> })}
             </span>
           </>
         ) : (
@@ -457,11 +463,9 @@ export function EnclaveDemo() {
               onContextMenu={(e) => e.preventDefault()}
             >
               <span className="ln-hold__fill" aria-hidden="true" />
-              <Icon name="lock" /> Hold to send the plan
+              <Icon name="lock" /> {t("demos.enclave.hold")}
             </button>
-            <span className="ln-demo__note">
-              the enclave signs; the contract checks the signature <Sim kind="illustration" />
-            </span>
+            <span className="ln-demo__note">{rich("demos.enclave.noteIdle", { sim: <Sim kind="illustration" /> })}</span>
           </>
         )}
       </div>

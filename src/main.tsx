@@ -3,6 +3,9 @@ import ReactDOM from "react-dom/client";
 import { selectRoute } from "./route.ts";
 import { startTelemetry } from "./telemetry.ts";
 import { captureReferral } from "./account/referral.ts";
+import { t } from "./i18n/catalog.ts";
+import { getLocale } from "./i18n/locale.ts";
+import { I18nProvider } from "./i18n/react.tsx";
 // Order matters: iso.css first, index.css second (index.css tokens must win the cascade, as before the
 // route split). iso.css is tiny (~2 KB gzip), so it stays in the entry chunk instead of the game chunk.
 import "./plate/iso/iso.css";
@@ -72,9 +75,13 @@ if (rootEl) {
           <StaticPage page={route} />
         </Suspense>
       ) : (
-        <Suspense fallback={<BootFallback label="warming the incubator…" />}>
-          <Landing />
-        </Suspense>
+        // UI-161: only the landing page is translated so far. Wrap another route in `I18nProvider`
+        // (it keeps `<html lang>` in step) once its screens use `useT()`.
+        <I18nProvider>
+          <Suspense fallback={<BootFallback label={t(getLocale(), "common.boot.landing")} />}>
+            <Landing />
+          </Suspense>
+        </I18nProvider>
       )}
     </React.StrictMode>,
   );

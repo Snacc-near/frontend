@@ -16,6 +16,7 @@ import {
   type MotionPref,
 } from "../prefs/prefs.ts";
 import { bioSound } from "../sound.ts";
+import { LanguageSettings } from "./LanguageSettings.tsx";
 import { NotificationSettings } from "../hud/NotificationsModal.tsx";
 import { AdminTools, MyDataSettings, UsageStatsSettings } from "../account/AccountSettings.tsx";
 import { Modal } from "../ui/Modal.tsx";
@@ -135,6 +136,8 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
           <SkinSwitch skin={skin} onChange={onSkin} />
           <p className="fd-field__hint">The same mechanics named as a bio-lab or as a fintech desk.</p>
         </section>
+
+        <LanguageSettings />
 
         {/* UI-149: shown only when the profile features are on (Supabase env set). */}
         <NotificationSettings />

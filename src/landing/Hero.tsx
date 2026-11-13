@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { CHAPTERS, LINKS } from "./chapters.ts";
+import { CHAPTERS, LINKS, chapterText } from "./chapters.ts";
 import { Cap, Chip } from "../ui/fd.tsx";
-import { eventLabel, formatToken, shortHash, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
+import { useT } from "../i18n/react.tsx";
+import { eventLabel, formatToken, shortHash, zoneFromApi, zoneFromTemp, zoneLabel } from "./lib/live.ts";
 import { explorerAccount } from "./lib/chain.ts";
 import type { LiveState } from "./useLive.ts";
 
@@ -39,31 +40,33 @@ function Words({ text, accent, start = 0, step = 70 }: { text: string; accent?: 
  * content sits in a sticky layer; the theatre fades it out in place before the camera moves.
  */
 export function HeroBlock({ live, finePointer, style }: { live: LiveState; finePointer: boolean; style?: CSSProperties }) {
+  const { t } = useT();
+  const hero = chapterText(t, HERO);
   return (
     <section id={HERO.id} data-block="" className="ln-block ln-block--hero" style={style} aria-labelledby="ln-hero-title">
       <div className="ln-pin">
         <div className="ln-hero__copy">
           <Chip className="ln-rise" dot={live.status === "live" ? "live" : "accent"}>
-            fig-01.incubator · NEAR testnet
+            {t("landing.hero.chip")}
           </Chip>
           <h1 id="ln-hero-title" className="ln-hero__title">
-            <Words text={HERO.headline} accent={HERO.accent} start={180} />
+            <Words key={hero.headline} text={hero.headline} accent={hero.accent} start={180} />
           </h1>
           <p className="ln-hero__line ln-rise" style={{ animationDelay: "560ms" }}>
-            {HERO.line}
+            {hero.line}
           </p>
           <div className="ln-cta ln-rise" style={{ animationDelay: "700ms" }}>
             <a className="fd-btn fd-btn--primary" href={LINKS.app} data-magnetic="">
-              Enter the lab
+              {t("landing.hero.cta")}
             </a>
             <a className="fd-btn" href="#ch-02" data-magnetic="">
-              Scroll <span aria-hidden="true">↓</span>
+              {t("landing.hero.scroll")} <span aria-hidden="true">↓</span>
             </a>
           </div>
           {finePointer ? (
             <p className="ln-hint ln-rise" style={{ animationDelay: "900ms" }} aria-hidden="true">
-              <Cap icon="eye">move the lens over the dish</Cap>
-              <Cap icon="grid">hover the door</Cap>
+              <Cap icon="eye">{t("landing.hero.hintLens")}</Cap>
+              <Cap icon="grid">{t("landing.hero.hintDoor")}</Cap>
             </p>
           ) : null}
         </div>
@@ -82,36 +85,35 @@ export function Ruler() {
 }
 
 export function Ticker({ live }: { live: LiveState }) {
+  const { t } = useT();
   const m = live.macro;
   const zone = m ? (zoneFromApi(m.zone) ?? zoneFromTemp(m.crucibleTemp)) : null;
   const items: Array<[string, string]> = m
     ? [
-        ["CrucibleTemp", `${m.crucibleTemp.toLocaleString("en-US")} mK`],
-        ["zone", zone ? zone.label : "—"],
-        ["strains alive", live.alive == null ? "—" : `${live.alive} of ${live.strains ?? "?"}`],
-        ["total burned", `${formatToken(m.totalSnaccBurned)} $SNACC`],
-        ["last event", live.last ? `${eventLabel(live.last.kind)} · ${shortHash(live.last.receipt_id)}` : "—"],
+        [t("landing.ticker.items.temp"), `${m.crucibleTemp.toLocaleString("en-US")} mK`],
+        [t("landing.ticker.items.zone"), zone ? zoneLabel(t, zone.key) : "—"],
+        [t("landing.ticker.items.strains"), live.alive == null ? "—" : t("landing.ticker.alive", { alive: live.alive, total: live.strains ?? "?" })],
+        [t("landing.ticker.items.burned"), `${formatToken(m.totalSnaccBurned)} $SNACC`],
+        [t("landing.ticker.items.last"), live.last ? `${eventLabel(live.last.kind)} · ${shortHash(live.last.receipt_id)}` : "—"],
       ]
     : [];
   return (
-    <div className="ln-ticker" role="region" aria-label="Live testnet ticker" data-status={live.status}>
+    <div className="ln-ticker" role="region" aria-label={t("landing.ticker.label")} data-status={live.status}>
       <a className="ln-ticker__state" href={explorerAccount(m?.contractId ?? "snacc-v001.testnet")} target="_blank" rel="noopener noreferrer">
         <span className="ln-dot" aria-hidden="true" />
-        {live.status === "live" ? "live · testnet" : live.status === "loading" ? "connecting…" : "offline"}
+        {live.status === "live" ? t("landing.ticker.live") : live.status === "loading" ? t("landing.ticker.connecting") : t("landing.ticker.offline")}
       </a>
       {live.status === "live" ? (
         <ul className="ln-ticker__items">
-          {items.map(([k, v]) => (
-            <li key={k}>
+          {items.map(([k, v], i) => (
+            <li key={i}>
               <span className="ln-ticker__k">{k}</span>
               <span className="ln-ticker__v">{v}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="ln-ticker__off">
-          {live.status === "offline" ? "The backend did not answer, so no numbers are shown." : "Reading the colony…"}
-        </p>
+        <p className="ln-ticker__off">{live.status === "offline" ? t("landing.ticker.offlineMsg") : t("landing.ticker.reading")}</p>
       )}
     </div>
   );
@@ -122,6 +124,7 @@ export function Ticker({ live }: { live: LiveState }) {
  * whichever comes first. Absolutely positioned, so it never shifts layout.
  */
 export function Loader({ ready }: { ready: boolean }) {
+  const { rich } = useT();
   const [gone, setGone] = useState(false);
   const numRef = useRef<HTMLSpanElement>(null);
   const t0 = useRef(performance.now());
@@ -153,9 +156,7 @@ export function Loader({ ready }: { ready: boolean }) {
       <div className="ln-loader__thermo">
         <span className="ln-loader__fill" />
       </div>
-      <p className="ln-loader__txt">
-        warming the incubator <span ref={numRef}>00</span>%
-      </p>
+      <p className="ln-loader__txt">{rich("landing.loader.text", { pct: <span ref={numRef}>00</span> })}</p>
     </div>
   );
 }
