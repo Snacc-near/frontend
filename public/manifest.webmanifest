@@ -1,0 +1,33 @@
+{
+  "name": "Snacc - NFTs that eat a memecoin",
+  "short_name": "Snacc",
+  "description": "An on-chain economic game on NEAR testnet: living NFT organisms that must be fed. Testnet only, $SNACC has no monetary value.",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "en",
+  "background_color": "#efefec",
+  "theme_color": "#efefec",
+  "icons": [
+    {
+      "src": "/brand/snacc-app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/snacc-app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/snacc-app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

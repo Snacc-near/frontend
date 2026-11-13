@@ -113,7 +113,16 @@ export function SiteFooter() {
       </div>
       <Wordmark text="Snacc" />
       <div className="ln-footer__base">
-        <p className="ln-footer__note">{FOOTER_DISCLAIMER}</p>
+        <p className="ln-footer__note">
+          {FOOTER_DISCLAIMER}{" "}
+          <a href="/terms" data-testid="footer-terms">
+            Terms
+          </a>
+          <span aria-hidden="true"> · </span>
+          <a href="/privacy" data-testid="footer-privacy">
+            Privacy
+          </a>
+        </p>
         <p className="ln-footer__legal">
           <a href={`${repo("frontend")}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">
             MIT License
