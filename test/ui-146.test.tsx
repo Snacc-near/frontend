@@ -24,6 +24,8 @@ import {
 import { humanizeTxError, readOutcome, readThrown } from "../src/chain/txResult.ts";
 import { EMPTY_ACCOUNT_INFO, type AccountInfo } from "../src/chain/useAccountInfo.ts";
 import { FaucetLine, StorageLine, TESTNET_FAUCET_URL, TxStatusView } from "../src/hud/ChainActions.tsx";
+import { StrainDetailModal } from "../src/hud/StrainDetailModal.tsx";
+import type { StrainDetail } from "../src/data/types.ts";
 
 const QUARTER_NEAR = "250000000000000000000000";
 const FIVE_MILLINEAR = "5000000000000000000000";
@@ -155,6 +157,40 @@ const info: AccountInfo = {
   nearYocto: "1500000000000000000000000",
   storage: { registered: false, minYocto: FIVE_MILLINEAR },
 };
+
+const strain: StrainDetail = {
+  strain_id: 7,
+  owner_id: "alice.testnet",
+  vault_subaccount: "v7.alice.testnet",
+  vitality: 7200,
+  efficiency_bps: 10000,
+  bmr_per_hour: 100,
+  last_fed_sec: 0,
+  role_mask: 1,
+  state_nonce: 1,
+  pending_callbacks: 0,
+  atp_balance: "5",
+  generation: 1,
+  organel: { mitokondria: 1, nukleus: 2, lisosom: 0 },
+  status: "Active",
+  effective_vitality: 7100,
+};
+
+describe("UI-146 inject nutrients in Strain Detail", () => {
+  const feedKey = (html: string) => /<button[^>]*data-testid="strain-feed"[^>]*>/.exec(html)?.[0] ?? "";
+
+  it("stays disabled in live mode without an owning wallet, with the given hint", () => {
+    const html = renderToStaticMarkup(<StrainDetailModal strain={strain} skin="biolab" mode="live" onClose={() => {}} feedHint="connect a wallet to feed" />);
+    expect(feedKey(html)).toContain('disabled=""');
+    expect(html).toContain("connect a wallet to feed");
+  });
+
+  it("is enabled in live mode when the connected wallet owns the strain", () => {
+    const html = renderToStaticMarkup(<StrainDetailModal strain={strain} skin="biolab" mode="live" onClose={() => {}} feedEnabled />);
+    expect(feedKey(html)).not.toContain("disabled");
+    expect(html).toContain("feed_strain · signed in your wallet on testnet");
+  });
+});
 
 describe("UI-146 status lines", () => {
   it("explains the one-time storage registration only when needed", () => {

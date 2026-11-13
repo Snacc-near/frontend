@@ -31,6 +31,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { Empty, Field, KeycapButton, Select } from "../ui/controls.tsx";
 import { Icon, Tag } from "../ui/fd.tsx";
 import { StrainDetailModal } from "./StrainDetailModal.tsx";
+import { useWallet } from "../chain/wallet.tsx";
 
 export interface MyCollectionProps {
   /** The account whose collection is shown: the wallet account, or the one typed in the highlight field. */
@@ -38,6 +39,10 @@ export interface MyCollectionProps {
   skin?: SkinMode;
   mode?: GameMode;
   onClose: () => void;
+  /** Opens the signed feed for a strain the connected wallet owns (`feed_strain`). */
+  onFeedStrain?: (strainId: number) => void;
+  /** Bumped by the app after a signed action succeeds: the list is read again. */
+  refreshKey?: number;
 }
 
 type LoadState =
@@ -135,10 +140,15 @@ function Row({ item, onOpen }: { item: CollectionItem; onOpen: (id: number) => v
   );
 }
 
-export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose }: MyCollectionProps) {
+export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose, onFeedStrain, refreshKey = 0 }: MyCollectionProps) {
   const uid = useId();
   const account = normalizeAccount(accountId);
   const { state, reload } = useCollection(account);
+  const wallet = useWallet();
+  const firstRefresh = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey !== firstRefresh.current) reload();
+  }, [refreshKey, reload]);
   const [filter, setFilter] = useState<CollectionFilter>("all");
   const [sort, setSort] = useState<CollectionSort>("vitality-asc");
   const [openId, setOpenId] = useState<number | null>(null);
@@ -298,6 +308,9 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
           skin={skin}
           mode="live"
           onClose={() => setOpenId(null)}
+          feedEnabled={Boolean(onFeedStrain && wallet.accountId && opened.detail.owner_id === wallet.accountId)}
+          feedHint={wallet.accountId ? "only the owner's connected wallet can feed this Snacc" : "connect a wallet to feed"}
+          onFeedClick={() => onFeedStrain?.(opened.strainId)}
         />
       ) : null}
     </>

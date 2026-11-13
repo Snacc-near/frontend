@@ -24,6 +24,10 @@ interface StrainDetailModalProps {
   mode: GameMode;
   onClose: () => void;
   onFeedClick?: () => void;
+  /** Live mode: the connected wallet owns this strain, so "inject nutrients" opens the signed feed. */
+  feedEnabled?: boolean;
+  /** Live mode: why feeding is unavailable (e.g. "connect a wallet to feed"). */
+  feedHint?: string;
 }
 
 const SVG_BOX = "h-40 w-full border border-[var(--ink-hi)] bg-[var(--paper)]";
@@ -38,6 +42,8 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   mode,
   onClose,
   onFeedClick,
+  feedEnabled = false,
+  feedHint,
 }) => {
   const labels = SKIN_LABELS[skin];
 
@@ -166,10 +172,21 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
 
           {/* Feed action button */}
           <div className="fd-stack border-t border-dashed border-[var(--rule-dash)] pt-3" style={{ gap: 6 }}>
-            <KeycapButton variant="primary" block onClick={onFeedClick} disabled={mode === "live"} aria-label={labels.feedAction}>
+            <KeycapButton
+              variant="primary"
+              block
+              onClick={onFeedClick}
+              disabled={mode === "live" && !feedEnabled}
+              aria-label={labels.feedAction}
+              data-testid="strain-feed"
+            >
               {labels.feedAction}
             </KeycapButton>
-            {mode === "live" && <span className="fd-field__hint text-center">{labels.feedDisabled}</span>}
+            {mode === "live" ? (
+              <span className="fd-field__hint text-center">
+                {feedEnabled ? "feed_strain · signed in your wallet on testnet" : (feedHint ?? labels.feedDisabled)}
+              </span>
+            ) : null}
           </div>
         </div>
       ) : null}

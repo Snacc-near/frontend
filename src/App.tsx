@@ -173,7 +173,13 @@ export const App: React.FC = () => {
   /** Live mode + wallet: the hatch and feed keys send real testnet transactions. */
   const signedActions = mode === "live" && walletConnected;
   const [chainAction, setChainAction] = useState<"hatch" | "feed" | null>(null);
+  /** Strain picked in My collection for the signed feed; the dock falls back to the plate selection. */
+  const [feedTarget, setFeedTarget] = useState<number | null>(null);
   const closeChainAction = useCallback(() => setChainAction(null), []);
+  const openFeedFor = useCallback((strainId: number) => {
+    setFeedTarget(strainId);
+    setChainAction("feed");
+  }, []);
 
   const matchedStrainsCount = useMemo(() => {
     const q = effectiveAccount.trim().toLowerCase();
@@ -451,6 +457,7 @@ export const App: React.FC = () => {
     (key: string) => {
       if (mode === "live") {
         if (signedActions && (key === "hatch" || key === "feed")) {
+          setFeedTarget(null);
           setChainAction(key);
           return;
         }
@@ -797,7 +804,16 @@ export const App: React.FC = () => {
       ) : null}
 
       <React.Suspense fallback={<div className="fd-modal fd-ui" role="status" aria-label="loading tool" />}>
-        {tool === "collection" ? <MyCollection accountId={userAccount || null} skin={skin} mode={mode} onClose={closeTool} /> : null}
+        {tool === "collection" ? (
+          <MyCollection
+            accountId={effectiveAccount || null}
+            skin={skin}
+            mode={mode}
+            onClose={closeTool}
+            onFeedStrain={walletConnected ? openFeedFor : undefined}
+            refreshKey={chainRefresh}
+          />
+        ) : null}
         {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
         {tool === "social" ? <SocialLeaderboardModal onClose={closeTool} appetite={appetite} mode={mode} skin={skin} /> : null}
         {tool === "thesis" ? <ThesisDashboardModal onClose={closeTool} mode={mode} skin={skin} /> : null}
@@ -844,8 +860,15 @@ export const App: React.FC = () => {
         {chainAction === "hatch" && signedActions ? (
           <HatchModal wallet={wallet} info={accountInfo} onClose={closeChainAction} onDone={handleChainDone} />
         ) : null}
-        {chainAction === "feed" && signedActions ? (
-          <FeedModal wallet={wallet} info={accountInfo} onClose={closeChainAction} onDone={handleChainDone} preferredStrainId={selectedId} />
+        {/* My collection is always live data, so its feed only needs the wallet; the dock also needs live mode. */}
+        {chainAction === "feed" && walletConnected ? (
+          <FeedModal
+            wallet={wallet}
+            info={accountInfo}
+            onClose={closeChainAction}
+            onDone={handleChainDone}
+            preferredStrainId={feedTarget ?? selectedId}
+          />
         ) : null}
       </React.Suspense>
     </main>
