@@ -3,21 +3,26 @@
  * none, reads `get_appetite_meter` + `get_top_feeder` straight from the contract; with no data it
  * shows an empty state. Demo mode shows invented feeders, each number labelled SIMULATION.
  * With the profile features on, tabs add most active, longest streaks and (UI-154) the season XP board
- * with its hall of fame; rows show the player's level.
+ * with its hall of fame; rows show the player's level. UI-156 adds a "graveyard" tab (public chain history of the Snaccs that died).
  */
 import { useEffect, useId, useState } from "react";
 import { useAccount } from "../account/session.tsx";
 import { ActivityBoard, PlayerName, StreakBoard, useFollowing, useLevels, useNames, usePublicClient } from "./PlayerBoards.tsx";
 import { SeasonBoardPanel } from "./SeasonBoard.tsx";
+import { GraveyardPanel } from "./Graveyard.tsx";
+import { useWallet } from "../chain/wallet.tsx";
 import { KeycapButton, TabPanel, Tabs, type TabDef } from "../ui/controls.tsx";
 
-type BoardTab = "feeders" | "active" | "streaks" | "season";
+type BoardTab = "feeders" | "active" | "streaks" | "season" | "graveyard";
 const BOARD_TABS: readonly TabDef<BoardTab>[] = [
   { id: "feeders", label: "top feeders", icon: "podium" },
   { id: "active", label: "most active (7 days)", icon: "spark" },
   { id: "streaks", label: "longest streaks", icon: "lines" },
   { id: "season", label: "season xp", icon: "gauge" },
+  { id: "graveyard", label: "graveyard", icon: "ring" },
 ];
+/** The tabs that read public chain data only (no player boards): available as soon as the profile database is configured. */
+const PUBLIC_TABS: readonly TabDef<BoardTab>[] = BOARD_TABS.filter((t) => t.id === "feeders" || t.id === "graveyard");
 import type { GameMode, SkinMode } from "../config/constants.ts";
 import type { AppetiteViewModel } from "../data/types.ts";
 import { DEMO_FEAST, fetchFeastBoard, formatSnacc, formatSocialPost, type FeastBoard } from "../swap/socialFormat.ts";
@@ -67,9 +72,12 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
 
   // UI-148: player names and boards, only with the profile features on and a loaded client.
   const account = useAccount();
-  const client = usePublicClient(false);
-  const players = account.enabled && client !== null;
+  const wallet = useWallet();
   const [tab, setTab] = useState<BoardTab>("feeders");
+  // The graveyard is public chain data: opening it loads the client on demand (no sign-in needed).
+  const client = usePublicClient(tab === "graveyard");
+  const players = account.enabled && client !== null;
+  const myAccount = account.nearAccountId ?? wallet.accountId ?? null;
   const following = useFollowing(players ? client : null);
   const [onlyFollowing, setOnlyFollowing] = useState(false);
   const only = onlyFollowing && following ? following : null;
@@ -77,8 +85,11 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
   const names = useNames(players && live ? client : null, feeders.map((f) => f.account_id));
   const levels = useLevels(players && live ? client : null, feeders.map((f) => f.account_id));
   const tabsId = useId();
+  const graveyard = account.enabled && tab === "graveyard";
   const boardSource =
-    players && tab === "active"
+    graveyard
+      ? "graveyard_snacc (chain index of the contract's events)"
+      : players && tab === "active"
       ? "activity_snacc, last 7 days"
       : players && tab === "streaks"
         ? "streaks_snacc"
@@ -95,22 +106,26 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
       footer={
         <>
           <span>source: {boardSource ?? source}</span>
-          {boardSource ? <Tag>profile database</Tag> : live ? <Tag>live · testnet</Tag> : <Sim />}
+          {graveyard ? <Tag>chain index · testnet</Tag> : boardSource ? <Tag>profile database</Tag> : live ? <Tag>live · testnet</Tag> : <Sim />}
         </>
       }
     >
       <div className="fd-stack">
-        {players ? (
+        {account.enabled ? (
           <div className="fd-stack" data-testid="board-tabs">
-            <Tabs label="leaderboards" idBase={tabsId} tabs={BOARD_TABS} value={tab} onChange={setTab} />
-            {following ? (
+            <Tabs label="leaderboards" idBase={tabsId} tabs={players ? BOARD_TABS : PUBLIC_TABS} value={tab} onChange={setTab} />
+            {following && tab !== "graveyard" ? (
               <KeycapButton mono icon={onlyFollowing ? "check" : "user"} aria-pressed={onlyFollowing} onClick={() => setOnlyFollowing((v) => !v)} data-testid="board-following">
                 {onlyFollowing ? `following only (${following.size})` : "show only players I follow"}
               </KeycapButton>
             ) : null}
           </div>
         ) : null}
-        {players && tab === "active" ? (
+        {graveyard ? (
+          <TabPanel idBase={tabsId} id="graveyard">
+            <GraveyardPanel client={client} account={myAccount} live={live} />
+          </TabPanel>
+        ) : players && tab === "active" ? (
           <TabPanel idBase={tabsId} id="active">
             <ActivityBoard client={client} only={only} />
             <p className="fd-field__hint">Counts signed actions recorded by signed-in players in the last 7 days (activity_snacc).</p>

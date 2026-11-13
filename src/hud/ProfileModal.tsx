@@ -21,12 +21,14 @@ import {
   type StreakRow,
 } from "../account/model.ts";
 import { profilePath, profileUrl } from "../account/config.ts";
+import { inviteShare, referralCountsOf, type RecruitCounts } from "../account/referral.ts";
 import { fetchCollection, type CollectionItem } from "../data/collection.ts";
 import { explorerTx } from "../data/nearView.ts";
 import { ISSUES_URL } from "../legal/content.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { CopyButton, Empty, ExtLink, Field, Input, KeycapButton } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
+import { InviteFriends } from "./InviteFriends.tsx";
 import { LevelBadge, XpBar } from "./XpWidgets.tsx";
 import "../account/account.css";
 
@@ -52,6 +54,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   const [badges, setBadges] = useState<AchievementRow[]>([]);
   const [streak, setStreak] = useState<StreakRow | null>(null);
   const [xp, setXp] = useState<PlayerXpRow | null>(null);
+  const [recruits, setRecruits] = useState<RecruitCounts | null>(null);
   const [activity, setActivity] = useState<ActivityRow[] | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
@@ -68,6 +71,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     void achievementsOf(client, userId).then((r) => alive && setBadges(r)).catch(() => undefined);
     void streakOf(client, { userId }).then((r) => alive && setStreak(r)).catch(() => undefined);
     void playerXpOf(client, { userId }).then((r) => alive && setXp(r)).catch(() => undefined);
+    void referralCountsOf(client, userId).then((r) => alive && setRecruits(r));
     void recentActivity(client, { userId }).then((r) => alive && setActivity(r)).catch(() => alive && setActivity([]));
     return () => {
       alive = false;
@@ -114,6 +118,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   };
 
   const earned = new Map(badges.map((b) => [b.code, b.earned_at]));
+  const share = nearAccountId ? inviteShare(nearAccountId) : null;
 
   return (
     <Modal
@@ -187,6 +192,10 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
               XP comes from your recorded actions and finished daily quests (see the quests window). It is cosmetic and off-chain: no tokens, no NEAR.
             </p>
           </section>
+
+          {nearAccountId ? (
+            <InviteFriends account={nearAccountId} counts={recruits} onShare={share ? () => void share() : null} />
+          ) : null}
 
           <section className="fd-stack" aria-label="edit profile">
             <Field id={`${uid}-user`} label="username" hint={userErr && username ? userErr : "3 to 20 characters: a-z, 0-9 and _"} bad={Boolean(userErr && username)}>
