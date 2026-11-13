@@ -140,6 +140,11 @@ export function parseVessel(raw: unknown): StrainDetail | null {
     organel: { mitokondria: o.mitokondria, nukleus: o.nukleus, lisosom: o.lisosom },
     status: raw.status,
     effective_vitality: raw.effective_vitality,
+    // A never-allocated strain holds `u64::MAX`, which arrives quoted (16+ digits); any epoch differs from it.
+    ...(isNum(raw.last_allocate_epoch) || (typeof raw.last_allocate_epoch === "string" && /^\d+$/.test(raw.last_allocate_epoch))
+      ? { last_allocate_epoch: Number(raw.last_allocate_epoch) }
+      : {}),
+    ...(typeof raw.phenotype_trait === "string" || raw.phenotype_trait === null ? { phenotype_trait: raw.phenotype_trait } : {}),
   };
 }
 
