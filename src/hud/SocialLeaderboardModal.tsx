@@ -2,17 +2,21 @@
  * Great Feast leaderboard. Live mode shows the backend's `/api/appetite` podium or, when that has
  * none, reads `get_appetite_meter` + `get_top_feeder` straight from the contract; with no data it
  * shows an empty state. Demo mode shows invented feeders, each number labelled SIMULATION.
+ * With the profile features on, tabs add most active, longest streaks and (UI-154) the season XP board
+ * with its hall of fame; rows show the player's level.
  */
 import { useEffect, useId, useState } from "react";
 import { useAccount } from "../account/session.tsx";
-import { ActivityBoard, PlayerName, StreakBoard, useFollowing, useNames, usePublicClient } from "./PlayerBoards.tsx";
+import { ActivityBoard, PlayerName, StreakBoard, useFollowing, useLevels, useNames, usePublicClient } from "./PlayerBoards.tsx";
+import { SeasonBoardPanel } from "./SeasonBoard.tsx";
 import { KeycapButton, TabPanel, Tabs, type TabDef } from "../ui/controls.tsx";
 
-type BoardTab = "feeders" | "active" | "streaks";
+type BoardTab = "feeders" | "active" | "streaks" | "season";
 const BOARD_TABS: readonly TabDef<BoardTab>[] = [
   { id: "feeders", label: "top feeders", icon: "podium" },
   { id: "active", label: "most active (7 days)", icon: "spark" },
   { id: "streaks", label: "longest streaks", icon: "lines" },
+  { id: "season", label: "season xp", icon: "gauge" },
 ];
 import type { GameMode, SkinMode } from "../config/constants.ts";
 import type { AppetiteViewModel } from "../data/types.ts";
@@ -71,8 +75,16 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
   const only = onlyFollowing && following ? following : null;
   const feeders = (board?.topFeeders ?? []).filter((f) => !only || only.has(f.account_id)).slice(0, 3);
   const names = useNames(players && live ? client : null, feeders.map((f) => f.account_id));
+  const levels = useLevels(players && live ? client : null, feeders.map((f) => f.account_id));
   const tabsId = useId();
-  const boardSource = players && tab === "active" ? "activity_snacc, last 7 days" : players && tab === "streaks" ? "streaks_snacc" : null;
+  const boardSource =
+    players && tab === "active"
+      ? "activity_snacc, last 7 days"
+      : players && tab === "streaks"
+        ? "streaks_snacc"
+        : players && tab === "season"
+          ? "season_leaderboard_snacc, hall_of_fame_snacc"
+          : null;
 
   return (
     <Modal
@@ -107,6 +119,10 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
           <TabPanel idBase={tabsId} id="streaks">
             <StreakBoard client={client} only={only} />
             <p className="fd-field__hint">Days in a row with at least one recorded feed (streaks_snacc).</p>
+          </TabPanel>
+        ) : players && tab === "season" ? (
+          <TabPanel idBase={tabsId} id="season">
+            <SeasonBoardPanel client={client} only={only} />
           </TabPanel>
         ) : live && rpcBoard === "loading" && !fromBackend ? (
           <Empty icon="eye">reading get_appetite_meter and get_top_feeder…</Empty>
@@ -144,7 +160,7 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
                       {i + 1}
                     </span>
                     {players && live ? (
-                      <PlayerName account={f.account_id} username={names.get(f.account_id) ?? null} />
+                      <PlayerName account={f.account_id} username={names.get(f.account_id) ?? null} level={levels.get(f.account_id)} />
                     ) : (
                       <code className="feast-account">{f.account_id}</code>
                     )}

@@ -129,6 +129,9 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { code: "rescuer", name: "Rescuer", how: "Feed a Snacc while it is starving or distressed." },
   { code: "gifter", name: "Gifter", how: "Gift a Snacc or $SNACC to another player." },
   { code: "colony_5", name: "Colony of five", how: "Own five living Snaccs at the same time." },
+  // UI-153: awarded by the database when a daily quest is finished (cosmetic, off-chain).
+  { code: "quest_first", name: "First quest", how: "Finish a daily quest." },
+  { code: "quest_streak_7", name: "Seven quest days", how: "Finish at least one daily quest on seven days in a row." },
 ];
 
 export function achievementName(code: string): string {

@@ -266,6 +266,22 @@ Public pages: `/p/<accountId>`
 (profile, Snaccs from contract views, achievements, streak, follow) and `/snacc/<id>` (on-chain SVG,
 owner, status, vitality, "Open in game" = `/app?strain=<id>`).
 
+### Daily quests, XP and seasons (UI-153, UI-154)
+
+**Status: built, not deployed, and it needs the backend migration `0004` (quests, XP, seasons) applied to the
+profile database**, which has not happened yet; the profile features themselves are still hidden in production.
+Behind the same two variables the toolbar gets a "quests" key. The Quests window shows today's three
+quests with progress bars, the countdown to the 00:00 UTC reset, the player's level and XP and a
+"How XP works" list; signed out, it explains that quests need a sign-in. Level shows on the Profile window,
+on `/p/<account>` and next to names in the leaderboard rows. The leaderboard window gets a "season xp"
+tab: a selector (this week, finished seasons, all time), the countdown to the end of the season and a hall
+of fame with the top three of every finished season. A season is a Monday-to-Monday week in UTC; season 1
+began on 2026-11-02. Everything is read from the database (`snacc_my_quests()`, `player_xp_snacc`,
+`season_leaderboard_snacc`, `hall_of_fame_snacc`), which computes it from the actions recorded for signed-in
+players, so nothing in the browser can change progress. XP, levels, quests, seasons and badges are cosmetic
+and off-chain: no token, no NEAR, no money value. Code: `src/account/quests.ts` (pure maths),
+`src/hud/QuestsModal.tsx`, `src/hud/SeasonBoard.tsx`, `src/hud/XpWidgets.tsx`.
+
 ## Wallet (testnet)
 
 The header has a **connect wallet** key (`src/chain/wallet.tsx`, [NEAR Connect](https://github.com/hot-dao/near-selector),

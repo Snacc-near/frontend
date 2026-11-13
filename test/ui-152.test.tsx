@@ -16,16 +16,18 @@ const read = (rel: string): string => readFileSync(join(__dirname, "..", rel), "
 describe("toolbar fold (UI-152)", () => {
   const props = { skin: "biolab" as const, panelsOpen: false, onTogglePanels: noop, onOpen: noop, guestLabel: null };
 
-  it("marks the strip as full only when every tool, the profile key included, is shown", () => {
+  it("marks the strip as full only when every tool, the profile and quests keys included, is shown", () => {
     expect(renderToStaticMarkup(<ToolsToolbar {...props} />)).toContain("tools-bar--full");
     expect(renderToStaticMarkup(<ToolsToolbar {...props} hidden={["profile"]} />)).not.toContain("tools-bar--full");
+    expect(renderToStaticMarkup(<ToolsToolbar {...props} hidden={["profile", "quests"]} />)).not.toContain("tools-bar--full");
     expect(TOOLS.some((t) => t.id === "profile")).toBe(true);
+    expect(TOOLS.some((t) => t.id === "quests")).toBe(true);
   });
 
-  it("folds the full strip into the tools sheet below 1260 px and the short one below 1140 px", () => {
+  it("folds the full strip into the tools sheet below 1360 px and the short one below 1140 px", () => {
     const css = read("src/ui/fd.css");
     expect(css).toMatch(/@media \(max-width: 1139\.98px\)[^@]*\.tools-bar \.tools-bar__tool\s*\{\s*display: none;/);
-    expect(css).toMatch(/@media \(max-width: 1259\.98px\)[^@]*\.tools-bar--full \.tools-bar__tool\s*\{\s*display: none;/);
+    expect(css).toMatch(/@media \(max-width: 1359\.98px\)[^@]*\.tools-bar--full \.tools-bar__tool\s*\{\s*display: none;/);
     expect(css).toMatch(/\.tools-bar--full \.tools-bar__more\s*\{\s*display: inline-flex;/);
   });
 });

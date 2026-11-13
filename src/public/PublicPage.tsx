@@ -10,10 +10,12 @@
 import { useEffect, useState } from "react";
 import { parsePublicPath, type PublicTarget } from "../route.ts";
 import { SessionProvider, useAccount } from "../account/session.tsx";
-import { achievementsOf, profileByAccount, setFollow, streakOf, followeesOf } from "../account/api.ts";
+import { achievementsOf, playerXpOf, profileByAccount, setFollow, streakOf, followeesOf } from "../account/api.ts";
 import { ACHIEVEMENTS, type AchievementRow, type ProfileRow, type StreakRow } from "../account/model.ts";
+import type { PlayerXpRow } from "../account/quests.ts";
 import { profilePath, profileUrl, snaccPath } from "../account/config.ts";
 import { usePublicClient } from "../hud/PlayerBoards.tsx";
+import { LevelBadge } from "../hud/XpWidgets.tsx";
 import { fetchCollection, healthOf, parseVessel, type CollectionItem } from "../data/collection.ts";
 import { CONTRACT_ID, explorerAccount, viewCall } from "../data/nearView.ts";
 import { safeNftMediaSrc } from "../landing/lib/live.ts";
@@ -121,6 +123,7 @@ function ProfileView({ accountId }: { accountId: string }) {
   const [profile, setProfile] = useState<ProfileRow | null | "loading">(account.enabled ? "loading" : null);
   const [badges, setBadges] = useState<AchievementRow[]>([]);
   const [streak, setStreak] = useState<StreakRow | null>(null);
+  const [xp, setXp] = useState<PlayerXpRow | null>(null);
   const [items, setItems] = useState<CollectionItem[] | "loading" | string>("loading");
 
   useEffect(() => {
@@ -138,13 +141,15 @@ function ProfileView({ accountId }: { accountId: string }) {
       .then(async (p) => {
         if (!alive) return;
         setProfile(p);
-        const [b, s] = await Promise.all([
+        const [b, s, x] = await Promise.all([
           p ? achievementsOf(client, p.user_id).catch(() => []) : Promise.resolve([]),
           streakOf(client, p ? { userId: p.user_id } : { accountId }).catch(() => null),
+          playerXpOf(client, { accountId }).catch(() => null),
         ]);
         if (!alive) return;
         setBadges(b);
         setStreak(s);
+        setXp(x);
       })
       .catch(() => alive && setProfile(null));
     return () => {
@@ -205,6 +210,9 @@ function ProfileView({ accountId }: { accountId: string }) {
               <h2 id="pub-ach" className="lg-h2">
                 Streak and achievements
               </h2>
+              <p data-testid="public-level">
+                <LevelBadge level={xp?.level ?? 1} /> <strong>{(xp?.total_xp ?? 0).toLocaleString("en-US")}</strong> XP (cosmetic, off-chain)
+              </p>
               <p data-testid="public-streak">
                 Feed streak: <strong>{streak?.current_streak_days ?? 0}</strong> day{(streak?.current_streak_days ?? 0) === 1 ? "" : "s"} in a row
               </p>
