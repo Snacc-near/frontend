@@ -10,6 +10,11 @@ export type RouteName = "app" | "landing" | "sign" | "terms" | "privacy" | "prof
 /** NEAR account id: 2 to 64 chars, lowercase alphanumerics joined by single `-`, `_` or `.`. */
 const ACCOUNT_RE = /^(?:[a-z\d]+[-_.])*[a-z\d]+$/;
 
+/** True for a well-formed NEAR account id (the rule behind `/p/<accountId>` and the `?ref=` invite parameter). */
+export function isNearAccountId(id: string): boolean {
+  return id.length >= 2 && id.length <= 64 && ACCOUNT_RE.test(id);
+}
+
 export type PublicTarget = { kind: "profile"; accountId: string } | { kind: "snacc"; strainId: number };
 
 /** The account of `/p/<accountId>` or the id of `/snacc/<id>`; null for any other or malformed path. */
@@ -23,7 +28,7 @@ export function parsePublicPath(pathname: string): PublicTarget | null {
     } catch {
       return null;
     }
-    return id.length >= 2 && id.length <= 64 && ACCOUNT_RE.test(id) ? { kind: "profile", accountId: id } : null;
+    return isNearAccountId(id) ? { kind: "profile", accountId: id } : null;
   }
   const s = /^\/snacc\/(\d{1,9})$/.exec(path);
   if (s) {

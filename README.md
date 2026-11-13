@@ -43,7 +43,8 @@ the game is at `/app`). Testnet only; `$SNACC` has no monetary value.
 
 There is no router library: `src/route.ts` picks one of these from the path, and each route is its own lazy
 chunk (the landing page never downloads the game, the wallet connector or Privy). `vercel.json` rewrites every
-path to `index.html`, so the 404 page is rendered by the app itself.
+path to `index.html`, so the 404 page is rendered by the app itself. The one exception is link-preview crawlers
+on `/snacc/<id>` and `/p/<account>`, see [Share previews](#share-previews-ui-157).
 
 | Path | What it is |
 | --- | --- |
@@ -281,6 +282,42 @@ began on 2026-11-02. Everything is read from the database (`snacc_my_quests()`, 
 players, so nothing in the browser can change progress. XP, levels, quests, seasons and badges are cosmetic
 and off-chain: no token, no NEAR, no money value. Code: `src/account/quests.ts` (pure maths),
 `src/hud/QuestsModal.tsx`, `src/hud/SeasonBoard.tsx`, `src/hud/XpWidgets.tsx`.
+
+### Invite friends (UI-158)
+
+**Status: built, not deployed, and it needs the backend migration `0007` (referrals) applied to the profile
+database**; like the rest of this section it stays hidden while the two Supabase variables are empty. Any page
+that is opened with `?ref=<account>` (for example `https://snacc-nu.vercel.app/app?ref=alice.testnet`) stores that
+NEAR account in `localStorage` for seven days (`src/main.tsx` -> `captureReferral`; a malformed account is ignored,
+the newest link wins). After the player signs in and has a profile, `SessionProvider` calls the database function
+`snacc_claim_referral` once and forgets the link on any definitive answer (`claimed`, `already_referred`,
+`not_new_player`, `self_referral`, `unknown_referrer`, `invalid_account`); a failed call keeps the link for a later
+visit. Nothing is shown and sign-in is never blocked. Only a new player can be referred: one who already has a
+recorded hatch is refused. The Profile window has an "Invite friends" block with the player's own link, a copy
+button, a Share button where the browser has the Web Share API, and how many friends joined and hatched
+(`referral_counts_snacc`). The only reward is the cosmetic `recruiter` badge, earned when a friend hatches a first
+Snacc: no token, no XP, no money value (testnet). Code: `src/account/referral.ts`, `src/hud/InviteFriends.tsx`.
+
+## Share previews (UI-157)
+
+`/snacc/<id>` and `/p/<account>` are client-rendered, so the HTML that X, Discord, Telegram, Slack, LinkedIn,
+WhatsApp and Facebook fetch carries no per-page tags. `vercel.json` therefore sends requests whose `User-Agent`
+matches a link-preview crawler (the list is `CRAWLER_UA_TOKENS` in `server/share/validate.js`; a test keeps the
+regex in `vercel.json` identical) to the function `api/share.js`, which answers with `og:title`,
+`og:description`, `og:image`, `og:url`, `twitter:card=summary_large_image` and a plain link. Every other visitor
+still gets the SPA from the unchanged catch-all rewrite.
+
+`api/og/snacc/<id>` and `api/og/p/<account>` return a 1200x630 PNG: the Snacc's on-chain SVG (read with
+`nft_token` and `get_strain` from `https://test.rpc.fastnear.com`, falling back to
+`https://rpc.testnet.fastnear.com`) on a branded card with status, vitality, generation and owner; or the player's
+username, level (`player_xp_snacc`) and Snacc count (`nft_supply_for_owner`). The SVG is chain data, so scripts,
+styles, foreign objects, event handlers and external references are stripped first, and emoji (which the bundled
+fonts lack) are dropped. Rendering is `@resvg/resvg-wasm` with the OFL fonts in `server/assets/fonts/`
+(DM Sans, JetBrains Mono). Responses carry `s-maxage` cache headers; every upstream call has a 3 s timeout; any
+failure ends in the static `/brand/og-image.png` (or a redirect to it), never a 5xx. The profile cards read the
+Supabase project from `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` at runtime; without them the card
+simply has no level. Code: `api/` (thin entry points) and `server/share/` (plain ES modules, type-checked by
+`tsc` through `allowJs`).
 
 ## Wallet (testnet)
 

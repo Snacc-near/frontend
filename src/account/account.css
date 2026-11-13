@@ -93,6 +93,14 @@
   height: 52px;
   object-fit: contain;
 }
+.acct-invite__link {
+  display: block;
+  padding: 6px 8px;
+  border: 1px dashed var(--edge, #c9c9c4);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  user-select: all;
+}
 .acct-textarea {
   min-height: 64px;
   resize: vertical;
