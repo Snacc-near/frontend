@@ -5,10 +5,11 @@
  *   the profile session (the wallet stays connected).
  * Everything renders nothing when the Supabase env vars are missing.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWallet } from "../chain/wallet.tsx";
 import { accountLabel, useAccount } from "../account/session.tsx";
-import { claimStarterPack, type StarterOutcome } from "../account/model.ts";
+import { claimStarterPackWithCaptcha, type StarterOutcome } from "../account/model.ts";
+import { createCaptchaGate, turnstileSiteKey, type CaptchaGate } from "../account/turnstile.ts";
 import { explorerTx } from "../data/nearView.ts";
 import { formatYocto } from "../chain/actions.ts";
 import { KeycapButton } from "../ui/controls.tsx";
@@ -53,14 +54,35 @@ export function AccountChip({ compact = false, onOpenProfile }: { compact?: bool
   );
 }
 
+/** Outcomes shown as a problem (red hint) rather than as a plain note. */
+function isStarterProblem(kind: StarterOutcome["kind"]): boolean {
+  return kind === "error" || kind === "captcha_failed" || kind === "captcha_unavailable";
+}
+
 /**
  * "Get testnet NEAR to start" (UI-148): shown beside the faucet link when the wallet is low. Signs in
  * first when needed, then asks the backend's `starter-pack` function to send a little testnet NEAR.
  */
-export function StarterPackButton({ onSent }: { onSent?: () => void }) {
+export function StarterPackButton({
+  onSent,
+  siteKey = turnstileSiteKey(),
+}: {
+  onSent?: () => void;
+  /** SEC-119: Cloudflare Turnstile site key (`VITE_TURNSTILE_SITE_KEY`). Empty or null: no script, no widget. */
+  siteKey?: string | null;
+}) {
   const account = useAccount();
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState<StarterOutcome | null>(null);
+  const captchaEl = useRef<HTMLSpanElement | null>(null);
+  const gate = useRef<CaptchaGate | null>(null);
+  useEffect(
+    () => () => {
+      gate.current?.dispose();
+      gate.current = null;
+    },
+    [],
+  );
   if (!account.enabled || !account.cfg) return null;
   const cfg = account.cfg;
 
@@ -82,7 +104,9 @@ export function StarterPackButton({ onSent }: { onSent?: () => void }) {
         setOut({ kind: "error", message: "Sign in first to claim the starter pack." });
         return;
       }
-      const result = await claimStarterPack(cfg, token);
+      // The Turnstile script and widget exist only when a site key is set, and only from the first claim on.
+      const captcha = siteKey ? (gate.current ??= createCaptchaGate(siteKey)) : null;
+      const result = await claimStarterPackWithCaptcha(cfg, token, captcha, captchaEl.current);
       setOut(result);
       if (result.kind === "sent") onSent?.();
     } finally {
@@ -95,6 +119,7 @@ export function StarterPackButton({ onSent }: { onSent?: () => void }) {
       <KeycapButton mono icon="spark" onClick={() => void claim()} disabled={busy || out?.kind === "sent"} data-testid="starter-pack-claim">
         {busy ? "asking…" : "Get testnet NEAR to start"}
       </KeycapButton>
+      {siteKey ? <span ref={captchaEl} className="acct-starter__captcha" data-testid="starter-pack-captcha" /> : null}
       {out ? (
         out.kind === "sent" ? (
           <span className="fd-field__hint" role="status" data-testid="starter-pack-sent">
@@ -104,7 +129,7 @@ export function StarterPackButton({ onSent }: { onSent?: () => void }) {
             </a>
           </span>
         ) : (
-          <span className={out.kind === "error" ? "fd-field__hint fd-field__hint--bad" : "fd-field__hint"} role="status" data-testid="starter-pack-msg">
+          <span className={isStarterProblem(out.kind) ? "fd-field__hint fd-field__hint--bad" : "fd-field__hint"} role="status" data-testid="starter-pack-msg">
             {out.message}
           </span>
         )

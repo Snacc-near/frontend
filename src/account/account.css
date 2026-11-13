@@ -47,6 +47,14 @@
   gap: 4px 8px;
   margin-top: 4px;
 }
+/* SEC-119: Turnstile draws its (interaction-only) widget in here; nothing shows until it has a child. */
+.acct-starter__captcha {
+  display: block;
+  flex-basis: 100%;
+}
+.acct-starter__captcha:empty {
+  display: none;
+}
 
 /* Profile window */
 .acct-avatar {
