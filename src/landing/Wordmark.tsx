@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useT } from "../i18n/react.tsx";
 import { Icon } from "../ui/fd.tsx";
 
 const INK = "#16181a";
@@ -38,6 +39,18 @@ export function Wordmark({ text = "Snacc" }: { text?: string }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const countRef = useRef<HTMLSpanElement>(null);
+  // The cell count is written straight into the DOM by the build below; keep the translator and the
+  // last count in refs so it can be written again in the new language without rebuilding the grid.
+  const { t, rich } = useT();
+  const tRef = useRef(t);
+  tRef.current = t;
+  const countN = useRef<number | null>(null);
+  const writeCount = (tr: typeof t) => {
+    if (countRef.current && countN.current != null) {
+      countRef.current.textContent = tr("landing.wordmark.count", { n: countN.current.toLocaleString("en-US") });
+    }
+  };
+  useEffect(() => writeCount(t), [t]);
 
   useEffect(() => {
     const box = boxRef.current;
@@ -111,7 +124,8 @@ export function Wordmark({ text = "Snacc" }: { text?: string }) {
         }
       }
       st.dots = dots;
-      if (countRef.current) countRef.current.textContent = `${n.toLocaleString("en-US")} cells`;
+      countN.current = n;
+      writeCount(tRef.current);
       draw(performance.now());
     };
 
@@ -275,9 +289,7 @@ export function Wordmark({ text = "Snacc" }: { text?: string }) {
       <canvas ref={canvasRef} aria-hidden="true" />
       <span className="fd-cap ln-mark__cap" aria-hidden="true">
         <Icon name="cell" />
-        <span>
-          fig-08.culture · <span ref={countRef}>cells</span>
-        </span>
+        <span>{rich("landing.wordmark.caption", { count: <span ref={countRef}>{t("landing.wordmark.cells")}</span> })}</span>
       </span>
     </div>
   );

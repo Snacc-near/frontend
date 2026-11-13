@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
+import type { MessageKey } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
 import { CONTRACT_ID, EVIDENCE_TXS, explorerAccount, explorerTx, fetchNftCards, type NftCard } from "./lib/chain.ts";
-import { countUp, formatToken, liveChipText, shortHash, tokenToNumber, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
+import { countUp, formatToken, liveChipText, shortHash, tokenToNumber, zoneFromApi, zoneFromTemp, zoneLabel, zoneRate } from "./lib/live.ts";
 import type { LiveState } from "./useLive.ts";
 
 function useInView<T extends Element>(margin = "0px 0px -10% 0px") {
@@ -58,33 +60,35 @@ function CountUp({ to, final, run, digits = 0 }: { to: number | null; final: str
   return <>{text}</>;
 }
 
-/** Labels of the number cells; the placeholder grid uses the same ones so nothing moves when data lands. */
-const NUM_KEYS: ReadonlyArray<[string, string?]> = [
-  ["CrucibleTemp", "mK"],
-  ["$SNACC supply"],
-  ["$SNACC burned"],
-  ["The Pantry", "$SNACC"],
-  ["Snaccs minted"],
-  ["alive now"],
-  ["events indexed"],
-  ["block height"],
+/** Labels of the number cells (`landing.live.nums.<key>`) and their unit; the placeholder grid uses the same ones so nothing moves when data lands. */
+type NumKey = "temp" | "supply" | "burned" | "pantry" | "minted" | "alive" | "events" | "block";
+const NUM_KEYS: ReadonlyArray<{ key: NumKey; unit?: string }> = [
+  { key: "temp", unit: "mK" },
+  { key: "supply" },
+  { key: "burned" },
+  { key: "pantry", unit: "$SNACC" },
+  { key: "minted" },
+  { key: "alive" },
+  { key: "events" },
+  { key: "block" },
 ];
 
 function Numbers({ live, run }: { live: LiveState; run: boolean }) {
+  const { t, rich } = useT();
   const m = live.macro;
   if (!m) {
     return (
       <>
         <p className="ln-live__offline" data-status={live.status}>
           <span className="ln-dot" aria-hidden="true" />
-          {live.status === "loading" ? "Reading the colony…" : "The backend did not answer, so no numbers are shown here."}
+          {live.status === "loading" ? t("landing.live.reading") : t("landing.live.offline")}
         </p>
         <dl className="ln-live__nums" aria-busy={live.status === "loading" ? "true" : undefined}>
-          {NUM_KEYS.map(([k, unit]) => (
-            <div key={k} className="ln-num" data-reveal="">
-              <dt>{k}</dt>
+          {NUM_KEYS.map((n) => (
+            <div key={n.key} className="ln-num" data-reveal="">
+              <dt>{t(`landing.live.nums.${n.key}`)}</dt>
               <dd>
-                —{unit ? <small> {unit}</small> : null}
+                —{n.unit ? <small> {n.unit}</small> : null}
               </dd>
             </div>
           ))}
@@ -93,26 +97,26 @@ function Numbers({ live, run }: { live: LiveState; run: boolean }) {
     );
   }
   const zone = zoneFromApi(m.zone) ?? zoneFromTemp(m.crucibleTemp);
-  const cells: Array<{ k: string; to: number | null; final: string; unit?: string; digits?: number }> = [
-    { k: "CrucibleTemp", to: m.crucibleTemp, final: String(m.crucibleTemp), unit: "mK" },
-    { k: "$SNACC supply", to: tokenToNumber(m.totalSnaccSupply), final: formatToken(m.totalSnaccSupply), digits: 4 },
-    { k: "$SNACC burned", to: tokenToNumber(m.totalSnaccBurned), final: formatToken(m.totalSnaccBurned), digits: 5 },
-    { k: "The Pantry", to: tokenToNumber(m.ruleBoundTreasury), final: formatToken(m.ruleBoundTreasury), unit: "$SNACC", digits: 4 },
-    { k: "Snaccs minted", to: live.strains, final: live.strains == null ? "—" : String(live.strains) },
-    { k: "alive now", to: live.alive, final: live.alive == null ? "—" : String(live.alive) },
-    { k: "events indexed", to: live.events, final: live.events == null ? "—" : String(live.events) },
-    { k: "block height", to: m.blockHeight, final: m.blockHeight.toLocaleString("en-US") },
+  const cells: Array<{ k: NumKey; to: number | null; final: string; unit?: string; digits?: number }> = [
+    { k: "temp", to: m.crucibleTemp, final: String(m.crucibleTemp), unit: "mK" },
+    { k: "supply", to: tokenToNumber(m.totalSnaccSupply), final: formatToken(m.totalSnaccSupply), digits: 4 },
+    { k: "burned", to: tokenToNumber(m.totalSnaccBurned), final: formatToken(m.totalSnaccBurned), digits: 5 },
+    { k: "pantry", to: tokenToNumber(m.ruleBoundTreasury), final: formatToken(m.ruleBoundTreasury), unit: "$SNACC", digits: 4 },
+    { k: "minted", to: live.strains, final: live.strains == null ? "—" : String(live.strains) },
+    { k: "alive", to: live.alive, final: live.alive == null ? "—" : String(live.alive) },
+    { k: "events", to: live.events, final: live.events == null ? "—" : String(live.events) },
+    { k: "block", to: m.blockHeight, final: m.blockHeight.toLocaleString("en-US") },
   ];
   return (
     <>
       <p className="ln-live__zone" data-zone={zone.key} data-status="live">
         <span className="ln-dot" aria-hidden="true" />
-        The colony is in <strong>{zone.label}</strong> right now ({zone.rate}).
+        {rich("landing.live.zone", { zone: <strong>{zoneLabel(t, zone.key)}</strong>, rate: zoneRate(t, zone.key) })}
       </p>
       <dl className="ln-live__nums">
         {cells.map((c) => (
           <div key={c.k} className="ln-num" data-reveal="">
-            <dt>{c.k}</dt>
+            <dt>{t(`landing.live.nums.${c.k}`)}</dt>
             <dd>
               <CountUp to={c.to} final={c.final} run={run} digits={c.digits} />
               {c.unit ? <small> {c.unit}</small> : null}
@@ -124,9 +128,30 @@ function Numbers({ live, run }: { live: LiveState; run: boolean }) {
   );
 }
 
+/**
+ * Dictionary key of each rehearsal transaction's description, by action name. The action names are
+ * method names and stay as written; an action added to the evidence list without a key here shows
+ * its English `detail`.
+ */
+const TX_DETAIL_KEYS: Readonly<Record<string, MessageKey>> = {
+  incubate: "landing.live.txs.detail.incubate",
+  feed: "landing.live.txs.detail.feed",
+  "merge (splice)": "landing.live.txs.detail.merge",
+  "extract spores": "landing.live.txs.detail.extract",
+  transmute: "landing.live.txs.detail.transmute",
+  "synthesize elixir": "landing.live.txs.detail.synthesize",
+  apply_tee_mutation_zero_trust: "landing.live.txs.detail.tee",
+  ft_burn: "landing.live.txs.detail.burn",
+  harvest_starving_strain: "landing.live.txs.detail.harvest",
+  hostile_takeover_splice: "landing.live.txs.detail.takeover",
+  nft_transfer: "landing.live.txs.detail.transfer",
+  advance_epoch: "landing.live.txs.detail.epoch",
+};
+
 const shortAccount = (a: string) => (a.length > 22 ? `${a.slice(0, 10)}…${a.slice(-9)}` : a);
 
 function Gallery({ run }: { run: boolean }) {
+  const { t } = useT();
   const [cards, setCards] = useState<NftCard[] | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -150,7 +175,7 @@ function Gallery({ run }: { run: boolean }) {
             <GhostCard key={i} n={i} />
           ))}
         </ul>
-        {failed ? <p className="ln-live__offline ln-gallery__msg">The NEAR testnet RPC did not answer, so the gallery is empty.</p> : null}
+        {failed ? <p className="ln-live__offline ln-gallery__msg">{t("landing.live.gallery.failed")}</p> : null}
       </div>
     );
   }
@@ -158,24 +183,28 @@ function Gallery({ run }: { run: boolean }) {
   return (
     <ul className="ln-gallery">
       {shown.map((c, i) => (
-        <Win key={c.tokenId} as="li" title={`specimen-${c.tokenId}.svg`} className="ln-nft" bodyClass="ln-nft__body">
+        <Win key={c.tokenId} as="li" title={t("landing.live.gallery.specimen", { id: c.tokenId })} className="ln-nft" bodyClass="ln-nft__body">
           <div className="ln-nft__media" style={{ animationDelay: `${i * 70}ms` }}>
-            {c.src ? <img src={c.src} alt={`On-chain SVG of ${c.title}`} width={320} height={320} loading="lazy" decoding="async" /> : <span>no on-chain image</span>}
+            {c.src ? (
+              <img src={c.src} alt={t("landing.live.gallery.imgAlt", { title: c.title })} width={320} height={320} loading="lazy" decoding="async" />
+            ) : (
+              <span>{t("landing.live.gallery.noImage")}</span>
+            )}
             <span className="ln-nft__slide" aria-hidden="true">
               #{String(i + 1).padStart(2, "0")}
             </span>
           </div>
           <dl className="fd-kv ln-nft__meta">
             <div className="fd-kv__row">
-              <dt>title</dt>
+              <dt>{t("landing.live.gallery.rows.title")}</dt>
               <dd className="ln-nft__title">{c.title}</dd>
             </div>
             <div className="fd-kv__row">
-              <dt>owner</dt>
+              <dt>{t("landing.live.gallery.rows.owner")}</dt>
               <dd>{shortAccount(c.owner)}</dd>
             </div>
             <div className="fd-kv__row">
-              <dt>token</dt>
+              <dt>{t("landing.live.gallery.rows.token")}</dt>
               <dd>
                 <a href={explorerAccount(CONTRACT_ID)} target="_blank" rel="noopener noreferrer">
                   #{c.tokenId} ↗
@@ -196,13 +225,14 @@ const GALLERY_SLOTS = 9;
 
 /** Empty specimen slide with the same box as a loaded one. */
 function GhostCard({ n }: { n: number }) {
+  const { t } = useT();
   return (
-    <Win as="li" title={`specimen-${String(n + 1).padStart(2, "0")}.svg`} className="ln-nft ln-nft--ghost" bodyClass="ln-nft__body">
+    <Win as="li" title={t("landing.live.gallery.specimen", { id: String(n + 1).padStart(2, "0") })} className="ln-nft ln-nft--ghost" bodyClass="ln-nft__body">
       <div className="ln-nft__media" />
       <dl className="fd-kv ln-nft__meta" aria-hidden="true">
-        {["title", "owner", "token"].map((k) => (
+        {(["title", "owner", "token"] as const).map((k) => (
           <div key={k} className="fd-kv__row">
-            <dt>{k}</dt>
+            <dt>{t(`landing.live.gallery.rows.${k}`)}</dt>
             <dd>—</dd>
           </div>
         ))}
@@ -213,20 +243,18 @@ function GhostCard({ n }: { n: number }) {
 
 /** "Live from testnet": real numbers, the real NFTs (their on-chain SVGs) and real transactions. */
 export function LiveLab({ live }: { live: LiveState }) {
+  const { t } = useT();
   const [numRef, numsSeen] = useInView<HTMLDivElement>();
   const [galRef, galSeen] = useInView<HTMLDivElement>("0px 0px 300px 0px");
   return (
     <section id="live" className="ln-section ln-live" aria-labelledby="ln-live-title">
       <div className="ln-section__inner">
         <header className="ln-section__head" data-reveal="">
-          <Chip dot={live.status === "live" ? "live" : "off"}>{liveChipText(live.status, CONTRACT_ID)}</Chip>
+          <Chip dot={live.status === "live" ? "live" : "off"}>{liveChipText(live.status, CONTRACT_ID, t)}</Chip>
           <h2 id="ln-live-title" className="ln-section__title">
-            <Accent text="Not a mockup. This colony is on-chain." accent="on-chain" />
+            <Accent text={t("landing.live.title")} accent={t("landing.live.accent")} />
           </h2>
-          <p className="ln-section__line">
-            Every number here is read from the contract on testnet, every card is an NFT whose picture the contract draws itself.
-            Testnet only: $SNACC has no monetary value.
-          </p>
+          <p className="ln-section__line">{t("landing.live.line")}</p>
         </header>
 
         <div ref={numRef}>
@@ -236,31 +264,31 @@ export function LiveLab({ live }: { live: LiveState }) {
         <div className="ln-live__grid">
           <div ref={galRef}>
             <h3 className="ln-sub">
-              <Cap icon="cell">On-chain gallery</Cap> <span className="fd-tag">nft_tokens</span>
+              <Cap icon="cell">{t("landing.live.gallery.heading")}</Cap> <span className="fd-tag">nft_tokens</span>
             </h3>
             <Gallery run={galSeen} />
           </div>
           <div>
             <h3 className="ln-sub">
-              <Cap icon="chain">Real transactions</Cap> <span className="fd-tag">testnet</span>
+              <Cap icon="chain">{t("landing.live.txs.heading")}</Cap> <span className="fd-tag">testnet</span>
             </h3>
             <Win title="txs.testnet" className="ln-txs-win">
               <ol className="ln-txs">
-                {EVIDENCE_TXS.map((t, i) => (
-                  <li key={t.hash} data-reveal="" style={{ transitionDelay: `${i * 45}ms` }}>
-                    <a href={explorerTx(t.hash)} target="_blank" rel="noopener noreferrer">
+                {EVIDENCE_TXS.map((tx, i) => (
+                  <li key={tx.hash} data-reveal="" style={{ transitionDelay: `${i * 45}ms` }}>
+                    <a href={explorerTx(tx.hash)} target="_blank" rel="noopener noreferrer">
                       <span className="ln-txs__n" aria-hidden="true">
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <span className="ln-txs__act">{t.action}</span>
-                      <span className="ln-txs__det">{t.detail}</span>
-                      <span className="ln-txs__hash">{shortHash(t.hash, 5, 4)} ↗</span>
+                      <span className="ln-txs__act">{tx.action}</span>
+                      <span className="ln-txs__det">{TX_DETAIL_KEYS[tx.action] ? t(TX_DETAIL_KEYS[tx.action]!) : tx.detail}</span>
+                      <span className="ln-txs__hash">{shortHash(tx.hash, 5, 4)} ↗</span>
                     </a>
                   </li>
                 ))}
               </ol>
             </Win>
-            <p className="ln-demo__note">From the rehearsal run of 2026-11-09 (evidence pack in the Snacc repo). Links open nearblocks.</p>
+            <p className="ln-demo__note">{t("landing.live.txs.note")}</p>
           </div>
         </div>
       </div>

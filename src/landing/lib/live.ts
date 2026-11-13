@@ -3,6 +3,7 @@
  * on-chain NFT media). Numbers come only from the API/chain or the official figures below.
  */
 import { FEVER_THRESHOLD_MK, HYPOTHERMIA_THRESHOLD_MK, classifyZone } from "../../config/zones.ts";
+import { tEn, type Translate } from "../../i18n/catalog.ts";
 
 /** Official figures (Kamus Angka Resmi): thermostat rates and the Cell Lysis split. */
 export const OFFICIAL = {
@@ -19,14 +20,29 @@ export type ZoneKey = "famine" | "normal" | "frenzy";
 
 export interface ZoneInfo {
   key: ZoneKey;
+  /** English label. To show a zone in the reader's language use `zoneLabel(t, key)`. */
   label: string;
+  /** English rate. To show it in the reader's language use `zoneRate(t, key)`. */
   rate: string;
 }
 
+/** The percentage each zone's rate sentence quotes (`{pct}`); the normal zone quotes none. */
+const ZONE_PCT: Record<ZoneKey, string> = { famine: OFFICIAL.famineReliefPct, normal: "", frenzy: OFFICIAL.frenzyBurnPct };
+
+/** Zone name in the language of `tr` (`t` from `useT()`). */
+export function zoneLabel(tr: Translate, key: ZoneKey): string {
+  return tr(`common.zones.${key}.label`);
+}
+
+/** Zone rate sentence in the language of `tr`. */
+export function zoneRate(tr: Translate, key: ZoneKey): string {
+  return tr(`common.zones.${key}.rate`, { pct: ZONE_PCT[key] });
+}
+
 const ZONES: Record<ZoneKey, ZoneInfo> = {
-  famine: { key: "famine", label: "Famine Relief", rate: `${OFFICIAL.famineReliefPct} relief` },
-  normal: { key: "normal", label: "Normal Appetite", rate: "no burn, no relief" },
-  frenzy: { key: "frenzy", label: "Feeding Frenzy", rate: `${OFFICIAL.frenzyBurnPct} burn` },
+  famine: { key: "famine", label: zoneLabel(tEn, "famine"), rate: zoneRate(tEn, "famine") },
+  normal: { key: "normal", label: zoneLabel(tEn, "normal"), rate: zoneRate(tEn, "normal") },
+  frenzy: { key: "frenzy", label: zoneLabel(tEn, "frenzy"), rate: zoneRate(tEn, "frenzy") },
 };
 
 /** Product-language zone for a CrucibleTemp reading (mK). */
@@ -148,9 +164,8 @@ export function safeNftMediaSrc(media: string | null | undefined): string | null
  * Header chip of the Live section. "live" is claimed only while the backend actually answers;
  * while it is still being read the chip says so, and when it did not answer it says "offline".
  */
-export function liveChipText(status: "loading" | "live" | "offline", contractId: string): string {
-  const lead = status === "live" ? "live" : status === "loading" ? "connecting…" : "offline";
-  return `${lead} · NEAR testnet · ${contractId}`;
+export function liveChipText(status: "loading" | "live" | "offline", contractId: string, tr: Translate = tEn): string {
+  return tr("landing.live.chip", { lead: tr(`landing.live.lead.${status}`), contract: contractId });
 }
 
 /** Count-up easing for the live numbers (ease-out). */

@@ -1,3 +1,4 @@
+import { useT } from "../i18n/react.tsx";
 import { LINKS } from "./chapters.ts";
 import { Accent, Cap, Chip, Icon, Win } from "../ui/fd.tsx";
 
@@ -63,40 +64,42 @@ function TeeIcon() {
   );
 }
 
+/** `std` and `file` are standard names and file-like labels (not translated); the words are in `landing.hood.<key>`. */
 const ITEMS = [
-  { std: "NEP-141", file: "nep-141.coin", name: "$SNACC", line: "The memecoin every Snacc eats. A testnet token with no monetary value.", Art: CoinIcon },
-  { std: "NEP-171 / 177", file: "nep-171.nft", name: "Living NFT", line: "Each Snacc is an NFT whose picture is an SVG drawn by the contract itself.", Art: NftIcon },
-  { std: "NEP-245", file: "nep-245.multi", name: "Spores · enzymes · elixirs", line: "The supply chain is a multi-token: raw, refined and finished goods.", Art: VialsIcon },
-  { std: "NEAR AI Cloud", file: "near-ai.tee", name: "TEE diet plans", line: "Plans run inside a TEE; the contract checks the enclave signature.", Art: TeeIcon },
+  { key: "coin", std: "NEP-141", file: "nep-141.coin", Art: CoinIcon },
+  { key: "nft", std: "NEP-171 / 177", file: "nep-171.nft", Art: NftIcon },
+  { key: "multi", std: "NEP-245", file: "nep-245.multi", Art: VialsIcon },
+  { key: "tee", std: "NEAR AI Cloud", file: "near-ai.tee", Art: TeeIcon },
 ] as const;
 
 export function UnderHood() {
+  const { t } = useT();
   return (
     <section id="hood" className="ln-section ln-hood" aria-labelledby="ln-hood-title">
       <div className="ln-section__inner">
         <header className="ln-section__head" data-reveal="">
-          <Chip>fig-08.under-the-hood</Chip>
+          <Chip>{t("landing.hood.chip")}</Chip>
           <h2 id="ln-hood-title" className="ln-section__title">
-            <Accent text="Four NEAR building blocks, one living machine." accent="one living machine" />
+            <Accent text={t("landing.hood.title")} accent={t("landing.hood.accent")} />
           </h2>
         </header>
         <ul className="ln-hood__grid">
-          {ITEMS.map(({ std, file, name, line, Art }, i) => (
+          {ITEMS.map(({ key, std, file, Art }, i) => (
             <li key={std} className="ln-hood__cell" data-reveal="" style={{ transitionDelay: `${i * 80}ms` }}>
               <Win title={file} className="ln-hood__item">
                 <Art />
                 <p className="ln-hood__std">
                   <Cap icon="doc">{std}</Cap>
                 </p>
-                <h3 className="ln-hood__name">{name}</h3>
-                <p className="ln-hood__line">{line}</p>
+                <h3 className="ln-hood__name">{t(`landing.hood.${key}.name`)}</h3>
+                <p className="ln-hood__line">{t(`landing.hood.${key}.line`)}</p>
               </Win>
             </li>
           ))}
         </ul>
-        <nav className="ln-repos" aria-label="Source code" data-reveal="">
+        <nav className="ln-repos" aria-label={t("landing.hood.repos")} data-reveal="">
           <span className="ln-repos__k">
-            <Icon name="grid" /> open source
+            <Icon name="grid" /> {t("landing.hood.openSource")}
           </span>
           {REPOS.map((r) => (
             <a key={r} href={`${LINKS.github}/${r}`} target="_blank" rel="noopener noreferrer">

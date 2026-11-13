@@ -23,7 +23,8 @@ import {
 } from "./lib/camera.ts";
 import { DEFAULT_ANCHORS, prefixIds, type FigureSource } from "./lib/figure.ts";
 import { Icon } from "../ui/fd.tsx";
-import { LENS_PARTS, SCALE_LEVEL_ANCHORS, STAGE_CUES, THEATRE, cardOpacity, frameFor, type TheatreMap } from "./story.ts";
+import { useT } from "../i18n/react.tsx";
+import { LENS_PARTS, SCALE_LEVEL_ANCHORS, STAGE_CUES, THEATRE, cardOpacity, frameFor, type PartKey, type TheatreMap } from "./story.ts";
 import { World, worldBus } from "./world.ts";
 
 const LENS_R = 112;
@@ -72,6 +73,11 @@ const smoothstep = (t: number) => {
  * per frame and writes only what changed.
  */
 export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
+  // The scroll loop below is imperative and runs once per figure; it reads the current translator
+  // through this ref, so switching language never rebuilds the stage.
+  const { t } = useT();
+  const tRef = useRef(t);
+  tRef.current = t;
   const theatreRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -393,7 +399,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
           st.lensCamT = lt;
           lensCam.setAttribute("transform", lt);
         }
-        const tag = `×${LENS_ZOOM} · ${partAt(cur, st.lx, st.ly)}`;
+        const tag = `×${LENS_ZOOM} · ${tRef.current(`landing.parts.${partAt(cur, st.lx, st.ly)}`)}`;
         if (lensTagRef.current && lensTagRef.current.textContent !== tag) lensTagRef.current.textContent = tag;
       }
 
@@ -451,7 +457,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       return best;
     };
 
-    const partAt = (cam: Cam, px: number, py: number) => {
+    const partAt = (cam: Cam, px: number, py: number): PartKey => {
       for (const [id, name] of LENS_PARTS) {
         const a = anchors[id];
         if (!a) continue;
@@ -519,9 +525,10 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       node(start, sx + (left ? 4 : -4), sy, 7, k > 0.5);
       node(elbow, mx, sy, 6, k > 0.5 && e > 0.2);
       node(dot, ex, ey, 9, k > 0.5 && done);
-      if (st.tagText !== cue.part && leaderTagTextRef.current) {
-        st.tagText = cue.part;
-        leaderTagTextRef.current.textContent = cue.part;
+      const partName = tRef.current(`landing.parts.${cue.partKey}`);
+      if (st.tagText !== partName && leaderTagTextRef.current) {
+        st.tagText = partName;
+        leaderTagTextRef.current.textContent = partName;
         st.tagW = tag.offsetWidth;
       }
       // Caption box sits beside the part, on the side away from the card.

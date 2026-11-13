@@ -11,6 +11,7 @@ import type { SkinMode } from "../config/constants.ts";
 import { GUEST_LABEL_KEY, LEGACY_SESSION_KEY } from "../auth/guestLabel.ts";
 import { BROWSER_ALERTS_KEY, SESSION_STORAGE_KEY } from "../account/config.ts";
 import { DEVICE_KEY, TELEMETRY_KEY, track } from "../telemetry.ts";
+import { LOCALE_KEY } from "../i18n/locale.ts";
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -183,14 +184,14 @@ export function saveSkinPref(skin: SkinMode, store: StorageLike | null = appStor
 // ------------------------------------------------------------------ reset
 
 /**
- * Removes the app's own keys (`APP_LOCAL_KEYS`) and returns the ones that were present. Any other key
- * in the store, such as the wallet's, is left alone.
+ * Removes the app's own keys (`APP_LOCAL_KEYS`) and the language choice (`LOCALE_KEY`), and returns the
+ * ones that were present. Any other key in the store, such as the wallet's, is left alone.
  */
 export function resetLocalData(store: StorageLike | null = appStorage()): string[] {
   const removed: string[] = [];
   resetOnboardingMemory();
   if (!store) return removed;
-  for (const key of APP_LOCAL_KEYS) {
+  for (const key of [...APP_LOCAL_KEYS, LOCALE_KEY]) {
     try {
       if (store.getItem(key) !== null) removed.push(key);
       store.removeItem(key);
@@ -200,3 +201,13 @@ export function resetLocalData(store: StorageLike | null = appStorage()): string
   }
   return removed;
 }
+
+// ------------------------------------------------------------------ language (UI-161)
+
+/**
+ * The language choice (`en` or `id`) lives under `snacc_locale`; `i18n/locale.ts` reads and writes it
+ * and the Language section of Settings explains it. It is cleared by `resetLocalData` above. It is not
+ * in `APP_LOCAL_KEY_INFO` yet (that list is pinned by the UI-151 tests and the privacy page copy);
+ * move it there together with those two when the legal copy is updated.
+ */
+export { LOCALE_KEY };

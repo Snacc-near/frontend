@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { CHAPTERS } from "./chapters.ts";
+import { useT } from "../i18n/react.tsx";
+import { CHAPTERS, chapterText } from "./chapters.ts";
 import { AppetiteDemo, ColonyDemo, EnclaveDemo, FeedDemo, MetabolismDemo } from "./demos.tsx";
 import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 import { HeroBlock, Loader, Ruler, Ticker } from "./Hero.tsx";
@@ -32,14 +33,16 @@ function demoFor(id: string, live: LiveState): ReactNode {
 export const figTitle = (num: string, name: string) => `fig-${num}.${name}`;
 
 function ChapterCard({ index, live }: { index: number; live: LiveState }) {
+  const { t } = useT();
   const c = STORY[index]!;
+  const text = chapterText(t, c);
   const titleId = `${c.id}-title`;
   return (
-    <Win as="article" title={figTitle(c.num, c.fig)} className="ln-card" labelledBy={titleId} card>
+    <Win as="article" title={figTitle(c.num, text.fig)} className="ln-card" labelledBy={titleId} card>
       <h2 id={titleId} className="ln-card__title">
-        <Accent text={c.headline} accent={c.accent} />
+        <Accent text={text.headline} accent={text.accent} />
       </h2>
-      <p className="ln-card__line">{c.line}</p>
+      <p className="ln-card__line">{text.line}</p>
       {demoFor(c.id, live)}
     </Win>
   );
@@ -85,24 +88,26 @@ export function TheatreStory({ source, live, finePointer }: { source: FigureSour
  * figure; the crop is mounted as a live copy near the viewport so the demos still move it.
  */
 export function StaticStory({ source, live }: { source: FigureSource | null; live: LiveState }) {
+  const { t } = useT();
   const anchors = { ...DEFAULT_ANCHORS, ...(source?.cam.anchors ?? {}) };
-  const hero = CHAPTERS[0]!;
+  const heroChapter = CHAPTERS[0]!;
+  const hero = chapterText(t, heroChapter);
   return (
     <>
-      <section id={hero.id} className="ln-sblock ln-sblock--hero" aria-labelledby="ln-hero-title">
-        <img className="ln-sblock__fig--hero" src={FIGURE_SVG_URL} alt="Isometric cutaway of the Snacc incubator: a petri dish colony behind the glass, a thermometer and a frosted enclave." width={1600} height={1000} />
+      <section id={heroChapter.id} className="ln-sblock ln-sblock--hero" aria-labelledby="ln-hero-title">
+        <img className="ln-sblock__fig--hero" src={FIGURE_SVG_URL} alt={t("landing.figureAlt")} width={1600} height={1000} />
         <div className="ln-hero__copy ln-hero__copy--static">
-          <Chip>fig-01.incubator · NEAR testnet</Chip>
+          <Chip>{t("landing.hero.chip")}</Chip>
           <h1 id="ln-hero-title" className="ln-hero__title">
             <Accent text={hero.headline} accent={hero.accent} />
           </h1>
           <p className="ln-hero__line">{hero.line}</p>
           <div className="ln-cta">
             <a className="fd-btn fd-btn--primary" href="/app">
-              Enter the lab
+              {t("landing.hero.cta")}
             </a>
             <a className="fd-btn" href="#ch-02">
-              Scroll <span aria-hidden="true">↓</span>
+              {t("landing.hero.scroll")} <span aria-hidden="true">↓</span>
             </a>
           </div>
         </div>
@@ -112,12 +117,13 @@ export function StaticStory({ source, live }: { source: FigureSource | null; liv
       {STORY.map((c, i) => {
         const cue = STAGE_CUES[i + 1]!;
         const a = anchors[cue.anchor] ?? DEFAULT_ANCHORS[cue.anchor]!;
+        const part = t(`landing.parts.${cue.partKey}`);
         return (
           <section key={c.id} id={c.id} className="ln-sblock" aria-labelledby={`${c.id}-title`} data-reveal="">
-            <Win as="figure" title={`${figTitle(c.num, c.fig)} · ${cue.part}`} className="ln-sblock__crop">
+            <Win as="figure" title={`${figTitle(c.num, chapterText(t, c).fig)} · ${part}`} className="ln-sblock__crop">
               <LiveCrop source={source} anchor={a} pad={cue.anchor === "ch-mito" ? 0.6 : 0.25} prefix={`s${c.num}-`} />
               <Cap icon="ring" className="ln-sblock__cap">
-                {cue.part}
+                {part}
               </Cap>
             </Win>
             <ChapterCard index={i} live={live} />

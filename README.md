@@ -215,6 +215,7 @@ file with real values (`.env.local`) is not committed.
 | `src/public/` | `/p/<account>` and `/snacc/<id>` |
 | `src/sign/` | The `/sign` page for the optional Privy login |
 | `src/prefs/` | Local preferences (sound, reduce motion) and the "Reset local data" key list |
+| `src/i18n/` | English and Indonesian: the dictionaries (`messages/<lang>/<ns>.ts`), `t()`, `useT()`, `I18nProvider`, the language choice (`locale.ts`) and the `EN \| ID` switch, see [Languages](#languages-ui-161) |
 | `src/data/` | Reads: backend API client, contract views over public RPCs, collection, NPC quotes, the poller |
 | `src/hud/`, `src/plate/`, `src/game/` | The game UI, the isometric Colony Plate, and the demo simulation plus the Cell Lab postMessage bridge |
 | `src/landing/` | The landing page |
@@ -466,6 +467,60 @@ vectors, nonce and fallback paths against a fake RPC, storage scoping), and word
 focus return are covered through the shared keyboard logic (`src/ui/a11y.ts`) and checked by hand in
 a browser. The wallet popups, Privy login and Supabase are not exercised by tests: they need real
 services.
+
+## Languages (UI-161)
+
+The UI speaks English and Indonesian (`en`, `id`). English is the source of truth. The landing page
+(`/`) is translated; the game, help, account and public pages are being converted one namespace at a
+time, and the Settings window says so.
+
+**Which language.** The saved choice (`snacc_locale` in localStorage, set by the `EN | ID` switch in the
+landing header or the *Language / Bahasa* section of Settings, and cleared by *Reset local data*), else
+the browser language when it is Indonesian (`id`, `id-ID`), else English. Without a browser (tests,
+server rendering) it is always English. `<html lang>` follows the choice. Outside React,
+`getLocale()` from `src/i18n/locale.ts` returns the current language.
+
+**Where the words live.** One file per namespace and language: `src/i18n/messages/en/<ns>.ts` and
+`src/i18n/messages/id/<ns>.ts` (today `common`, `landing`, `demos`, `settings`). A file is a plain nested
+object of strings; `{name}` marks a value filled in at run time. There is no plural engine: write one key
+per case.
+
+```ts
+// src/i18n/messages/en/landing.ts
+const landing = { hero: { cta: "Enter the lab" } };
+export default landing;
+
+// src/i18n/messages/id/landing.ts
+import type { Messages } from "../../types.ts";
+import type en from "../en/landing.ts";
+const landing = { hero: { cta: "Masuk lab" } } satisfies Messages<typeof en>;
+export default landing;
+```
+
+```tsx
+const { t, rich } = useT();                 // src/i18n/react.tsx
+t("landing.hero.cta");                      // plain text, key checked by tsc
+t("demos.feed.note", { bite: 10 });         // {bite} filled in
+rich("landing.live.zone", { zone: <strong>{label}</strong>, rate });   // elements inside the text
+// outside React: import { t } from "../i18n/catalog.ts"; t(getLocale(), "landing.hero.cta")
+```
+
+**How Indonesian is checked.** Every Indonesian file ends in `satisfies Messages<typeof en>`, so a missing
+key, an extra key or a non-string value fails `tsc` (`npm run build`), and `MessageKey` (the type of
+`t()`'s first argument) is derived from the English files, so a typo in a key fails it too.
+`test/ui-161-guards.test.ts` also checks that both languages have the same `{placeholders}`, no empty
+strings, the accent phrase of each headline inside the headline, that the Indonesian copy has none of
+the banned wording (GameFi, investment, yield, guaranteed profit, with the Indonesian equivalents), and
+that no user-visible string is written straight into the JSX of the converted files.
+
+**Add a key.** Add it to the English file, then the Indonesian file (the build tells you if you forget),
+and use it with `t()`. **Add a namespace.** Create `<ns>.ts` in both language folders, then add one line
+to `src/i18n/messages/en/index.ts` and one to `src/i18n/messages/id/index.ts`. **Convert a screen.**
+Replace its literal text with `t()` / `rich()`, add the file to `convertedFiles()` in the guard test, and
+wrap its route in `<I18nProvider>` in `src/main.tsx` (that is what keeps `<html lang>` in step; only the
+landing route is wrapped so far). Names stay as they are in both languages: Snacc, `$SNACC`, ATP, NEAR,
+TEE, contract method names and account ids. The Indonesian glossary is at the top of
+`src/i18n/messages/id/common.ts`.
 
 ## Lighthouse (static gzip server, production build)
 

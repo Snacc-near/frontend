@@ -1,6 +1,7 @@
 import "../ui/fd.css";
 import "./landing.css";
 import { useEffect, useRef, useState } from "react";
+import { useT } from "../i18n/react.tsx";
 import { SiteFooter } from "./SiteFooter.tsx";
 import { SiteHeader } from "./SiteHeader.tsx";
 import { StatusBar } from "./StatusBar.tsx";
@@ -17,6 +18,7 @@ import { Faq, Finale } from "./Finale.tsx";
 import { Spores } from "./Spores.tsx";
 
 export default function Landing() {
+  const { t } = useT();
   const active = useScrollSpy(SECTION_IDS);
   const theatre = useTheatreMode();
   const fine = useFinePointer();
@@ -38,7 +40,7 @@ export default function Landing() {
   return (
     <div className="ln-page" ref={pageRef} data-mode={theatre ? "theatre" : "static"}>
       <a className="ln-skip" href="#main">
-        Skip to content
+        {t("landing.skip")}
       </a>
       <SiteHeader live={live.status} />
       <div className="fd-guides" aria-hidden="true" />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CHAPTERS, LINKS } from "./chapters.ts";
+import { useT } from "../i18n/react.tsx";
+import { CHAPTERS, LINKS, chapterText } from "./chapters.ts";
 import { CONTRACT_ID, explorerAccount } from "./lib/chain.ts";
 import { OFFICIAL } from "./lib/live.ts";
 import { prefixIds, type FigureSource } from "./lib/figure.ts";
@@ -13,6 +14,8 @@ const FINALE = CHAPTERS[6]!;
  * out. The figure copy (id-prefixed) mounts only when the section is near.
  */
 export function Finale({ source }: { source: FigureSource | null }) {
+  const { t } = useT();
+  const text = chapterText(t, FINALE);
   const ref = useRef<HTMLElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
@@ -62,21 +65,21 @@ export function Finale({ source }: { source: FigureSource | null }) {
         <div className="ln-finale__glow" aria-hidden="true" />
         <div className="ln-finale__host" ref={hostRef} aria-hidden="true" dangerouslySetInnerHTML={{ __html: markup }} />
         <Cap icon="spark" className="ln-finale__cap">
-          door open · light on
+          {t("landing.finale.cap")}
         </Cap>
       </div>
       <div className="ln-finale__copy">
-        <Chip>fig-{FINALE.num}.{FINALE.fig}</Chip>
+        <Chip>{`fig-${FINALE.num}.${text.fig}`}</Chip>
         <h2 id="ln-finale-title" className="ln-finale__title">
-          <Accent text={FINALE.headline} accent={FINALE.accent} />
+          <Accent text={text.headline} accent={text.accent} />
         </h2>
-        <p className="ln-finale__line">{FINALE.line}</p>
+        <p className="ln-finale__line">{text.line}</p>
         <div className="ln-cta">
           <a className="fd-btn fd-btn--primary fd-btn--lg" href={LINKS.app} data-magnetic="">
-            Launch app (testnet)
+            {t("landing.finale.launch")}
           </a>
           <a className="fd-btn fd-btn--lg" href={LINKS.github} target="_blank" rel="noopener noreferrer" data-magnetic="">
-            Read the code
+            {t("landing.finale.code")}
           </a>
         </div>
       </div>
@@ -84,64 +87,47 @@ export function Finale({ source }: { source: FigureSource | null }) {
   );
 }
 
-const FAQ: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
-  {
-    q: "What is $SNACC?",
-    a: <>A NEP-141 token on NEAR testnet that every Snacc eats. It is a testnet token with no monetary value; it exists so the economy can be played and checked in the open.</>,
-  },
-  {
-    q: "Is it live?",
-    a: (
-      <>
-        Yes, on NEAR testnet. The contract is{" "}
+/**
+ * FAQ entries, by dictionary key (`landing.faq.<key>.q` / `.a`). The English answer of "Do I need a
+ * wallet?" says "In live testnet mode you sign testnet transactions yourself" (UI-151 pins that
+ * wording; it lives in `i18n/messages/en/landing.ts`).
+ */
+const FAQ_KEYS = ["token", "live", "hungry", "wallet"] as const;
+
+export function Faq() {
+  const { t, rich } = useT();
+  const answers = {
+    token: t("landing.faq.token.a"),
+    live: rich("landing.faq.live.a", {
+      contract: (
         <a href={explorerAccount(CONTRACT_ID)} target="_blank" rel="noopener noreferrer">
           {CONTRACT_ID}
         </a>
-        ; the ticker, the numbers and the gallery on this page are read from it.
-      </>
-    ),
-  },
-  {
-    q: "What happens if I don't feed it?",
-    a: (
-      <>
-        Its Fullness drains over time. A Starving Snacc can be taken over by another player; a Fainted one can be snacked by anyone: {OFFICIAL.lysisBountyPct} goes to the hunter and{" "}
-        {OFFICIAL.lysisPantryPct} to The Pantry.
-      </>
-    ),
-  },
-  {
-    q: "Do I need a wallet?",
-    a: (
-      <>
-        Not to look around. This page and the demo need no wallet and sign nothing. In live testnet mode you sign testnet transactions yourself,
-        with your own NEAR wallet or the optional email login; the app never sees your keys.
-      </>
-    ),
-  },
-];
-
-export function Faq() {
+      ),
+    }),
+    hungry: t("landing.faq.hungry.a", { bounty: OFFICIAL.lysisBountyPct, pantry: OFFICIAL.lysisPantryPct }),
+    wallet: t("landing.faq.wallet.a"),
+  } as const;
   return (
     <section id="faq" className="ln-section ln-faq" aria-labelledby="ln-faq-title">
       <div className="ln-section__inner ln-faq__inner">
         <header data-reveal="">
-          <Chip>faq.md</Chip>
+          <Chip>{t("landing.faq.chip")}</Chip>
           <h2 id="ln-faq-title" className="ln-section__title">
-            <Accent text="Questions from the lab door." accent="lab door" />
+            <Accent text={t("landing.faq.title")} accent={t("landing.faq.accent")} />
           </h2>
         </header>
-        <Win title="questions.md" className="ln-faq__list">
-          {FAQ.map((f, i) => (
-            <details key={f.q} className="ln-faq__item" data-reveal="">
+        <Win title={t("landing.faq.window")} className="ln-faq__list">
+          {FAQ_KEYS.map((key, i) => (
+            <details key={key} className="ln-faq__item" data-reveal="">
               <summary>
                 <span className="ln-faq__n" aria-hidden="true">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="ln-faq__q">{f.q}</span>
+                <span className="ln-faq__q">{t(`landing.faq.${key}.q`)}</span>
                 <span className="ln-faq__pm" aria-hidden="true" />
               </summary>
-              <p>{f.a}</p>
+              <p>{answers[key]}</p>
             </details>
           ))}
         </Win>
