@@ -123,7 +123,7 @@ describe("UI-145 signing page summary", () => {
   it("shows a faucet line in the account chip when the balance cannot cover a hatch", () => {
     const poor = renderToStaticMarkup(<WalletControl wallet={connected} info={{ ...info, nearYocto: "0" }} />);
     expect(poor).toContain('data-testid="wallet-faucet"');
-    expect(poor).toContain("https://docs.near.org/tools/faucet");
+    expect(poor).toContain("https://docs.near.org/getting-started/faucet");
     expect(renderToStaticMarkup(<WalletControl wallet={connected} info={info} />)).not.toContain("wallet-faucet");
   });
 });

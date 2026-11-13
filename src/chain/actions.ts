@@ -57,8 +57,8 @@ export const MIN_STAKE_NEAR = "0.01";
 export const MAX_STAKE_NEAR = "5";
 /** Default feed: 0.05 $SNACC, burnt from the strain's own balance. */
 export const DEFAULT_FEED_SNACC = "0.05";
-/** Official NEAR testnet faucet page on docs.near.org. */
-export const TESTNET_FAUCET_URL = "https://docs.near.org/tools/faucet";
+/** Official NEAR testnet faucet page on docs.near.org (the old `/tools/faucet` path now returns 404). */
+export const TESTNET_FAUCET_URL = "https://docs.near.org/getting-started/faucet";
 /** Below this spendable balance one default hatch (0.25 NEAR stake + storage + gas) is out of reach. */
 export const LOW_NEAR_YOCTO = (3n * 10n ** 23n).toString();
 /** Fallback when `storage_balance_bounds` cannot be read: 5 milliNEAR (`STORAGE_DEPOSIT_MILLINEAR`). */
