@@ -460,11 +460,16 @@ html {
 }
 
 /* The figure's own layer: the theatre moves it with a composited transform between repaints (see
-   Theatre.tsx), so camera motion never invalidates the painted figure. */
+   Theatre.tsx), so camera motion never invalidates the painted figure. The raster scale is pinned
+   (will-change) only while it moves; at rest the hint is dropped so the GPU re-rasters it 1:1. */
 .ln-world {
   position: absolute;
   inset: 0;
+  transform: translateZ(0);
   transform-origin: 0 0;
+}
+
+.ln-world[data-moving] {
   will-change: transform;
 }
 

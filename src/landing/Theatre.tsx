@@ -142,6 +142,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       base: null as Cam | null,
       /** composited transform last written on `.ln-world` */
       rel: "",
+      layerMoving: false,
       pad: 0,
       lensCamT: "",
       lastT: 0,
@@ -257,6 +258,12 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       if (rel !== st.rel) {
         st.rel = rel;
         host.style.transform = rel;
+      }
+      // pin the layer's raster scale while it moves; release it at rest for a 1:1 re-raster
+      const layerMoving = rel !== "" || st.scrolling;
+      if (layerMoving !== st.layerMoving) {
+        st.layerMoving = layerMoving;
+        host.toggleAttribute("data-moving", layerMoving);
       }
       // Depth layers drift against each other with the pointer, in the hero only and never while the
       // page scrolls: each write repaints the figure.
@@ -448,12 +455,20 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       return "glass";
     };
 
-    /** Square handle node centred on (x, y). */
+    /** Square handle node centred on (x, y); writes only what changed. */
+    const nodeState = new WeakMap<SVGRectElement, string>();
     const node = (el: SVGRectElement, x: number, y: number, size: number, on: boolean) => {
-      el.setAttribute("x", (x - size / 2).toFixed(1));
-      el.setAttribute("y", (y - size / 2).toFixed(1));
-      el.setAttribute("width", String(size));
-      el.setAttribute("height", String(size));
+      const nx = (x - size / 2).toFixed(1);
+      const ny = (y - size / 2).toFixed(1);
+      const key = `${nx} ${ny} ${size} ${on ? 1 : 0}`;
+      if (nodeState.get(el) === key) return;
+      nodeState.set(el, key);
+      el.setAttribute("x", nx);
+      el.setAttribute("y", ny);
+      if (el.getAttribute("width") !== String(size)) {
+        el.setAttribute("width", String(size));
+        el.setAttribute("height", String(size));
+      }
       el.style.opacity = on ? "1" : "0";
     };
 
@@ -471,7 +486,10 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
         if (st.leaderOn) {
           st.leaderOn = false;
           path.style.opacity = "0";
-          for (const n of [dot, start, elbow]) n.style.opacity = "0";
+          for (const n of [dot, start, elbow]) {
+            n.style.opacity = "0";
+            nodeState.delete(n);
+          }
           tag.style.opacity = "0";
         }
         return;
@@ -574,6 +592,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       window.clearTimeout(st.scrollTimer);
       stage.removeAttribute("data-scrolling");
       host.style.transform = "";
+      host.removeAttribute("data-moving");
       ro.disconnect();
       io.disconnect();
       off();
