@@ -1,7 +1,8 @@
 /**
  * Settings (UI-151): sound on or off and volume, reduce motion (follows the OS unless you override
  * it), the terminology skin, and "Reset local data", which lists the exact localStorage keys it
- * clears. The wallet's own entries are never touched.
+ * clears. The wallet's own entries are never touched. RES-111 adds "One-tap play"; the reset also
+ * deletes this browser's one-tap key database (not the key on the account).
  */
 import { useState } from "react";
 import type { SkinMode } from "../config/constants.ts";
@@ -17,6 +18,9 @@ import {
 } from "../prefs/prefs.ts";
 import { bioSound } from "../sound.ts";
 import { NotificationSettings } from "../hud/NotificationsModal.tsx";
+import { ONE_TAP_DB } from "../chain/oneTapKeys.ts";
+import { useOneTap } from "../chain/oneTapSession.ts";
+import { OneTapSettings } from "./OneTapSettings.tsx";
 import { AdminTools, MyDataSettings, UsageStatsSettings } from "../account/AccountSettings.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Field, KeycapButton } from "../ui/controls.tsx";
@@ -44,6 +48,7 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
   const [sound, setSound] = useState(() => readSoundPrefs());
   const [motion, setMotion] = useState<MotionPref>(() => readMotionPref());
   const [confirmReset, setConfirmReset] = useState(false);
+  const oneTap = useOneTap();
   const volumePct = Math.round(sound.volume * 100);
 
   const toggleSound = () => {
@@ -140,6 +145,9 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
         <NotificationSettings />
 
         {/* OPS-127 / UI-163 / UI-162: usage stats choice, data download, admin tools (each hides itself when not relevant). */}
+        {/* RES-111: deposit-free actions without a wallet popup (opt-in). */}
+        <OneTapSettings />
+
         <UsageStatsSettings />
         <MyDataSettings />
         <AdminTools />
@@ -150,7 +158,9 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
           </h4>
           <p className="fd-note">
             <strong>Reset local data</strong> clears exactly these keys in this browser, then reloads the page. Your wallet&apos;s own entries,
-            such as the <code>selected-wallet</code> key NEAR Connect keeps, are not touched. The intro will show again.
+            such as the <code>selected-wallet</code> key NEAR Connect keeps, are not touched. The intro will show again. It also deletes the
+            one-tap play key database (IndexedDB <code>{ONE_TAP_DB}</code>) in this browser; that does not remove a one-tap key from your account,
+            so turn one-tap play off first if it is on.
           </p>
           <ul className="guide-keys" data-testid="settings-keys">
             {APP_LOCAL_KEY_INFO.map((k) => (
@@ -167,7 +177,8 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
                 icon="warn"
                 onClick={() => {
                   resetLocalData();
-                  window.location.reload();
+                  // Closes this page's key database connection, then deletes the database.
+                  void oneTap.wipeDevice().finally(() => window.location.reload());
                 }}
                 data-testid="settings-reset-confirm"
               >

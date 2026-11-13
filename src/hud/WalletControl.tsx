@@ -6,6 +6,7 @@
 import type { ReactNode } from "react";
 import type { WalletApi } from "../chain/wallet.tsx";
 import type { AccountInfo } from "../chain/useAccountInfo.ts";
+import { useOneTap } from "../chain/oneTapSession.ts";
 import { LOW_NEAR_YOCTO, TESTNET_FAUCET_URL, formatYocto } from "../chain/actions.ts";
 import { explorerAccount } from "../data/nearView.ts";
 import { ExtLink, KeycapButton } from "../ui/controls.tsx";
@@ -18,6 +19,17 @@ export interface WalletControlProps {
   compact?: boolean;
   /** UI-148: shown beside the faucet link when the wallet is low (the optional starter pack). */
   lowBalanceExtra?: ReactNode;
+}
+
+/** RES-111: a small "one-tap on" tag while this browser holds a working one-tap key (Settings → One-tap play). */
+function OneTapTag() {
+  const st = useOneTap().snapshot.status;
+  if (st.kind !== "on" || st.chain === "missing" || st.outdated) return null;
+  return (
+    <span title="Deposit-free actions are signed in this browser without a wallet popup. Settings → One-tap play." data-testid="wallet-one-tap">
+      <Tag>one-tap on</Tag>
+    </span>
+  );
 }
 
 /** Shortens long implicit (64-hex) account ids for the chip; named accounts stay whole. */
@@ -73,6 +85,7 @@ export function WalletControl({ wallet, info, compact = false, lowBalanceExtra =
           {info.snaccYocto === null ? "—" : formatYocto(info.snaccYocto)} <span className="text-[var(--ink)]">$SNACC</span>
         </span>
         <Tag>testnet</Tag>
+        <OneTapTag />
       </div>
       <span className="font-mono text-[10px] lowercase text-[var(--ink)]">
         {wallet.walletName ? `${wallet.walletName} · ` : ""}$SNACC on testnet has no monetary value

@@ -67,7 +67,8 @@ export const TERMS: LegalDoc = {
       id: "wallet",
       heading: "Your wallet, your responsibility",
       paragraphs: [
-        "You sign every transaction yourself in your own NEAR wallet or through the optional email login. The app never sees or stores your private keys. You are responsible for your account and for what you sign. Transactions are public and cannot be undone.",
+        "Every transaction is signed on your behalf only with keys you control: by your own NEAR wallet or the optional email login, or, if you turn on one-tap play, by a limited key in your browser that your wallet added once at your request. The app never sees or stores your wallet's private keys. You are responsible for your account and for what you sign. Transactions are public and cannot be undone.",
+        "One-tap play is optional and off until you turn it on in Settings. Then your wallet adds a separate, limited key that the app makes in your browser: it can only call the deposit-free game actions that do not pay another player, on the Snacc contract, cannot attach NEAR, and can spend at most its gas allowance from your account. Disconnecting the wallet does not remove it; turn one-tap play off in Settings or delete the key in your wallet.",
       ],
     },
     {
@@ -102,7 +103,8 @@ export const PRIVACY: LegalDoc = {
       heading: "Your wallet account id is public",
       paragraphs: [
         "When you connect a NEAR wallet, the app reads your account id. On NEAR testnet an account id, what it owns and every transaction it signs are public to anyone, and they cannot be deleted. Snacc does not add anything private to that.",
-        "The app never sees your private keys. Wallets sign inside NEAR Connect's sandboxed frames.",
+        "The app never sees your wallet's private keys. Wallets sign inside NEAR Connect's sandboxed frames.",
+        "If you turn on one-tap play, the app makes a limited key in your browser and keeps it there (IndexedDB snacc_one_tap, or the localStorage key snacc_one_tap when IndexedDB is blocked). The private key is never sent anywhere; only its public key goes on chain, in the transaction your wallet signs to add it.",
       ],
     },
     {
