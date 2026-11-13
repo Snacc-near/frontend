@@ -35,7 +35,7 @@ export function resolveReceiver(receiverId?: string): string | null {
   return SIGNABLE_RECEIVERS.includes(receiverId) ? receiverId : null;
 }
 
-export type WalletStatus ="idle" | "restoring" | "connecting" | "connected" | "error";
+export type WalletStatus = "idle" | "restoring" | "connecting" | "connected" | "error";
 
 export interface WalletApi {
   status: WalletStatus;
