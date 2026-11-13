@@ -136,9 +136,15 @@ describe("honesty guards over all of src", () => {
     expect(hits).toEqual([]);
   });
 
-  it("does not claim a wallet connection or verified sign-in", () => {
-    const hits = SOURCES.filter((f) => /wallet connected|connect(ed)? your wallet|Authenticated via|verified: ?true/i.test(fs.readFileSync(f, "utf8"))).map(rel);
+  it("does not claim a verified sign-in, and claims a wallet connection only from real wallet state", () => {
+    const hits = SOURCES.filter((f) => /connect(ed)? your wallet|Authenticated via|verified: ?true/i.test(fs.readFileSync(f, "utf8"))).map(rel);
     expect(hits).toEqual([]);
+    // UI-145: "wallet connected" may only appear where the state comes from the real connector (`useWallet`).
+    const claims = SOURCES.filter((f) => {
+      const t = fs.readFileSync(f, "utf8");
+      return /wallet connected/i.test(t) && !/\buseWallet\(\)/.test(t);
+    }).map(rel);
+    expect(claims).toEqual([]);
   });
 
   it("puts no API key in a VITE_ variable", () => {
