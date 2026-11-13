@@ -784,8 +784,8 @@ export const App: React.FC = () => {
           ) : (
             <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]" data-testid="live-tx-note">
               {signedActions
-                ? "hatch and feed are signed in your wallet on testnet · $SNACC on testnet has no monetary value"
-                : "connect a wallet to hatch and feed on testnet · reads work without one"}
+                ? "game actions are signed in your wallet on testnet · $SNACC on testnet has no monetary value"
+                : "connect a wallet to sign game actions on testnet · reads work without one"}
             </span>
           )}
           {mode === "demo" && walletConnected ? (

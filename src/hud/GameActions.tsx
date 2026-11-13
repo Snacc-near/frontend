@@ -800,8 +800,13 @@ export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStr
           <ul className="fd-stack" style={{ gap: 6 }} data-testid="hungry-list">
             {list.data.items.map((h) => (
               <li key={h.vessel.strain_id}>
-                <KeycapButton block aria-pressed={pickedId === h.vessel.strain_id} onClick={() => setPickedId(h.vessel.strain_id)} className="justify-between">
-                  <span>{`#${h.vessel.strain_id} · ${roleText(h.vessel.role_mask)} · ${h.vessel.owner_id}`}</span>
+                <KeycapButton
+                  block
+                  aria-pressed={pickedId === h.vessel.strain_id}
+                  onClick={() => setPickedId(h.vessel.strain_id)}
+                  style={{ whiteSpace: "normal", height: "auto", flexWrap: "wrap", justifyContent: "space-between", textAlign: "left", maxWidth: "100%", minWidth: 0, columnGap: 12 }}
+                >
+                  <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{`#${h.vessel.strain_id} · ${roleText(h.vessel.role_mask)} · ${h.vessel.owner_id}`}</span>
                   <span className="fd-num">{h.kind === "starving" ? "starving · vitality 0" : `distressed · vitality ${h.vessel.effective_vitality.toLocaleString("en-US")}`}</span>
                 </KeycapButton>
               </li>
