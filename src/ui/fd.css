@@ -931,8 +931,8 @@
   text-overflow: ellipsis;
 }
 
-/* nine tool keys plus telemetry need about 1100 px; below that they fold into the "tools" sheet */
-@media (max-width: 1139.98px) {
+/* ten tool keys (the market key included) plus telemetry need about 1190 px; below that they fold into the "tools" sheet */
+@media (max-width: 1239.98px) {
   .tools-bar .tools-bar__tool {
     display: none;
   }
@@ -943,8 +943,8 @@
   }
 }
 
-/* with the profile and quests keys shown (eleven tool keys plus telemetry) the strip needs about 1310 px */
-@media (max-width: 1359.98px) {
+/* with the profile and quests keys shown (twelve tool keys plus telemetry) the strip needs about 1400 px */
+@media (max-width: 1459.98px) {
   .tools-bar--full .tools-bar__tool {
     display: none;
   }

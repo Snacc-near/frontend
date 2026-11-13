@@ -282,6 +282,22 @@ players, so nothing in the browser can change progress. XP, levels, quests, seas
 and off-chain: no token, no NEAR, no money value. Code: `src/account/quests.ts` (pure maths),
 `src/hud/QuestsModal.tsx`, `src/hud/SeasonBoard.tsx`, `src/hud/XpWidgets.tsx`.
 
+### Market (UI-164)
+
+The toolbar's **market** key opens a testnet demo marketplace for Snaccs (`snacc-market.testnet`, the
+`contracts/market` crate; fee 0%, at most 20 listings per seller, price up to 10,000 NEAR). Testnet NEAR
+and Snaccs have no money value. Three tabs: **Browse** (every open listing, paged, with the on-chain SVG,
+vitality, generation, seller and price; a confirm step shows the exact deposit before a purchase),
+**Sell** (list one of your living Snaccs for a price in NEAR) and **My listings** (change the price or
+delist). A Snacc moves with its whole state (stomach `$SNACC`, inventory) when it is sold, like a normal
+transfer. A listing is the Snacc contract's `nft_transfer_call` to the market with
+`msg = {"price":"<yoctoNEAR>"}` (1 yoctoNEAR, 100 TGas); `buy` (deposit = price, 150 TGas), `delist` and
+`update_price` go to the market contract. The market can refuse a listing or refund a purchase inside a
+transaction the wallet reports as successful, so after each success the window reads the chain again and
+only says "listed" or "bought" when the views agree. Reads use FastNEAR first. Prices are parsed with exact
+BigInt math. Code: `src/chain/market.ts`, `src/hud/MarketModal.tsx`; `signAndSend(calls, receiverId?)`
+signs for the Snacc contract by default and for the market only (any other receiver is refused).
+
 ## Wallet (testnet)
 
 The header has a **connect wallet** key (`src/chain/wallet.tsx`, [NEAR Connect](https://github.com/hot-dao/near-selector),

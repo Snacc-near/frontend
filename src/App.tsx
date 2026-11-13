@@ -65,6 +65,7 @@ const ProfileModal = React.lazy(() => import("./hud/ProfileModal.tsx"));
 const QuestsModal = React.lazy(() => import("./hud/QuestsModal.tsx"));
 const NotificationsModal = React.lazy(() => import("./hud/NotificationsModal.tsx"));
 const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
+const MarketModal = React.lazy(() => import("./hud/MarketModal.tsx"));
 const SwapPanel = React.lazy(() => import("./hud/SwapPanel.tsx"));
 const NpcPanel = React.lazy(() => import("./hud/NpcPanel.tsx"));
 const SocialLeaderboardModal = React.lazy(() => import("./hud/SocialLeaderboardModal.tsx"));
@@ -946,6 +947,7 @@ export const App: React.FC = () => {
             focusStrainId={collectionFocus}
           />
         ) : null}
+        {tool === "market" ? <MarketModal onClose={closeTool} info={accountInfo} onDone={handleChainDone} /> : null}
         {tool === "profile" && account.enabled ? <ProfileModal onClose={closeTool} /> : null}
         {tool === "quests" && account.enabled ? <QuestsModal onClose={closeTool} /> : null}
         {tool === "notifications" && account.enabled ? (

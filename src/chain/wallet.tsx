@@ -11,6 +11,7 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CONTRACT_ID, toWalletActions, type ContractCall } from "./actions.ts";
+import { MARKET_ID } from "../data/nearView.ts";
 import { readOutcome, readThrown, type TxResult } from "./txResult.ts";
 import { privyManifestFromEnv } from "./privy.ts";
 
@@ -25,7 +26,16 @@ export const NEAR_CONNECT_CSP_NONCE = "c25hY2MtbmVhci1jb25uZWN0";
 /** Key NEAR Connect itself writes to localStorage once a wallet is chosen. */
 const SELECTED_WALLET_KEY = "selected-wallet";
 
-export type WalletStatus = "idle" | "restoring" | "connecting" | "connected" | "error";
+/** Contracts the game signs transactions for: the Snacc contract (default) and the testnet market (UI-164). */
+export const SIGNABLE_RECEIVERS: readonly string[] = [CONTRACT_ID, MARKET_ID];
+
+/** The receiver for `signAndSend`: the Snacc contract when none is given, the id itself when allowed, otherwise null. */
+export function resolveReceiver(receiverId?: string): string | null {
+  if (receiverId === undefined) return CONTRACT_ID;
+  return SIGNABLE_RECEIVERS.includes(receiverId) ? receiverId : null;
+}
+
+export type WalletStatus ="idle" | "restoring" | "connecting" | "connected" | "error";
 
 export interface WalletApi {
   status: WalletStatus;
@@ -36,8 +46,11 @@ export interface WalletApi {
   error: string | null;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
-  /** Signs and sends one transaction to the Snacc contract with the given calls, in order. */
-  signAndSend: (calls: ContractCall[]) => Promise<TxResult>;
+  /**
+   * Signs and sends one transaction with the given calls, in order. The receiver is the Snacc
+   * contract unless `receiverId` names the testnet market (UI-164); any other receiver is refused.
+   */
+  signAndSend: (calls: ContractCall[], receiverId?: string) => Promise<TxResult>;
   /**
    * NEP-413 message signing (UI-148 sign-in to the optional profile). Rejects when no wallet is
    * connected, the player cancels, or the wallet cannot sign messages.
@@ -221,18 +234,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setStatus("idle");
   }, []);
 
-  const signAndSend = useCallback(async (calls: ContractCall[]): Promise<TxResult> => {
+  const signAndSend = useCallback(async (calls: ContractCall[], receiverId?: string): Promise<TxResult> => {
     const signer = accountRef.current;
     if (!signer) return notConnected();
     // The game call is the last action (a storage registration may come first).
     const method = calls[calls.length - 1]?.methodName;
+    // Only the Snacc contract (the default) and the testnet market can be a receiver; nothing else reaches the wallet.
+    const receiver = resolveReceiver(receiverId);
+    if (receiver === null) return readThrown(new Error(`receiver ${receiverId} is not a contract this game signs for`), method);
     try {
       const connector = await loadConnector();
       const wallet = await connector.wallet();
       const outcome = await wallet.signAndSendTransaction({
         network: NETWORK,
         signerId: signer,
-        receiverId: CONTRACT_ID,
+        receiverId: receiver,
         actions: toWalletActions(calls),
       });
       return readOutcome(outcome, method);
