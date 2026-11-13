@@ -184,6 +184,26 @@ export const unreadCount = (items: readonly NotificationRow[]) => items.filter((
 /** Kinds whose click opens that Snacc's detail. */
 export const opensStrain = (n: NotificationRow) => (n.kind === "starving" || n.kind === "distressed") && typeof n.strain_id === "number";
 
+/** UI-159: the Snacc a notification asks you to feed right now (starving/distressed), else null. */
+export const feedTargetOf = (n: NotificationRow): number | null => (opensStrain(n) ? (n.strain_id as number) : null);
+
+/** UI-159: window event that asks the app to open the feed window for `detail.strainId`. */
+export const FEED_REQUEST_EVENT = "snacc:feed-request";
+
+/** UI-159: `/app?feed=<id>` deep link (browser alerts, web push, shared links) → strain id, else null. */
+export function feedParamOf(search: string): number | null {
+  const raw = new URLSearchParams(search).get("feed");
+  if (raw === null || !/^\d{1,9}$/.test(raw)) return null;
+  return Number(raw);
+}
+
+/** UI-159: urgency line under a starving/distressed notification. */
+export function urgencyOf(n: NotificationRow): string | null {
+  if (n.kind === "starving") return "At risk now: anyone can harvest a starving Snacc. Feed it to keep it.";
+  if (n.kind === "distressed") return "Vitality is low: feed it before it starves and can be harvested or adopted.";
+  return null;
+}
+
 // ------------------------------------------------------------------ leaderboard
 
 export interface NamedRow {

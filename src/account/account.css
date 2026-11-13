@@ -157,6 +157,15 @@
   font-size: 12px;
   color: var(--ink);
 }
+/* UI-159: starving/distressed alerts carry an urgency line and a "feed now" button. */
+.acct-notif__urgent {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bad, #c0392b);
+}
+.acct-notif[data-urgent] .acct-notif__dot {
+  background: var(--bad, #c0392b);
+}
 .acct-notif__when {
   font: 400 10px/1.2 var(--mono, ui-monospace, monospace);
   color: var(--ink);

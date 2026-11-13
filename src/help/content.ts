@@ -172,7 +172,7 @@ export const RULES: readonly RuleBlock[] = [
   {
     id: "modes",
     title: "What works in live mode today",
-    body: "In live testnet mode the game signs two actions: hatch and feed. Produce ATP, extract, transmute, synthesize, divide and harvest run in the demo only.",
+    body: "In live testnet mode your wallet signs every player action: hatch, feed, produce ATP, extract, transmute, synthesize, divide, splice, hostile takeover, adopt, harvest a starving Snacc, buy spores from the NPC, claim the industrial dividend, and gift or send Snaccs and $SNACC. Testnet $SNACC has no money value.",
   },
 ];
 
