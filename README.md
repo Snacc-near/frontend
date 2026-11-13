@@ -283,10 +283,26 @@ players, so nothing in the browser can change progress. XP, levels, quests, seas
 and off-chain: no token, no NEAR, no money value. Code: `src/account/quests.ts` (pure maths),
 `src/hud/QuestsModal.tsx`, `src/hud/SeasonBoard.tsx`, `src/hud/XpWidgets.tsx`.
 
+### Market (UI-164)
+
+The toolbar's **market** key opens a testnet demo marketplace for Snaccs (`snacc-market.testnet`, the
+`contracts/market` crate; fee 0%, at most 20 listings per seller, price up to 10,000 NEAR). Testnet NEAR
+and Snaccs have no money value. Three tabs: **Browse** (every open listing, paged, with the on-chain SVG,
+vitality, generation, seller and price; a confirm step shows the exact deposit before a purchase),
+**Sell** (list one of your living Snaccs for a price in NEAR) and **My listings** (change the price or
+delist). A Snacc moves with its whole state (stomach `$SNACC`, inventory) when it is sold, like a normal
+transfer. A listing is the Snacc contract's `nft_transfer_call` to the market with
+`msg = {"price":"<yoctoNEAR>"}` (1 yoctoNEAR, 100 TGas); `buy` (deposit = price, 150 TGas), `delist` and
+`update_price` go to the market contract. The market can refuse a listing or refund a purchase inside a
+transaction the wallet reports as successful, so after each success the window reads the chain again and
+only says "listed" or "bought" when the views agree. Reads use FastNEAR first. Prices are parsed with exact
+BigInt math. Code: `src/chain/market.ts`, `src/hud/MarketModal.tsx`; `signAndSend(calls, receiverId?)`
+signs for the Snacc contract by default and for the market only (any other receiver is refused).
+
 ### Invite friends (UI-158)
 
-**Status: built, not deployed, and it needs the backend migration `0007` (referrals) applied to the profile
-database**; like the rest of this section it stays hidden while the two Supabase variables are empty. Any page
+**Status: live since 2026-11-13** (backend migration `0007` applied to the profile database); like the rest of
+this section it stays hidden while the two Supabase variables are empty. Any page
 that is opened with `?ref=<account>` (for example `https://snacc-nu.vercel.app/app?ref=alice.testnet`) stores that
 NEAR account in `localStorage` for seven days (`src/main.tsx` -> `captureReferral`; a malformed account is ignored,
 the newest link wins). After the player signs in and has a profile, `SessionProvider` calls the database function
@@ -305,9 +321,11 @@ WhatsApp and Facebook fetch carries no per-page tags. `vercel.json` therefore se
 matches a link-preview crawler (the list is `CRAWLER_UA_TOKENS` in `server/share/validate.js`; a test keeps the
 regex in `vercel.json` identical) to the function `api/share.js`, which answers with `og:title`,
 `og:description`, `og:image`, `og:url`, `twitter:card=summary_large_image` and a plain link. Every other visitor
-still gets the SPA from the unchanged catch-all rewrite.
+still gets the SPA from the catch-all rewrite, which skips `/api/`.
 
-`api/og/snacc/<id>` and `api/og/p/<account>` return a 1200x630 PNG: the Snacc's on-chain SVG (read with
+`/api/og/snacc/<id>` and `/api/og/p/<account>` (rewritten to the static functions `api/og-snacc.js` and
+`api/og-profile.js`, because the catch-all used to win over dynamic `[id].js` routes on production) return a
+1200x630 PNG: the Snacc's on-chain SVG (read with
 `nft_token` and `get_strain` from `https://test.rpc.fastnear.com`, falling back to
 `https://rpc.testnet.fastnear.com`) on a branded card with status, vitality, generation and owner; or the player's
 username, level (`player_xp_snacc`) and Snacc count (`nft_supply_for_owner`). The SVG is chain data, so scripts,

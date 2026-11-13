@@ -1,7 +1,7 @@
 /**
- * One toolbar for the game's tools: telemetry toggle plus the tool windows (the seven game tools, quests,
- * profile, help and settings). Below 1140 px (1260 px when the profile key is shown too) the tool keys fold into a
- * "tools" key that opens a sheet.
+ * One toolbar for the game's tools: telemetry toggle plus the tool windows (the seven game tools, the market,
+ * quests, profile, help and settings). Below 1240 px (1460 px when the profile key is shown too) the tool keys
+ * fold into a "tools" key that opens a sheet.
  */
 import { useState } from "react";
 import type { SkinMode } from "../config/constants.ts";
@@ -9,7 +9,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
 
-export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "quests" | "profile" | "notifications" | "help" | "settings";
+export type ToolId = "collection" | "market" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "quests" | "profile" | "notifications" | "help" | "settings";
 
 export interface ToolDef {
   id: ToolId;
@@ -19,6 +19,8 @@ export interface ToolDef {
 
 export const TOOLS: readonly ToolDef[] = [
   { id: "collection", label: () => "my collection", icon: "cell" },
+  // UI-164: the testnet demo marketplace.
+  { id: "market", label: () => "market", icon: "grid" },
   { id: "npc", label: (s) => (s === "fintech" ? "market makers" : "npc merchants"), icon: "scale" },
   { id: "swap", label: () => "swap quote", icon: "swap" },
   { id: "social", label: (s) => (s === "fintech" ? "top feeders" : "great feast"), icon: "podium" },

@@ -24,10 +24,10 @@ describe("toolbar fold (UI-152)", () => {
     expect(TOOLS.some((t) => t.id === "quests")).toBe(true);
   });
 
-  it("folds the full strip into the tools sheet below 1360 px and the short one below 1140 px", () => {
+  it("folds the full strip into the tools sheet below 1460 px and the short one below 1240 px (UI-164: the market key widened both)", () => {
     const css = read("src/ui/fd.css");
-    expect(css).toMatch(/@media \(max-width: 1139\.98px\)[^@]*\.tools-bar \.tools-bar__tool\s*\{\s*display: none;/);
-    expect(css).toMatch(/@media \(max-width: 1359\.98px\)[^@]*\.tools-bar--full \.tools-bar__tool\s*\{\s*display: none;/);
+    expect(css).toMatch(/@media \(max-width: 1239\.98px\)[^@]*\.tools-bar \.tools-bar__tool\s*\{\s*display: none;/);
+    expect(css).toMatch(/@media \(max-width: 1459\.98px\)[^@]*\.tools-bar--full \.tools-bar__tool\s*\{\s*display: none;/);
     expect(css).toMatch(/\.tools-bar--full \.tools-bar__more\s*\{\s*display: inline-flex;/);
   });
 });
