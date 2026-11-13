@@ -34,6 +34,14 @@ import { AppetiteDemo, ColonyDemo, EnclaveDemo, FeedDemo, MetabolismDemo } from 
 import { liveChipText, zoneFromTemp, zoneLabel, zoneRate } from "../src/landing/lib/live.ts";
 import type { LiveState } from "../src/landing/useLive.ts";
 import type { ReactElement } from "react";
+import { skinLabels } from "../src/i18n/skin.ts";
+import { SKIN_LABELS } from "../src/config/constants.ts";
+import { ResourceBar } from "../src/hud/GameHud.tsx";
+import { ThermalGauge } from "../src/hud/ThermalGauge.tsx";
+import { ToolsToolbar } from "../src/hud/ToolsToolbar.tsx";
+import { WalletControl } from "../src/hud/WalletControl.tsx";
+import type { WalletApi } from "../src/chain/wallet.tsx";
+import type { AccountInfo } from "../src/chain/useAccountInfo.ts";
 
 const BASE: LiveState = { status: "loading", macro: null, alive: null, strains: null, events: null, last: null, updatedAt: null };
 
@@ -271,6 +279,46 @@ describe("UI-161 landing in Indonesian", () => {
     for (const keep of ["CrucibleTemp", "The Pantry", "nft_tokens", "apply_tee_mutation_zero_trust", "ft_burn", "9bTCp"]) expect(rows).toContain(keep);
     expect(t("id", "landing.chapters.ch03.line")).toContain("3.5%");
     expect(t("id", "landing.chapters.ch03.line")).toContain("2%");
+  });
+});
+
+// ------------------------------------------------------------------ the game HUD (phase B1)
+
+describe("UI-161 game HUD", () => {
+  it("the toolbar, resource bar and gauge follow the language and the skin", () => {
+    const noop = () => {};
+    const tools = (skin: "biolab" | "fintech", guest: string | null = null) => (
+      <ToolsToolbar skin={skin} panelsOpen={false} onTogglePanels={noop} onOpen={noop} guestLabel={guest} />
+    );
+    const idBio = inId(tools("biolab", "Rina"));
+    expect(idBio).toContain('aria-label="alat game"');
+    expect(idBio).toContain("koleksiku");
+    expect(idBio).toContain("pedagang npc");
+    expect(idBio).toContain("tamu: Rina");
+    expect(inId(tools("fintech"))).toContain("market maker");
+    expect(inEn(tools("biolab"))).toContain("npc merchants");
+
+    const res = { snacc: "1", atp: "2", spores: "3", enzymes: "4", elixir: "5" };
+    expect(inId(<ResourceBar mode="demo" resources={res} skin="biolab" />)).toContain("spora");
+    expect(inId(<ResourceBar mode="live" resources={res} skin="fintech" />)).toContain("kupon");
+    expect(inEn(<ResourceBar mode="live" resources={res} skin="fintech" />)).toContain("coupons");
+
+    expect(inId(<ThermalGauge crucibleTempMk={605} skin="biolab" />)).toContain("zona suhu 605 milikelvin");
+    expect(inEn(<ThermalGauge crucibleTempMk={605} skin="biolab" />)).toContain("temperature zone 605 milikelvin");
+  });
+
+  it("the Indonesian skin vocabulary has every label of the English SKIN_LABELS", () => {
+    for (const skin of ["biolab", "fintech"] as const) {
+      expect(Object.keys(skinLabels((k, v) => t("id", k, v), skin)).sort()).toEqual(Object.keys(SKIN_LABELS[skin]).sort());
+      expect(skinLabels(tEn, skin)).toEqual(SKIN_LABELS[skin]);
+    }
+  });
+
+  it("the wallet control says connect in Indonesian", () => {
+    const wallet = { status: "disconnected", accountId: null, error: null, connect: async () => {}, disconnect: async () => {}, walletName: null } as unknown as WalletApi;
+    const info = { nearYocto: null, snaccYocto: null } as unknown as AccountInfo;
+    expect(inId(<WalletControl wallet={wallet} info={info} />)).toContain("sambungkan dompet");
+    expect(inEn(<WalletControl wallet={wallet} info={info} />)).toContain("connect wallet");
   });
 });
 

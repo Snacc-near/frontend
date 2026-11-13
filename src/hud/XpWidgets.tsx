@@ -5,13 +5,15 @@
  */
 import { useEffect, useState } from "react";
 import { xpBar, type PlayerXpRow } from "../account/quests.ts";
+import { useT } from "../i18n/react.tsx";
 import "../account/account.css";
 
 /** "Lv 4" chip shown next to a player's name. */
 export function LevelBadge({ level }: { level: number }) {
+  const { t } = useT();
   return (
-    <span className="acct-level-badge" title={`level ${level}`} data-testid="level-badge">
-      Lv {level}
+    <span className="acct-level-badge" title={t("hud.xp.badgeTitle", { n: level })} data-testid="level-badge">
+      {t("hud.xp.badge", { n: level })}
     </span>
   );
 }
@@ -27,18 +29,19 @@ export function ProgressBar({ value, max, label, percent, done = false }: { valu
 
 /** Level, total XP and the bar to the next level. `xp` null = nothing recorded yet (level 1, 0 XP). */
 export function XpBar({ xp }: { xp: PlayerXpRow | null | undefined }) {
+  const { t } = useT();
   const b = xpBar(xp);
   return (
-    <section className="fd-stack" aria-label="level and experience" data-testid="xp-bar">
+    <section className="fd-stack" aria-label={t("hud.xp.region")} data-testid="xp-bar">
       <div className="fd-row fd-row--between">
-        <span className="acct-level">Level {b.level}</span>
+        <span className="acct-level">{t("hud.xp.level", { n: b.level })}</span>
         <span className="fd-num" data-testid="xp-total">
-          {b.totalXp.toLocaleString("en-US")} XP
+          {t("hud.xp.total", { n: b.totalXp.toLocaleString("en-US") })}
         </span>
       </div>
-      <ProgressBar value={b.into} max={b.span} percent={b.percent} label={`level ${b.level}: ${b.into} of ${b.span} XP`} />
+      <ProgressBar value={b.into} max={b.span} percent={b.percent} label={t("hud.xp.bar", { level: b.level, into: b.into, span: b.span })} />
       <p className="fd-field__hint" data-testid="xp-to-next">
-        {b.toNext.toLocaleString("en-US")} XP to level {b.level + 1}
+        {t("hud.xp.toNext", { n: b.toNext.toLocaleString("en-US"), level: b.level + 1 })}
       </p>
     </section>
   );

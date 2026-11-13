@@ -5,6 +5,8 @@
  */
 import { useState } from "react";
 import type { SkinMode } from "../config/constants.ts";
+import { tEn, type Translate } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
@@ -13,25 +15,42 @@ export type ToolId = "collection" | "market" | "npc" | "swap" | "social" | "thes
 
 export interface ToolDef {
   id: ToolId;
+  /** English label; the toolbar shows `toolLabel(t, ...)` in the reader's language. */
   label: (skin: SkinMode, guestLabel: string | null) => string;
   icon: IconName;
 }
 
+/** A tool's label in the language of `tr`. The guest tool shows the label the player chose, when set. */
+export function toolLabel(tr: Translate, id: ToolId, skin: SkinMode, guestLabel: string | null): string {
+  switch (id) {
+    case "npc":
+      return tr(`hud.tools.npc.${skin}`);
+    case "social":
+      return tr(`hud.tools.social.${skin}`);
+    case "guest":
+      return guestLabel ? tr("hud.tools.guestNamed", { name: guestLabel }) : tr("hud.tools.guest");
+    default:
+      return tr(`hud.tools.${id}`);
+  }
+}
+
+const en = (id: ToolId): ToolDef["label"] => (skin, guest) => toolLabel(tEn, id, skin, guest);
+
 export const TOOLS: readonly ToolDef[] = [
-  { id: "collection", label: () => "my collection", icon: "cell" },
+  { id: "collection", label: en("collection"), icon: "cell" },
   // UI-164: the testnet demo marketplace.
-  { id: "market", label: () => "market", icon: "grid" },
-  { id: "npc", label: (s) => (s === "fintech" ? "market makers" : "npc merchants"), icon: "scale" },
-  { id: "swap", label: () => "swap quote", icon: "swap" },
-  { id: "social", label: (s) => (s === "fintech" ? "top feeders" : "great feast"), icon: "podium" },
-  { id: "thesis", label: () => "thesis", icon: "doc" },
-  { id: "recipes", label: () => "recipes", icon: "search" },
-  { id: "guest", label: (_s, g) => (g ? `guest: ${g}` : "guest label"), icon: "user" },
+  { id: "market", label: en("market"), icon: "grid" },
+  { id: "npc", label: en("npc"), icon: "scale" },
+  { id: "swap", label: en("swap"), icon: "swap" },
+  { id: "social", label: en("social"), icon: "podium" },
+  { id: "thesis", label: en("thesis"), icon: "doc" },
+  { id: "recipes", label: en("recipes"), icon: "search" },
+  { id: "guest", label: en("guest"), icon: "user" },
   // UI-153 and UI-148: hidden (see `hidden`) when the profile features are off.
-  { id: "quests", label: () => "quests", icon: "check" },
-  { id: "profile", label: () => "profile", icon: "user" },
-  { id: "help", label: () => "help", icon: "spark" },
-  { id: "settings", label: () => "settings", icon: "gauge" },
+  { id: "quests", label: en("quests"), icon: "check" },
+  { id: "profile", label: en("profile"), icon: "user" },
+  { id: "help", label: en("help"), icon: "spark" },
+  { id: "settings", label: en("settings"), icon: "gauge" },
 ];
 
 /** With every tool shown (the profile key included) the strip is wider, so it folds at a wider screen (see `fd.css`). */
@@ -48,42 +67,43 @@ export interface ToolsToolbarProps {
 }
 
 export function ToolsToolbar({ skin, panelsOpen, onTogglePanels, onOpen, guestLabel, hidden = [] }: ToolsToolbarProps) {
+  const { t } = useT();
   const [sheet, setSheet] = useState(false);
-  const tools = TOOLS.filter((t) => !hidden.includes(t.id));
+  const tools = TOOLS.filter((tool) => !hidden.includes(tool.id));
   return (
     <>
       <div
         className={`fd-toolbar fd-dither tools-bar pointer-events-auto${tools.length >= FULL_TOOL_COUNT ? " tools-bar--full" : ""}`}
         role="group"
-        aria-label="game tools"
+        aria-label={t("hud.tools.group")}
         data-testid="tools-bar"
       >
         <KeycapButton mono icon="lines" aria-expanded={panelsOpen} onClick={onTogglePanels}>
-          telemetry
+          {t("hud.tools.telemetry")}
         </KeycapButton>
-        {tools.map((t) => (
-          <KeycapButton key={t.id} mono icon={t.icon} className="tools-bar__tool" aria-haspopup="dialog" onClick={() => onOpen(t.id)}>
-            <span className="tools-bar__label">{t.label(skin, guestLabel)}</span>
+        {tools.map((tool) => (
+          <KeycapButton key={tool.id} mono icon={tool.icon} className="tools-bar__tool" aria-haspopup="dialog" onClick={() => onOpen(tool.id)}>
+            <span className="tools-bar__label">{toolLabel(t, tool.id, skin, guestLabel)}</span>
           </KeycapButton>
         ))}
         <KeycapButton mono icon="more" className="tools-bar__more" aria-haspopup="dialog" aria-expanded={sheet} onClick={() => setSheet(true)}>
-          tools
+          {t("hud.tools.more")}
         </KeycapButton>
       </div>
       {sheet ? (
-        <Modal title="tools.menu" heading="Tools" onClose={() => setSheet(false)} testId="tools-sheet">
+        <Modal title="tools.menu" heading={t("hud.tools.heading")} onClose={() => setSheet(false)} testId="tools-sheet">
           <div className="fd-tiles">
-            {tools.map((t) => (
+            {tools.map((tool) => (
               <KeycapButton
-                key={t.id}
+                key={tool.id}
                 mono
-                icon={t.icon}
+                icon={tool.icon}
                 onClick={() => {
                   setSheet(false);
-                  onOpen(t.id);
+                  onOpen(tool.id);
                 }}
               >
-                {t.label(skin, guestLabel)}
+                {toolLabel(t, tool.id, skin, guestLabel)}
               </KeycapButton>
             ))}
           </div>

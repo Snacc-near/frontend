@@ -1,7 +1,9 @@
 import React from "react";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS, VITALITY_MAX } from "../config/constants.ts";
+import { VITALITY_MAX } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 import { formatLiveVitality } from "../data/liveView.ts";
 
 interface VitalsPillProps {
@@ -23,7 +25,8 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
   mode,
   onFeedClick,
 }) => {
-  const labels = SKIN_LABELS[skin];
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
   const isPending = optimistic.status === "pending";
   const shownValue = mode === "live" ? formatLiveVitality(liveVitality) : optimistic.currentVitality.toLocaleString("en-US");
   const pct =
@@ -51,7 +54,7 @@ export const VitalsPill: React.FC<VitalsPillProps> = ({
         </div>
         {mode === "live" && liveStatus && (
           <div className="flex items-center gap-1.5 text-[10px] text-slate-400 lowercase">
-            <span>status:</span>
+            <span>{t("hud.vitals.status")}</span>
             <span
               className={`font-mono font-semibold ${
                 liveStatus === "Liquidated"

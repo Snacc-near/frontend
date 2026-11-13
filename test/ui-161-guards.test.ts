@@ -119,16 +119,25 @@ function convertedFiles(): string[] {
     .readdirSync(path.join(ROOT, "src/landing"))
     .filter((f) => f.endsWith(".tsx"))
     .map((f) => path.join("src/landing", f));
-  return [...landing, "src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
+  // Phase B1: the game HUD files converted so far. Add a file here when it is converted.
+  const hud = [
+    "AccountChip", "AccountFilter", "AppetitePanel", "AtpPill", "BreachLog", "GameHud", "HudOverlay", "ModeSwitch",
+    "NotificationsBell", "NutrientBurstBadge", "SignInPrompt", "SkinSwitch", "ThermalGauge", "ToolsToolbar", "VitalsPill",
+    "WalletControl", "XpWidgets", "ZoneBanner",
+  ].map((f) => `src/hud/${f}.tsx`);
+  return [...landing, ...hud, "src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
 }
 
 /** JSX attributes that carry text a reader sees or hears. */
 const TEXT_ATTRS = new Set(["aria-label", "aria-valuetext", "aria-description", "aria-roledescription", "title", "alt", "placeholder", "label", "text", "accent", "k"]);
 
 /** Names, standards, units and code-like labels that are the same in every language. */
-const KEEP = /Snacc|\$SNACC|NEAR|NEP-[\d /]+|ATP|TEE|mK|µm|\bcm\b|\bmm\b|GitHub|testnet|NFT|nft_tokens|\bfig\b|\bEN\b|\bID\b|&\w+;|0x/g;
-/** `faq.md`, `txs.testnet`: a file-like label. */
-const FILE_LIKE = /^[a-z0-9-]+\.[a-z0-9]+$/;
+const KEEP = /Snacc|\$SNACC|NEAR|NEP-[\d /]+|ATP|TEE|mK|µm|\bcm\b|\bmm\b|\bmk\b|\bms\b|GitHub|testnet|NFT|nft_tokens|\bfig\b|\bEN\b|\bID\b|&\w+;|0x/g;
+/**
+ * `faq.md`, `txs.testnet`: a file-like label; `crucible_temp`, `burst_bps`, `dormant`, `true`: field names and
+ * values of the backend API, shown as they are.
+ */
+const FILE_LIKE = /^([a-z0-9-]+\.[a-z0-9]+|[a-z]+(_[a-z]+)+|dormant|true|false)$/;
 
 function hardcodedStrings(file: string, source = fs.readFileSync(path.join(ROOT, file), "utf8")): string[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);

@@ -2,7 +2,7 @@ import React from "react";
 import type { MacroZone } from "../config/zones.ts";
 import { ZONE_THEMES } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS } from "../config/constants.ts";
+import { useSkinLabels } from "../i18n/skin.ts";
 
 interface ZoneBannerProps {
   zone: MacroZone;
@@ -11,7 +11,7 @@ interface ZoneBannerProps {
 
 export const ZoneBanner: React.FC<ZoneBannerProps> = ({ zone, skin }) => {
   const theme = ZONE_THEMES[zone];
-  const labels = SKIN_LABELS[skin];
+  const labels = useSkinLabels(skin);
 
   return (
     <div

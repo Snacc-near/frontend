@@ -32,6 +32,7 @@ const common = {
   },
   boot: {
     landing: "memanaskan inkubator…",
+    game: "memuat lab…",
   },
   brand: {
     backToTop: "Snacc, kembali ke atas",

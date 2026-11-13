@@ -2,6 +2,7 @@
 import React from "react";
 import type { ProductionItem } from "../game/simulation.ts";
 import type { SkinMode } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
 import { IconAtp, IconElixir, IconEnzyme, IconSnacc, IconSpore } from "./ResourceIcons.tsx";
 
 export type HudMode = "demo" | "live";
@@ -28,26 +29,27 @@ interface ResourceBarProps {
 }
 
 export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources, skin = "biolab" }) => {
+  const { t } = useT();
   const pills = [
     { key: "snacc", label: "$SNACC", value: resources.snacc, Icon: IconSnacc },
-    { key: "atp", label: skin === "fintech" ? "int-atp" : "atp", value: resources.atp, Icon: IconAtp },
-    { key: "spores", label: skin === "fintech" ? "coupons" : "spores", value: resources.spores, Icon: IconSpore },
-    { key: "enzymes", label: skin === "fintech" ? "clearing" : "enzymes", value: resources.enzymes, Icon: IconEnzyme },
-    { key: "elixir", label: skin === "fintech" ? "reserve" : "elixir", value: resources.elixir, Icon: IconElixir },
+    { key: "atp", label: t(`hud.resources.${skin}.atp`), value: resources.atp, Icon: IconAtp },
+    { key: "spores", label: t(`hud.resources.${skin}.spores`), value: resources.spores, Icon: IconSpore },
+    { key: "enzymes", label: t(`hud.resources.${skin}.enzymes`), value: resources.enzymes, Icon: IconEnzyme },
+    { key: "elixir", label: t(`hud.resources.${skin}.elixir`), value: resources.elixir, Icon: IconElixir },
   ];
   return (
     <div
       className="pointer-events-auto flex flex-wrap items-center justify-end gap-1.5 max-sm:max-w-[calc(100vw-1.25rem)] max-sm:flex-nowrap max-sm:justify-end max-sm:overflow-x-auto max-sm:pb-0.5"
       role="region"
-      aria-label="resources"
+      aria-label={t("hud.resources.region")}
     >
       {mode === "demo" ? (
         <span className="label-plate max-sm:hidden">
-          <span className="lp-label">demo · simulated</span>
+          <span className="lp-label">{t("hud.resources.demo")}</span>
         </span>
       ) : (
         <span className="label-plate max-sm:hidden">
-          <span className="lp-label">live · testnet</span>
+          <span className="lp-label">{t("hud.resources.live")}</span>
         </span>
       )}
       {pills.map(({ key, label, value, Icon }) => (
@@ -80,15 +82,17 @@ export const ProductionQueuePanel: React.FC<ProductionQueuePanelProps> = ({
   queue,
   onCollect,
   queueEmptyText,
-}) => (
+}) => {
+  const { t } = useT();
+  return (
   <section
     className="plate-panel pointer-events-auto flex w-full flex-col gap-1 p-2.5 sm:max-w-sm"
-    aria-label="production queue"
+    aria-label={t("hud.queue.region")}
   >
     <div className="flex items-center justify-between text-[11px]">
-      <span className="lowercase font-semibold text-[var(--ink-hi)]">production queue</span>
+      <span className="lowercase font-semibold text-[var(--ink-hi)]">{t("hud.queue.title")}</span>
       <span className="font-mono text-[10px] lowercase text-[var(--ink)]">
-        {mode === "demo" ? "demo · simulated" : "live values only"}
+        {mode === "demo" ? t("hud.queue.demo") : t("hud.queue.live")}
       </span>
     </div>
     {queue.length === 0 ? (
@@ -113,22 +117,22 @@ export const ProductionQueuePanel: React.FC<ProductionQueuePanelProps> = ({
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(pct)}
-                  aria-label={`${item.kind} progress`}
+                  aria-label={t("hud.queue.progress", { kind: item.kind })}
                 >
                   <span className="block h-full rounded-full bg-[var(--accent)] motion-safe:transition-all" style={{ width: `${pct}%` }} />
                 </span>
                 <span className="mt-0.5 block text-[10px] font-mono lowercase text-[var(--ink)]">
-                  {item.ready ? "ready" : `${Math.ceil(item.remainingSec)}s left`}
+                  {item.ready ? t("hud.queue.ready") : t("hud.queue.left", { s: Math.ceil(item.remainingSec) })}
                 </span>
               </span>
               <button
                 type="button"
                 disabled={!item.ready}
                 onClick={() => onCollect(item.id)}
-                aria-label={item.ready ? `collect ${item.kind}` : `${item.kind} not ready`}
+                aria-label={item.ready ? t("hud.queue.collectKind", { kind: item.kind }) : t("hud.queue.notReady", { kind: item.kind })}
                 className={`keycap min-h-[40px] px-3 text-[11px] ${item.ready ? "keycap--primary" : ""}`}
               >
-                collect
+                {t("hud.queue.collect")}
               </button>
             </li>
           );
@@ -136,17 +140,20 @@ export const ProductionQueuePanel: React.FC<ProductionQueuePanelProps> = ({
       </ul>
     )}
   </section>
-);
+  );
+};
 
 interface ActionDockProps {
   dock: DockButton[];
   onDock: (key: string) => void;
 }
 
-export const ActionDock: React.FC<ActionDockProps> = ({ dock, onDock }) => (
+export const ActionDock: React.FC<ActionDockProps> = ({ dock, onDock }) => {
+  const { t } = useT();
+  return (
   <nav
     className="plate-panel pointer-events-auto flex w-full items-end gap-1 overflow-x-auto p-1.5 max-sm:flex-wrap max-sm:overflow-x-visible"
-    aria-label="colony actions"
+    aria-label={t("hud.dock.region")}
   >
     {dock.map((button) => (
       <button
@@ -165,4 +172,5 @@ export const ActionDock: React.FC<ActionDockProps> = ({ dock, onDock }) => (
       </button>
     ))}
   </nav>
-);
+  );
+};

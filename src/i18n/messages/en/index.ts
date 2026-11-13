@@ -7,7 +7,9 @@
  */
 import common from "./common.ts";
 import demos from "./demos.ts";
+import hud from "./hud.ts";
 import landing from "./landing.ts";
 import settings from "./settings.ts";
+import skin from "./skin.ts";
 
-export const en = { common, demos, landing, settings };
+export const en = { common, demos, hud, landing, settings, skin };
