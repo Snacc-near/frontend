@@ -67,6 +67,9 @@ export const FOOTER_DISCLAIMER = "Testnet only. $SNACC has no monetary value. No
 
 const external = (href: string) => /^https?:\/\//.test(href);
 
+/** The base reset removes link underlines; the terms and privacy links in the note keep theirs. */
+const LEGAL_LINK_STYLE = { textDecoration: "underline", textUnderlineOffset: "3px" } as const;
+
 /** Docs-style footer: colophon + four link columns, the dot-matrix wordmark, and a base line. */
 export function SiteFooter() {
   return (
@@ -115,11 +118,11 @@ export function SiteFooter() {
       <div className="ln-footer__base">
         <p className="ln-footer__note">
           {FOOTER_DISCLAIMER}{" "}
-          <a href="/terms" data-testid="footer-terms">
+          <a href="/terms" data-testid="footer-terms" style={LEGAL_LINK_STYLE}>
             Terms
           </a>
           <span aria-hidden="true"> · </span>
-          <a href="/privacy" data-testid="footer-privacy">
+          <a href="/privacy" data-testid="footer-privacy" style={LEGAL_LINK_STYLE}>
             Privacy
           </a>
         </p>
