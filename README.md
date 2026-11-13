@@ -196,6 +196,7 @@ file with real values (`.env.local`) is not committed.
 | `VITE_PRIVY_CLIENT_ID` | Optional Privy client id | Not passed to Privy |
 | `VITE_SUPABASE_URL` | Supabase project URL for the optional player profiles | Profile features hidden (needs both Supabase variables) |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | The project's publishable key (public by design; row-level security guards the data) | Profile features hidden (needs both Supabase variables) |
+| `VITE_TURNSTILE_SITE_KEY` | Cloudflare Turnstile public site key for the starter-pack claim (SEC-119). Loads `challenges.cloudflare.com/turnstile/v0/api.js` lazily on the first claim, draws the widget and sends its token as `turnstileToken`; the backend checks it when `SNACC_TURNSTILE_SECRET` is set (`captcha_failed` otherwise) | No script, no widget, the claim sends no token (as before) |
 | `VITE_REF_INDEXER_URL` | Rhea price list base URL for the swap quote window (default `https://api.rhea.finance`) | Default |
 | `VITE_INTENTS_API_URL` | NEAR Intents 1Click API base URL (default `https://1click.chaindefuser.com`) | Default |
 | `VITE_SNACC_TOKEN_ID` | A mainnet `$SNACC` token id, if one ever exists; unset today | `$SNACC` is not priced or quoted (it is a testnet token) |
@@ -389,7 +390,8 @@ for the other builders. The builders' arguments are unit-tested (`npm test`).
 
 `index.html` carries the CSP the wallets need: a fixed nonce for NEAR Connect's `srcdoc` wallet
 frames (`script-src … 'nonce-…'`, same value as `NEAR_CONNECT_CSP_NONCE`) and `https:` for wallet
-icons, styles, fonts and frames.
+icons, styles, fonts and frames. `script-src` also lists `https://challenges.cloudflare.com` for the
+optional Turnstile widget (`VITE_TURNSTILE_SITE_KEY`); nothing from that host loads unless the key is set.
 
 ## Tests
 

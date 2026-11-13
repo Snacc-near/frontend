@@ -6,6 +6,7 @@
 import { AccountError, postFunction } from "./signIn.ts";
 import type { SupabaseConfig } from "./config.ts";
 import { track } from "../telemetry.ts";
+import type { CaptchaGate } from "./turnstile.ts";
 
 // ------------------------------------------------------------------ rows
 
@@ -271,22 +272,28 @@ export async function recordTx(
 
 export type StarterOutcome =
   | { kind: "sent"; txHash: string; amountYocto: string }
-  | { kind: "not_configured" | "already_claimed" | "balance_ok" | "error"; message: string };
+  | { kind: "not_configured" | "already_claimed" | "balance_ok" | "captcha_failed" | "captcha_unavailable" | "error"; message: string };
 
 export const STARTER_MESSAGES = {
   not_configured: "The starter pack is not switched on for this site yet. Use the NEAR testnet faucet instead.",
   already_claimed: "This account already received its starter pack. Use the NEAR testnet faucet for more.",
   balance_ok: "This account already has enough testnet NEAR to start, so no starter pack was sent.",
+  captcha_failed: "The captcha check failed or expired. Complete it again, then press the button once more.",
 } as const;
 
-/** Calls `starter-pack` and maps every answer to a plain outcome (never throws). */
+/**
+ * Calls `starter-pack` and maps every answer to a plain outcome (never throws). `turnstileToken` (SEC-119)
+ * goes in the body as `{ turnstileToken }` only when given; without it the request has no body, as before.
+ */
 export async function claimStarterPack(
   cfg: SupabaseConfig,
   accessToken: string,
   fetchFn?: (input: string, init?: RequestInit) => Promise<Response>,
+  turnstileToken?: string,
 ): Promise<StarterOutcome> {
   try {
-    const out = await postFunction<{ txHash?: unknown; amountYocto?: unknown }>(cfg, "starter-pack", undefined, { fetchFn, accessToken });
+    const body = turnstileToken ? { turnstileToken } : undefined;
+    const out = await postFunction<{ txHash?: unknown; amountYocto?: unknown }>(cfg, "starter-pack", body, { fetchFn, accessToken });
     if (typeof out?.txHash === "string") {
       track("starter_claimed");
       return { kind: "sent", txHash: out.txHash, amountYocto: String(out.amountYocto ?? "0") };
@@ -295,6 +302,34 @@ export async function claimStarterPack(
   } catch (e) {
     const code = e instanceof AccountError ? e.code : "error";
     if (code === "not_configured" || code === "already_claimed" || code === "balance_ok") return { kind: code, message: STARTER_MESSAGES[code] };
+    if (code === "captcha_failed" && turnstileToken) return { kind: "captcha_failed", message: STARTER_MESSAGES.captcha_failed };
     return { kind: "error", message: e instanceof Error ? e.message : String(e) };
   }
+}
+
+/**
+ * The claim with the optional captcha (SEC-119). Without a `gate` (no site key) this is exactly
+ * `claimStarterPack`. With one it first gets a Turnstile token from the widget in `container`, sends it
+ * with the claim, and resets the widget after any answer but success (a token is single use, so a
+ * `captcha_failed` or any other refusal needs a fresh challenge).
+ */
+export async function claimStarterPackWithCaptcha(
+  cfg: SupabaseConfig,
+  accessToken: string,
+  gate: CaptchaGate | null,
+  container: HTMLElement | null,
+  fetchFn?: (input: string, init?: RequestInit) => Promise<Response>,
+): Promise<StarterOutcome> {
+  if (!gate) return claimStarterPack(cfg, accessToken, fetchFn);
+  if (!container) return { kind: "captcha_unavailable", message: "The captcha could not be shown. Reload the page and try again." };
+  let token: string;
+  try {
+    token = await gate.getToken(container);
+  } catch (e) {
+    gate.reset();
+    return { kind: "captcha_unavailable", message: e instanceof Error ? e.message : "The captcha could not be started." };
+  }
+  const result = await claimStarterPack(cfg, accessToken, fetchFn, token);
+  if (result.kind !== "sent") gate.reset();
+  return result;
 }
