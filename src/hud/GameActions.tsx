@@ -311,9 +311,9 @@ export function ActionMenuModal({ onPick, onClose, connected }: { onPick: (key: 
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="list">
           {GAME_ACTIONS.map((a) => (
-            <KeycapButton key={a.key} block onClick={() => onPick(a.key)} data-testid={`action-${a.key}`} className="flex-col items-start text-left" role="listitem">
-              <span className="font-semibold">{a.label}</span>
-              <span className="fd-field__hint block truncate">{a.blurb}</span>
+            <KeycapButton key={a.key} block onClick={() => onPick(a.key)} data-testid={`action-${a.key}`} className="!h-auto min-w-0 flex-col !items-start gap-0.5 !py-2 text-left" role="listitem">
+              <span className="w-full min-w-0 font-semibold">{a.label}</span>
+              <span className="fd-field__hint block w-full min-w-0 whitespace-normal break-words text-left">{a.blurb}</span>
             </KeycapButton>
           ))}
         </div>
