@@ -144,6 +144,15 @@ export function safeNftMediaSrc(media: string | null | undefined): string | null
   }
 }
 
+/**
+ * Header chip of the Live section. "live" is claimed only while the backend actually answers;
+ * while it is still being read the chip says so, and when it did not answer it says "offline".
+ */
+export function liveChipText(status: "loading" | "live" | "offline", contractId: string): string {
+  const lead = status === "live" ? "live" : status === "loading" ? "connecting…" : "offline";
+  return `${lead} · NEAR testnet · ${contractId}`;
+}
+
 /** Count-up easing for the live numbers (ease-out). */
 export function countUp(from: number, to: number, t: number): number {
   const k = t <= 0 ? 0 : t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);

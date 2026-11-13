@@ -330,7 +330,7 @@ export function AppetiteDemo({ live }: { live: LiveState }) {
       </div>
       <div className="ln-demo__bar">
         <span className="ln-demo__note">
-          drag the meter: the needle, the thermometer and the medium follow <Sim />
+          drag the meter: the needle, the thermometer, the medium and the dew on the glass follow <Sim />
           {liveTemp != null ? <> · marker = live CrucibleTemp from {CONTRACT_ID}</> : null}
         </span>
       </div>
