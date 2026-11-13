@@ -38,6 +38,18 @@ export interface WalletApi {
   disconnect: () => Promise<void>;
   /** Signs and sends one transaction to the Snacc contract with the given calls, in order. */
   signAndSend: (calls: ContractCall[]) => Promise<TxResult>;
+  /**
+   * NEP-413 message signing (UI-148 sign-in to the optional profile). Rejects when no wallet is
+   * connected, the player cancels, or the wallet cannot sign messages.
+   */
+  signMessage: (input: { message: string; recipient: string; nonce: Uint8Array }) => Promise<SignedMessage>;
+}
+
+/** NEAR Connect's `SignedMessage` (NEP-413): `publicKey` is `ed25519:<base58>`, `signature` base64. */
+export interface SignedMessage {
+  accountId: string;
+  publicKey: string;
+  signature: string;
 }
 
 const notConnected = async (): Promise<TxResult> => ({
@@ -56,6 +68,9 @@ export const DISCONNECTED_WALLET: WalletApi = {
   connect: async () => undefined,
   disconnect: async () => undefined,
   signAndSend: notConnected,
+  signMessage: async () => {
+    throw new Error("Connect a wallet first.");
+  },
 };
 
 export const WalletContext = createContext<WalletApi>(DISCONNECTED_WALLET);
@@ -74,6 +89,7 @@ interface ConnectorWallet {
     receiverId: string;
     actions: ReturnType<typeof toWalletActions>;
   }): Promise<unknown>;
+  signMessage(params: { message: string; recipient: string; nonce: Uint8Array; network?: string; signerId?: string }): Promise<SignedMessage>;
 }
 interface Connector {
   whenManifestLoaded: Promise<void>;
@@ -225,9 +241,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signMessage = useCallback(async (input: { message: string; recipient: string; nonce: Uint8Array }): Promise<SignedMessage> => {
+    const signer = accountRef.current;
+    if (!signer) throw new Error("Connect a wallet first.");
+    const connector = await loadConnector();
+    const wallet = await connector.wallet();
+    if (typeof wallet.signMessage !== "function") throw new Error("signMessage not supported by this wallet");
+    return wallet.signMessage({ ...input, network: NETWORK, signerId: signer });
+  }, []);
+
   const value = useMemo<WalletApi>(
-    () => ({ status, accountId, walletName, error, connect, disconnect, signAndSend }),
-    [status, accountId, walletName, error, connect, disconnect, signAndSend],
+    () => ({ status, accountId, walletName, error, connect, disconnect, signAndSend, signMessage }),
+    [status, accountId, walletName, error, connect, disconnect, signAndSend, signMessage],
   );
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

@@ -46,6 +46,8 @@ export interface MyCollectionProps {
   onStrainAction?: (key: GameActionKey, strainId: number) => void;
   /** Bumped by the app after a signed action succeeds: the list is read again. */
   refreshKey?: number;
+  /** UI-149: strain to open in Strain Detail once the list has loaded (from a notification). */
+  focusStrainId?: number | null;
 }
 
 type LoadState =
@@ -143,7 +145,7 @@ function Row({ item, onOpen }: { item: CollectionItem; onOpen: (id: number) => v
   );
 }
 
-export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose, onFeedStrain, onStrainAction, refreshKey = 0 }: MyCollectionProps) {
+export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose, onFeedStrain, onStrainAction, refreshKey = 0, focusStrainId = null }: MyCollectionProps) {
   const uid = useId();
   const account = normalizeAccount(accountId);
   const { state, reload } = useCollection(account);
@@ -154,7 +156,8 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
   }, [refreshKey, reload]);
   const [filter, setFilter] = useState<CollectionFilter>("all");
   const [sort, setSort] = useState<CollectionSort>("vitality-asc");
-  const [openId, setOpenId] = useState<number | null>(null);
+  // UI-149: a starving/distressed notification opens that Snacc's detail once the list has loaded.
+  const [openId, setOpenId] = useState<number | null>(focusStrainId ?? null);
   const [fresh, setFresh] = useState<StrainDetail | null>(null);
 
   const data = state.kind === "ok" ? state.data : null;

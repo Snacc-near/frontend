@@ -9,6 +9,7 @@
  */
 import type { SkinMode } from "../config/constants.ts";
 import { GUEST_LABEL_KEY, LEGACY_SESSION_KEY } from "../auth/guestLabel.ts";
+import { BROWSER_ALERTS_KEY, SESSION_STORAGE_KEY } from "../account/config.ts";
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -25,6 +26,8 @@ export const APP_LOCAL_KEY_INFO: readonly { key: string; what: string }[] = [
   { key: SKIN_KEY, what: "bio-lab or fintech wording" },
   { key: GUEST_LABEL_KEY, what: "your guest label and highlighted account" },
   { key: LEGACY_SESSION_KEY, what: "a leftover key from an earlier build" },
+  { key: SESSION_STORAGE_KEY, what: "your profile sign-in session, only after you sign in to a profile" },
+  { key: BROWSER_ALERTS_KEY, what: "browser alerts turned on for notifications" },
 ];
 
 export const APP_LOCAL_KEYS: readonly string[] = APP_LOCAL_KEY_INFO.map((k) => k.key);

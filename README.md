@@ -154,6 +154,23 @@ Optional configuration (`.env`):
 - `VITE_SNACC_TOKEN_ID` — a mainnet `$SNACC` token id, if one ever exists; unset today.
 - `VITE_PRIVY_APP_ID` — Privy App ID (public). Set it to add "Email or social login (Privy)" to the
   wallet picker; empty turns it off. `VITE_PRIVY_CLIENT_ID` is optional and only passed on when set.
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` — the optional player-profile database
+  (Supabase project URL and its publishable key, which is public; row-level security guards the
+  data). With both set, the game shows "Save progress — sign in" next to the wallet, the Profile
+  window, the notifications bell, usernames and extra leaderboard tabs, the starter-pack key and the
+  profile parts of `/p/<account>`. Leave either empty and all of it stays hidden.
+
+## Player profiles (optional, UI-148/UI-149)
+
+`src/account/` signs in with NEAR: the backend's `near-auth/challenge` issues a NEP-413 message, the
+wallet signs it (`signMessage`, no transaction), `near-auth/verify` checks it and returns a token for
+`supabase.auth.verifyOtp`. A limited (function-call) key is refused with a plain message. Sign-out
+clears only the profile session; a session for another account than the connected wallet is dropped.
+`@supabase/supabase-js` is in its own lazy chunk: the landing page never loads it, and `/app` loads it
+only after a wallet is connected or a stored session exists. After each successful signed action the
+app calls `record-tx` (fire and forget) and toasts new achievements. Public pages: `/p/<accountId>`
+(profile, Snaccs from contract views, achievements, streak, follow) and `/snacc/<id>` (on-chain SVG,
+owner, status, vitality, "Open in game" = `/app?strain=<id>`).
 
 ## Wallet (testnet)
 

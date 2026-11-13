@@ -1,0 +1,85 @@
+/* Public profile and Snacc pages (UI-148), on top of fd.css + legal.css. */
+
+.pub-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+.pub-head__text {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+.pub-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pub-bio {
+  margin: 0;
+  max-width: 60ch;
+  overflow-wrap: anywhere;
+}
+.pub-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink, #5d6165);
+}
+.pub-note--bad {
+  color: var(--bad, #b42318);
+}
+.pub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pub-card {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--ink-hi, #1d2024);
+  background: var(--panel, #fff);
+  color: inherit;
+  text-decoration: none;
+}
+.pub-card:hover,
+.pub-card:focus-visible {
+  box-shadow: 0 2px 0 var(--ink-hi, #1d2024);
+}
+.pub-card img,
+.pub-card__none {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--paper, #f6f6f3);
+}
+.pub-card__none {
+  display: grid;
+  place-items: center;
+  font: 500 11px/1 var(--mono, ui-monospace, monospace);
+}
+.pub-card__id {
+  font: 700 13px/1 var(--mono, ui-monospace, monospace);
+}
+.pub-card__meta {
+  font: 400 11px/1.2 var(--mono, ui-monospace, monospace);
+  color: var(--ink, #5d6165);
+}
+.pub-svg {
+  width: min(320px, 100%);
+  aspect-ratio: 1;
+  object-fit: contain;
+  border: 1px solid var(--ink-hi, #1d2024);
+  background: var(--paper, #f6f6f3);
+}
+.pub-kv {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.pub-kv dd {
+  overflow-wrap: anywhere;
+}

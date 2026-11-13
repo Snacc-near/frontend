@@ -19,6 +19,8 @@ const Landing = React.lazy(() => import("./landing/Landing.tsx"));
 const SignPage = React.lazy(() => import("./sign/SignPage.tsx"));
 // Terms, privacy and the 404 page share one small static chunk (UI-151).
 const StaticPage = React.lazy(() => import("./legal/StaticPage.tsx"));
+// Public player profile `/p/<account>` and Snacc page `/snacc/<id>` (UI-148): their own chunk.
+const PublicPage = React.lazy(() => import("./public/PublicPage.tsx"));
 
 function BootFallback({ label }: { label: string }) {
   return (
@@ -52,6 +54,10 @@ if (rootEl) {
       ) : route === "sign" ? (
         <Suspense fallback={<BootFallback label="opening the signer…" />}>
           <SignPage />
+        </Suspense>
+      ) : route === "profile" || route === "snacc" ? (
+        <Suspense fallback={<BootFallback label="loading…" />}>
+          <PublicPage />
         </Suspense>
       ) : route === "terms" || route === "privacy" || route === "notfound" ? (
         <Suspense fallback={<BootFallback label="loading…" />}>

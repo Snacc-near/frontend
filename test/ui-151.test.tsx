@@ -161,7 +161,8 @@ describe("UI-151 settings persistence", () => {
 describe("UI-151 reset local data", () => {
   it("lists exactly the keys the app owns", () => {
     expect([...APP_LOCAL_KEYS].sort()).toEqual(
-      [GUEST_LABEL_KEY, LEGACY_SESSION_KEY, MOTION_KEY, ONBOARDING_KEY, SKIN_KEY, SOUND_KEY].sort(),
+      // UI-148 added the profile session and the browser-alerts flag.
+      [GUEST_LABEL_KEY, LEGACY_SESSION_KEY, MOTION_KEY, ONBOARDING_KEY, SKIN_KEY, SOUND_KEY, "snacc_profile_session", "snacc_browser_alerts"].sort(),
     );
     expect(APP_LOCAL_KEY_INFO.map((k) => k.key)).toEqual([...APP_LOCAL_KEYS]);
     for (const k of APP_LOCAL_KEYS) expect(k).toMatch(/^snacc_/);
@@ -426,12 +427,15 @@ describe("UI-151 legal pages", () => {
     }
   });
 
-  it("says what data is touched, and calls the Supabase profile database planned", () => {
+  it("says what data is touched, and that the Supabase profile database is live (UI-148)", () => {
     expect(privacy).toContain("public");
     expect(privacy).toContain("privy");
     expect(privacy).toContain("supabase");
-    expect(privacy).toMatch(/planned/);
-    expect(privacy).toMatch(/not live/);
+    expect(privacy).not.toMatch(/planned/);
+    expect(privacy).toMatch(/is live/);
+    for (const stored of ["near account id", "username", "bio", "avatar", "transaction hashes", "notifications", "delete my profile", "github issues"]) {
+      expect(privacy).toContain(stored);
+    }
     for (const key of APP_LOCAL_KEYS) expect(privacy).toContain(key);
   });
 

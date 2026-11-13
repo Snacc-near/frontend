@@ -131,13 +131,13 @@ function useView<T>(fn: ((signal: AbortSignal) => Promise<T | null>) | null, dep
 }
 
 /** `onDone` that also bumps a local key so the window re-reads its views after a success. */
-function useReload(onDone: (ok: boolean) => void): [number, (ok: boolean) => void] {
+function useReload(onDone: (ok: boolean, txHash?: string | null) => void): [number, (ok: boolean, txHash?: string | null) => void] {
   const [key, setKey] = useState(0);
   return [
     key,
-    (ok: boolean) => {
+    (ok: boolean, txHash?: string | null) => {
       if (ok) setKey((k) => k + 1);
-      onDone(ok);
+      onDone(ok, txHash);
     },
   ];
 }
