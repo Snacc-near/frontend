@@ -94,10 +94,10 @@ describe("every tool window is a labelled modal dialog", () => {
 });
 
 describe("toolbar", () => {
-  it("folds the six tools into one toolbar with a mobile overflow key", () => {
+  it("folds the seven tools into one toolbar with a mobile overflow key", () => {
     const html = renderToStaticMarkup(<ToolsToolbar skin="biolab" panelsOpen={false} onTogglePanels={() => {}} onOpen={() => {}} guestLabel={null} />);
-    expect(TOOLS).toHaveLength(6);
-    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(6);
+    expect(TOOLS).toHaveLength(7);
+    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(7);
     expect(html).toContain("tools-bar__more");
     expect(html).toContain('aria-label="game tools"');
     expect(html).not.toMatch(/\p{Emoji_Presentation}|️/u);

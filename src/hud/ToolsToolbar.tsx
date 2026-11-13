@@ -1,5 +1,5 @@
 /**
- * One toolbar for the game's tools: telemetry toggle plus the six tool windows. Below 900 px the
+ * One toolbar for the game's tools: telemetry toggle plus the seven tool windows. Below 900 px the
  * tool keys fold into a "tools" key that opens a sheet.
  */
 import { useState } from "react";
@@ -8,7 +8,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
 
-export type ToolId = "npc" | "swap" | "social" | "thesis" | "recipes" | "guest";
+export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest";
 
 export interface ToolDef {
   id: ToolId;
@@ -17,6 +17,7 @@ export interface ToolDef {
 }
 
 export const TOOLS: readonly ToolDef[] = [
+  { id: "collection", label: () => "my collection", icon: "cell" },
   { id: "npc", label: (s) => (s === "fintech" ? "market makers" : "npc merchants"), icon: "scale" },
   { id: "swap", label: () => "swap quote", icon: "swap" },
   { id: "social", label: (s) => (s === "fintech" ? "top feeders" : "great feast"), icon: "podium" },

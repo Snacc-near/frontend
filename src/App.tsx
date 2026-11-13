@@ -48,6 +48,7 @@ import { ColonyPlate } from "./plate/ColonyPlate.tsx";
 import { IrisOverlay } from "./hud/IrisOverlay.tsx";
 
 // Tool windows load on first open, outside the game's entry chunk.
+const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
 const SwapPanel = React.lazy(() => import("./hud/SwapPanel.tsx"));
 const NpcPanel = React.lazy(() => import("./hud/NpcPanel.tsx"));
 const SocialLeaderboardModal = React.lazy(() => import("./hud/SocialLeaderboardModal.tsx"));
@@ -740,6 +741,7 @@ export const App: React.FC = () => {
       ) : null}
 
       <React.Suspense fallback={<div className="fd-modal fd-ui" role="status" aria-label="loading tool" />}>
+        {tool === "collection" ? <MyCollection accountId={userAccount || null} skin={skin} mode={mode} onClose={closeTool} /> : null}
         {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
         {tool === "social" ? <SocialLeaderboardModal onClose={closeTool} appetite={appetite} mode={mode} skin={skin} /> : null}
         {tool === "thesis" ? <ThesisDashboardModal onClose={closeTool} mode={mode} skin={skin} /> : null}

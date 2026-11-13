@@ -9,6 +9,7 @@ import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SKIN_LABELS, VITALITY_MAX } from "../config/constants.ts";
 import type { GameMode } from "../config/constants.ts";
+import { healthOf } from "../data/collection.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
 
@@ -17,6 +18,8 @@ interface StrainDetailModalProps {
   isLoading?: boolean;
   svgDataUri?: string | null;
   svgStatus?: SvgLoadStatus;
+  /** Where a ready live SVG came from; defaults to the backend route. */
+  svgSource?: string;
   skin: SkinMode;
   mode: GameMode;
   onClose: () => void;
@@ -30,6 +33,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   isLoading,
   svgDataUri,
   svgStatus = "idle",
+  svgSource = "from /api/strains/{id}/svg",
   skin,
   mode,
   onClose,
@@ -39,7 +43,10 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
 
   if (!strain && !isLoading) return null;
 
-  const vitPct = strain ? Math.min(100, Math.max(0, (strain.vitality / VITALITY_MAX) * 100)) : 0;
+  // The headline and the bar show the effective vitality (after bmr decay); the stored value sits in its own row.
+  const shownVitality = strain ? (typeof strain.effective_vitality === "number" ? strain.effective_vitality : strain.vitality) : 0;
+  const vitPct = Math.min(100, Math.max(0, (shownVitality / VITALITY_MAX) * 100));
+  const starving = strain && typeof strain.effective_vitality === "number" && healthOf(strain.status, strain.effective_vitality) === "starving";
 
   return (
     <Modal
@@ -58,7 +65,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
             <div className="fd-row fd-row--between">
               <span className="fd-sub">on-chain svg</span>
               <span className="fd-field__hint">
-                {mode === "live" ? (svgStatus === "ready" ? "from /api/strains/{id}/svg" : svgStatus === "loading" ? "loading…" : svgStatus === "error" ? "unavailable" : "no data") : "demo, simulated"}
+                {mode === "live" ? (svgStatus === "ready" ? svgSource : svgStatus === "loading" ? "loading…" : svgStatus === "error" ? "unavailable" : "no data") : "demo, simulated"}
               </span>
             </div>
             {mode === "live" && svgStatus === "loading" ? (
@@ -96,7 +103,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
             <div className="fd-row fd-row--between">
               <span className="fd-sub lowercase">{labels.vitality}</span>
               <span className="fd-num text-sm font-semibold">
-                {strain.vitality.toLocaleString("en-US")}{" "}
+                {shownVitality.toLocaleString("en-US")}{" "}
                 <span className="font-normal text-[var(--ink)]">/ {VITALITY_MAX.toLocaleString("en-US")}</span>
               </span>
             </div>
@@ -106,10 +113,14 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               aria-label={labels.vitality}
               aria-valuemin={0}
               aria-valuemax={VITALITY_MAX}
-              aria-valuenow={Math.min(VITALITY_MAX, Math.max(0, strain.vitality))}
+              aria-valuenow={Math.min(VITALITY_MAX, Math.max(0, shownVitality))}
             >
               <span className="fd-meter__fill" style={{ transform: `scaleX(${(vitPct / 100).toFixed(3)})` }} />
             </span>
+            <div className="fd-row fd-row--between">
+              <span className="fd-field__hint">stored vitality (before bmr decay)</span>
+              <span className="fd-num text-xs">{strain.vitality.toLocaleString("en-US")}</span>
+            </div>
             <div className="fd-row fd-row--between">
               <span className="fd-field__hint">effective vitality (after bmr decay)</span>
               <span className="fd-num text-xs">
@@ -118,7 +129,10 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
             </div>
             <div className="fd-row fd-row--between">
               <span className="fd-field__hint">status</span>
-              <span className="fd-num text-xs">{strain.status ?? "—"}</span>
+              <span className="fd-num text-xs">
+                {strain.status ?? "—"}
+                {starving ? " · starving (effective vitality 0)" : ""}
+              </span>
             </div>
             <div className="fd-row fd-row--between">
               <span className="fd-field__hint">hunger rate (bmr)</span>
