@@ -26,6 +26,8 @@ import {
   type CollectionSort,
 } from "../data/collection.ts";
 import { CONTRACT_ID } from "../data/nearView.ts";
+import { fetchStrainSvg } from "../data/api.ts";
+import { svgToSafeDataUri } from "../data/svg.ts";
 import type { StrainDetail } from "../data/types.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, Field, KeycapButton, Select } from "../ui/controls.tsx";
@@ -182,6 +184,44 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
     setOpenId(null);
   }, [account]);
 
+  // UI-155: a lineage link opens that Snacc's detail. An owned one reuses the collection row; any other one (a parent
+  // somebody else owns, a Snacc that has died) is read from the contract on demand.
+  const [linkedId, setLinkedId] = useState<number | null>(null);
+  const [linked, setLinked] = useState<{ detail: StrainDetail; svg: string | null } | null>(null);
+  const [linkNote, setLinkNote] = useState<string | null>(null);
+  const openStrain = useCallback(
+    (id: number) => {
+      setLinkNote(null);
+      if (items?.some((i) => i.strainId === id)) {
+        setLinkedId(null);
+        setOpenId(id);
+        return;
+      }
+      setOpenId(null);
+      setLinkedId(id);
+    },
+    [items],
+  );
+  useEffect(() => {
+    setLinked(null);
+    if (linkedId === null) return;
+    const ac = new AbortController();
+    void Promise.all([fetchVessel(linkedId, ac.signal), fetchStrainSvg(linkedId)]).then(([vessel, svg]) => {
+      if (ac.signal.aborted) return;
+      if (!vessel) {
+        setLinkedId(null);
+        setLinkNote(`Could not read strain #${linkedId} from the contract.`);
+        return;
+      }
+      setLinked({ detail: vessel, svg: svg.svg ? svgToSafeDataUri(svg.svg) : null });
+    });
+    return () => ac.abort();
+  }, [linkedId]);
+  useEffect(() => {
+    setLinkedId(null);
+    setLinkNote(null);
+  }, [account]);
+
   return (
     <>
       <Modal
@@ -293,6 +333,12 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
                 </ul>
               )}
 
+              {linkNote ? (
+                <p className="fd-field__hint fd-field__hint--bad" role="status" data-testid="collection-link-note">
+                  {linkNote}
+                </p>
+              ) : null}
+
               {data.unresolved.length > 0 ? (
                 <p className="fd-field__hint fd-field__hint--bad" role="status" data-testid="collection-unresolved">
                   {data.unresolved.length} owned strain{data.unresolved.length === 1 ? "" : "s"} could not be read this time (
@@ -320,6 +366,27 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
           onAction={
             onStrainAction && wallet.accountId && opened.detail.owner_id === wallet.accountId ? (key) => onStrainAction(key, opened.strainId) : undefined
           }
+          onOpenStrain={openStrain}
+        />
+      ) : null}
+
+      {linkedId !== null ? (
+        <StrainDetailModal
+          strain={linked?.detail ?? null}
+          isLoading={linked === null}
+          svgDataUri={linked?.svg ?? null}
+          svgStatus={linked === null ? "loading" : linked.svg ? "ready" : "no-data"}
+          svgSource="from /api/strains/{id}/svg"
+          skin={skin}
+          mode="live"
+          onClose={() => setLinkedId(null)}
+          feedEnabled={Boolean(onFeedStrain && wallet.accountId && linked && linked.detail.owner_id === wallet.accountId)}
+          feedHint={wallet.accountId ? "only the owner's connected wallet can feed this Snacc" : "connect a wallet to feed"}
+          onFeedClick={() => onFeedStrain?.(linkedId)}
+          onAction={
+            onStrainAction && wallet.accountId && linked && linked.detail.owner_id === wallet.accountId ? (key) => onStrainAction(key, linkedId) : undefined
+          }
+          onOpenStrain={openStrain}
         />
       ) : null}
     </>
