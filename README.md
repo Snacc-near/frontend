@@ -176,7 +176,7 @@ npm run dev                    # http://localhost:5173, proxies /api to http://l
 - Open `/` for the landing page and `/app` for the game. With nothing configured the game runs in
   `demo · simulated` mode.
 - A wallet works against `testnet` only. A new testnet account needs NEAR from the
-  [faucet](https://docs.near.org/tools/faucet); the app links to it when the balance is low.
+  [faucet](https://docs.near.org/getting-started/faucet); the app links to a faucet when the balance is low.
 
 The production deployment at <https://snacc-nu.vercel.app> is the same build with the variables set
 on Vercel. Screenshots under [`docs/img/`](docs/img/) were taken from a production build served
@@ -301,7 +301,7 @@ enabling the sign key → the wallet → the result. All calls go to `snacc-v001
 
 Each window shows the cost before signing and then the result in the tx status panel: the tx hash
 with a nearblocks link, or the contract error in plain English with the raw text underneath. A
-faucet link ([docs.near.org/tools/faucet](https://docs.near.org/tools/faucet)) appears when the
+faucet link ([NEAR testnet faucet](https://docs.near.org/getting-started/faucet)) appears when the
 account lacks testnet NEAR. Without a wallet the windows still show their live reads and a connect
 button; nothing is signed. Demo mode keeps the simulated dock.
 
