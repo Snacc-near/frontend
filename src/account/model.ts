@@ -5,6 +5,7 @@
  */
 import { AccountError, postFunction } from "./signIn.ts";
 import type { SupabaseConfig } from "./config.ts";
+import { track } from "../telemetry.ts";
 
 // ------------------------------------------------------------------ rows
 
@@ -286,7 +287,10 @@ export async function claimStarterPack(
 ): Promise<StarterOutcome> {
   try {
     const out = await postFunction<{ txHash?: unknown; amountYocto?: unknown }>(cfg, "starter-pack", undefined, { fetchFn, accessToken });
-    if (typeof out?.txHash === "string") return { kind: "sent", txHash: out.txHash, amountYocto: String(out.amountYocto ?? "0") };
+    if (typeof out?.txHash === "string") {
+      track("starter_claimed");
+      return { kind: "sent", txHash: out.txHash, amountYocto: String(out.amountYocto ?? "0") };
+    }
     return { kind: "error", message: "The starter pack service answered without a transaction." };
   } catch (e) {
     const code = e instanceof AccountError ? e.code : "error";

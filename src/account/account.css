@@ -263,6 +263,40 @@
   gap: 8px;
 }
 
+/* UI-162: admin announcement banner */
+.acct-announce {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  max-width: min(640px, 100%);
+  padding: 6px 32px 6px 10px;
+  position: relative;
+  border: 1px solid var(--ink-hi);
+  background: var(--accent, #c8f35a);
+  color: var(--ink-hi);
+  font-size: 12px;
+}
+.acct-announce__title {
+  font-weight: 700;
+}
+.acct-announce__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.acct-announce__close {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-hi);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 /* Chain index (UI-155 lineage + history, UI-156 graveyard) */
 .chain-link {
   appearance: none;

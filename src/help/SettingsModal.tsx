@@ -17,6 +17,7 @@ import {
 } from "../prefs/prefs.ts";
 import { bioSound } from "../sound.ts";
 import { NotificationSettings } from "../hud/NotificationsModal.tsx";
+import { AdminTools, MyDataSettings, UsageStatsSettings } from "../account/AccountSettings.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Field, KeycapButton } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
@@ -137,6 +138,11 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
 
         {/* UI-149: shown only when the profile features are on (Supabase env set). */}
         <NotificationSettings />
+
+        {/* OPS-127 / UI-163 / UI-162: usage stats choice, data download, admin tools (each hides itself when not relevant). */}
+        <UsageStatsSettings />
+        <MyDataSettings />
+        <AdminTools />
 
         <section className="guide-section" aria-labelledby="settings-data-h">
           <h4 id="settings-data-h" className="fd-h">
