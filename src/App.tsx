@@ -56,10 +56,12 @@ import type { GameActionKey } from "./hud/GameActions.tsx";
 import { useAccount } from "./account/session.tsx";
 import { achievementToast } from "./account/model.ts";
 import { AccountChip, StarterPackButton } from "./hud/AccountChip.tsx";
+import { NotificationsBell } from "./hud/NotificationsBell.tsx";
 
 // Tool windows load on first open, outside the game's entry chunk.
-// UI-148: the profile window (shown only with the profile features on).
+// UI-148/149: the profile and notification windows (shown only with the profile features on).
 const ProfileModal = React.lazy(() => import("./hud/ProfileModal.tsx"));
+const NotificationsModal = React.lazy(() => import("./hud/NotificationsModal.tsx"));
 const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
 const SwapPanel = React.lazy(() => import("./hud/SwapPanel.tsx"));
 const NpcPanel = React.lazy(() => import("./hud/NpcPanel.tsx"));
@@ -206,6 +208,8 @@ export const App: React.FC = () => {
   const account = useAccount();
   const recordTxRef = useRef(account.recordTx);
   recordTxRef.current = account.recordTx;
+  /** UI-149: strain a notification asked to open in My collection. */
+  const [collectionFocus, setCollectionFocus] = useState<number | null>(null);
   /** UI-148: "Get testnet NEAR to start" beside the faucet link (renders nothing when the features are off). */
   const starterPack = account.enabled ? <StarterPackButton onSent={() => setChainRefresh((n) => n + 1)} /> : null;
   const walletConnected = wallet.status === "connected" && wallet.accountId !== null;
@@ -702,6 +706,7 @@ export const App: React.FC = () => {
             </div>
             <div className="flex flex-col items-end gap-1.5">
               <div className="pointer-events-auto flex items-start gap-1.5">
+                <NotificationsBell onOpen={() => setTool("notifications")} />
                 <AccountChip onOpenProfile={() => setTool("profile")} />
                 <WalletControl wallet={wallet} info={accountInfo} lowBalanceExtra={starterPack} />
               </div>
@@ -739,6 +744,7 @@ export const App: React.FC = () => {
             </div>
             {account.enabled ? (
               <div className="pointer-events-auto flex w-full min-w-0 items-start justify-end gap-1.5">
+                <NotificationsBell onOpen={() => setTool("notifications")} />
                 <AccountChip compact onOpenProfile={() => setTool("profile")} />
               </div>
             ) : null}
@@ -894,13 +900,26 @@ export const App: React.FC = () => {
             accountId={effectiveAccount || null}
             skin={skin}
             mode={mode}
-            onClose={closeTool}
+            onClose={() => {
+              setCollectionFocus(null);
+              closeTool();
+            }}
             onFeedStrain={walletConnected ? openFeedFor : undefined}
             onStrainAction={walletConnected ? openActionFor : undefined}
             refreshKey={chainRefresh}
+            focusStrainId={collectionFocus}
           />
         ) : null}
         {tool === "profile" && account.enabled ? <ProfileModal onClose={closeTool} /> : null}
+        {tool === "notifications" && account.enabled ? (
+          <NotificationsModal
+            onClose={closeTool}
+            onOpenStrain={(id) => {
+              setCollectionFocus(id);
+              setTool("collection");
+            }}
+          />
+        ) : null}
         {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
         {tool === "social" ? <SocialLeaderboardModal onClose={closeTool} appetite={appetite} mode={mode} skin={skin} /> : null}
         {tool === "thesis" ? <ThesisDashboardModal onClose={closeTool} mode={mode} skin={skin} /> : null}
