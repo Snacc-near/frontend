@@ -5,6 +5,7 @@ describe("selectRoute", () => {
   it("serves the landing page at the root", () => {
     expect(selectRoute("/")).toBe("landing");
     expect(selectRoute("")).toBe("landing");
+    expect(selectRoute("/index.html")).toBe("landing");
   });
 
   it("serves the game at /app and below it", () => {
@@ -14,19 +15,31 @@ describe("selectRoute", () => {
   });
 
   it("does not treat look-alike prefixes as the game", () => {
-    expect(selectRoute("/application")).toBe("landing");
-    expect(selectRoute("/apps")).toBe("landing");
-    expect(selectRoute("/story/app")).toBe("landing");
+    expect(selectRoute("/application")).toBe("notfound");
+    expect(selectRoute("/apps")).toBe("notfound");
+    expect(selectRoute("/story/app")).toBe("notfound");
   });
 
   it("serves the Privy signing popup at /sign only", () => {
     expect(selectRoute("/sign")).toBe("sign");
     expect(selectRoute("/sign/")).toBe("sign");
-    expect(selectRoute("/signup")).toBe("landing");
-    expect(selectRoute("/sign/x")).toBe("landing");
+    expect(selectRoute("/signup")).toBe("notfound");
+    expect(selectRoute("/sign/x")).toBe("notfound");
   });
 
-  it("falls back to the landing page for unknown paths", () => {
-    expect(selectRoute("/nope")).toBe("landing");
+  it("serves the legal pages at /terms and /privacy only", () => {
+    expect(selectRoute("/terms")).toBe("terms");
+    expect(selectRoute("/terms/")).toBe("terms");
+    expect(selectRoute("/privacy")).toBe("privacy");
+    expect(selectRoute("/privacy/")).toBe("privacy");
+    expect(selectRoute("/terms/extra")).toBe("notfound");
+    expect(selectRoute("/privacy-policy")).toBe("notfound");
+    expect(selectRoute("/Terms")).toBe("notfound");
+  });
+
+  it("gives every unknown path the 404 page", () => {
+    expect(selectRoute("/nope")).toBe("notfound");
+    expect(selectRoute("/docs")).toBe("notfound");
+    expect(selectRoute("/a/b/c")).toBe("notfound");
   });
 });
