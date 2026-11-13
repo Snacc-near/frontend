@@ -37,7 +37,7 @@ export const ResourceBar: React.FC<ResourceBarProps> = ({ mode, resources, skin 
   ];
   return (
     <div
-      className="pointer-events-auto flex flex-wrap items-center gap-1.5 max-sm:max-w-[calc(100vw-1.25rem)] max-sm:flex-nowrap max-sm:justify-end max-sm:overflow-x-auto max-sm:pb-0.5"
+      className="pointer-events-auto flex flex-wrap items-center justify-end gap-1.5 max-sm:max-w-[calc(100vw-1.25rem)] max-sm:flex-nowrap max-sm:justify-end max-sm:overflow-x-auto max-sm:pb-0.5"
       role="region"
       aria-label="resources"
     >
@@ -94,7 +94,7 @@ export const ProductionQueuePanel: React.FC<ProductionQueuePanelProps> = ({
     {queue.length === 0 ? (
       <span className="text-[11px] lowercase text-[var(--ink)]">{queueEmptyText}</span>
     ) : (
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex max-h-[max(9.5rem,22dvh)] flex-col gap-1.5 overflow-y-auto overscroll-contain" data-testid="queue-list">
         {queue.map((item) => {
           const pct = Math.min(100, Math.max(0, 100 - (item.remainingSec / item.durationSec) * 100));
           return (

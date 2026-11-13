@@ -1,6 +1,7 @@
 /**
  * One toolbar for the game's tools: telemetry toggle plus the tool windows (the seven game tools, help
- * and settings). Below 1140 px the tool keys fold into a "tools" key that opens a sheet.
+ * and settings). Below 1140 px (1260 px when the profile key is shown too) the tool keys fold into a
+ * "tools" key that opens a sheet.
  */
 import { useState } from "react";
 import type { SkinMode } from "../config/constants.ts";
@@ -30,6 +31,9 @@ export const TOOLS: readonly ToolDef[] = [
   { id: "settings", label: () => "settings", icon: "gauge" },
 ];
 
+/** With every tool shown (the profile key included) the strip is wider, so it folds at a wider screen (see `fd.css`). */
+export const FULL_TOOL_COUNT = TOOLS.length;
+
 export interface ToolsToolbarProps {
   skin: SkinMode;
   panelsOpen: boolean;
@@ -45,7 +49,12 @@ export function ToolsToolbar({ skin, panelsOpen, onTogglePanels, onOpen, guestLa
   const tools = TOOLS.filter((t) => !hidden.includes(t.id));
   return (
     <>
-      <div className="fd-toolbar fd-dither tools-bar pointer-events-auto" role="group" aria-label="game tools" data-testid="tools-bar">
+      <div
+        className={`fd-toolbar fd-dither tools-bar pointer-events-auto${tools.length >= FULL_TOOL_COUNT ? " tools-bar--full" : ""}`}
+        role="group"
+        aria-label="game tools"
+        data-testid="tools-bar"
+      >
         <KeycapButton mono icon="lines" aria-expanded={panelsOpen} onClick={onTogglePanels}>
           telemetry
         </KeycapButton>

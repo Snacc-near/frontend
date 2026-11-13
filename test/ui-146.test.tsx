@@ -201,7 +201,7 @@ describe("UI-146 status lines", () => {
   it("links the official testnet faucet when the balance is short", () => {
     const html = renderToStaticMarkup(<FaucetLine needYocto={QUARTER_NEAR} info={{ ...info, nearYocto: "0" }} />);
     expect(html).toContain(TESTNET_FAUCET_URL);
-    expect(TESTNET_FAUCET_URL).toBe("https://docs.near.org/tools/faucet");
+    expect(TESTNET_FAUCET_URL).toBe("https://docs.near.org/getting-started/faucet");
     expect(renderToStaticMarkup(<FaucetLine needYocto={QUARTER_NEAR} info={info} />)).toBe("");
   });
 

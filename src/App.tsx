@@ -704,7 +704,7 @@ export const App: React.FC = () => {
                 <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
               </span>
             </div>
-            <div className="flex flex-col items-end gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
               <div className="pointer-events-auto flex items-start gap-1.5">
                 <NotificationsBell onOpen={() => setTool("notifications")} />
                 <AccountChip onOpenProfile={() => setTool("profile")} />
@@ -785,7 +785,7 @@ export const App: React.FC = () => {
         ) : null}
 
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
             <ToolsToolbar
               skin={skin}
               panelsOpen={panelsOpen}

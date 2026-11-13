@@ -1659,6 +1659,9 @@ html {
 
 .ln-nft .fd-win__title {
   font-size: 10.5px;
+  /* the two-up phone grid is about 160 px wide: let the file name shrink (ellipsis) instead of pushing the bar out of the card */
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .ln-nft__body {
