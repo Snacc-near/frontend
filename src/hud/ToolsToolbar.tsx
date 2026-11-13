@@ -1,6 +1,6 @@
 /**
- * One toolbar for the game's tools: telemetry toggle plus the tool windows (the seven game tools, help
- * and settings). Below 1140 px (1260 px when the profile key is shown too) the tool keys fold into a
+ * One toolbar for the game's tools: telemetry toggle plus the tool windows (the seven game tools, quests,
+ * profile, help and settings). Below 1140 px (1260 px when the profile key is shown too) the tool keys fold into a
  * "tools" key that opens a sheet.
  */
 import { useState } from "react";
@@ -9,7 +9,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
 
-export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "profile" | "notifications" | "help" | "settings";
+export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "quests" | "profile" | "notifications" | "help" | "settings";
 
 export interface ToolDef {
   id: ToolId;
@@ -25,7 +25,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: "thesis", label: () => "thesis", icon: "doc" },
   { id: "recipes", label: () => "recipes", icon: "search" },
   { id: "guest", label: (_s, g) => (g ? `guest: ${g}` : "guest label"), icon: "user" },
-  // UI-148: hidden (see `hidden`) when the profile features are off.
+  // UI-153 and UI-148: hidden (see `hidden`) when the profile features are off.
+  { id: "quests", label: () => "quests", icon: "check" },
   { id: "profile", label: () => "profile", icon: "user" },
   { id: "help", label: () => "help", icon: "spark" },
   { id: "settings", label: () => "settings", icon: "gauge" },
@@ -40,7 +41,7 @@ export interface ToolsToolbarProps {
   onTogglePanels: () => void;
   onOpen: (id: ToolId) => void;
   guestLabel: string | null;
-  /** Tools to leave out, e.g. `profile` when the profile features are off. */
+  /** Tools to leave out, e.g. `profile` and `quests` when the profile features are off. */
   hidden?: readonly ToolId[];
 }
 

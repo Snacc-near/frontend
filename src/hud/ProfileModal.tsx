@@ -1,6 +1,6 @@
 /**
  * Profile window (UI-148): username, bio and avatar (picked from your own Snaccs, shown as their
- * on-chain SVG), achievements with how to earn each, the current feed streak, recent recorded
+ * on-chain SVG), level and XP (UI-153), achievements with how to earn each, the current feed streak, recent recorded
  * activity, a "Copy profile link" key and "Delete my profile". Data: `profiles_snacc`,
  * `achievements_snacc`, `streaks_snacc`, `activity_snacc` (row-level security applies); the avatar
  * list comes from contract views (`fetchCollection`).
@@ -8,7 +8,8 @@
 import { useEffect, useId, useState } from "react";
 import { useWallet } from "../chain/wallet.tsx";
 import { useAccount } from "../account/session.tsx";
-import { achievementsOf, deleteMyAccount, recentActivity, saveProfile, streakOf } from "../account/api.ts";
+import { achievementsOf, deleteMyAccount, playerXpOf, recentActivity, saveProfile, streakOf } from "../account/api.ts";
+import type { PlayerXpRow } from "../account/quests.ts";
 import {
   ACHIEVEMENTS,
   BIO_MAX,
@@ -26,6 +27,7 @@ import { ISSUES_URL } from "../legal/content.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { CopyButton, Empty, ExtLink, Field, Input, KeycapButton } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
+import { LevelBadge, XpBar } from "./XpWidgets.tsx";
 import "../account/account.css";
 
 export interface ProfileModalProps {
@@ -49,6 +51,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   const [own, setOwn] = useState<CollectionItem[] | null>(null);
   const [badges, setBadges] = useState<AchievementRow[]>([]);
   const [streak, setStreak] = useState<StreakRow | null>(null);
+  const [xp, setXp] = useState<PlayerXpRow | null>(null);
   const [activity, setActivity] = useState<ActivityRow[] | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
@@ -64,6 +67,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     let alive = true;
     void achievementsOf(client, userId).then((r) => alive && setBadges(r)).catch(() => undefined);
     void streakOf(client, { userId }).then((r) => alive && setStreak(r)).catch(() => undefined);
+    void playerXpOf(client, { userId }).then((r) => alive && setXp(r)).catch(() => undefined);
     void recentActivity(client, { userId }).then((r) => alive && setActivity(r)).catch(() => alive && setActivity([]));
     return () => {
       alive = false;
@@ -159,7 +163,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
               )}
               <div className="fd-stack" style={{ minWidth: 0 }}>
                 <h4 id={`${uid}-who`} className="fd-h">
-                  {profile?.username || nearAccountId}
+                  {profile?.username || nearAccountId} <LevelBadge level={xp?.level ?? 1} />
                 </h4>
                 <code>{nearAccountId}</code>
                 <div className="fd-row">
@@ -172,6 +176,16 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
                 </div>
               </div>
             </div>
+          </section>
+
+          <section className="fd-stack" aria-labelledby={`${uid}-xp`}>
+            <h4 id={`${uid}-xp`} className="fd-h">
+              Level and XP
+            </h4>
+            <XpBar xp={xp} />
+            <p className="fd-field__hint">
+              XP comes from your recorded actions and finished daily quests (see the quests window). It is cosmetic and off-chain: no tokens, no NEAR.
+            </p>
           </section>
 
           <section className="fd-stack" aria-label="edit profile">

@@ -96,9 +96,9 @@ describe("every tool window is a labelled modal dialog", () => {
 describe("toolbar", () => {
   it("folds the seven tools plus help and settings (UI-151) into one toolbar with a mobile overflow key", () => {
     const html = renderToStaticMarkup(<ToolsToolbar skin="biolab" panelsOpen={false} onTogglePanels={() => {}} onOpen={() => {}} guestLabel={null} />);
-    // UI-148 added "profile" (the app hides it when the profile features are off).
-    expect(TOOLS).toHaveLength(10);
-    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(10);
+    // UI-148 added "profile" and UI-153 "quests" (the app hides both when the profile features are off).
+    expect(TOOLS).toHaveLength(11);
+    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(11);
     expect(html).toContain("tools-bar__more");
     expect(html).toContain('aria-label="game tools"');
     expect(html).not.toMatch(/\p{Emoji_Presentation}|️/u);

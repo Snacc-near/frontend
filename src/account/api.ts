@@ -1,7 +1,8 @@
 /**
  * Table reads and writes for the player-account layer (UI-148, UI-149). Names are the backend's
  * (`profiles_snacc`, `activity_snacc`, `notifications_snacc`, `notification_prefs_snacc`,
- * `achievements_snacc`, `streaks_snacc`, `follows_snacc`); row-level security decides what each
+ * `achievements_snacc`, `streaks_snacc`, `follows_snacc`; UI-153/154: `snacc_my_quests()`,
+ * `player_xp_snacc`, `season_leaderboard_snacc`, `hall_of_fame_snacc`); row-level security decides what each
  * call may touch. Every function takes the client, so this file never imports Supabase itself.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -17,6 +18,16 @@ import {
   type ProfileRow,
   type StreakRow,
 } from "./model.ts";
+import {
+  normalizePlayerXp,
+  normalizeQuests,
+  normalizeSeasonRows,
+  normalizeXpRows,
+  type HallRow,
+  type PlayerXpRow,
+  type QuestRow,
+  type SeasonRow,
+} from "./quests.ts";
 
 const PROFILE_COLS = "user_id,near_account_id,username,avatar_strain_id,bio,created_at,updated_at";
 
@@ -90,6 +101,61 @@ export async function topStreaks(c: SupabaseClient, limit = 10): Promise<StreakR
     .order("current_streak_days", { ascending: false })
     .limit(limit);
   return (data as StreakRow[] | null) ?? [];
+}
+
+// ------------------------------------------------------------------ quests, XP and seasons (UI-153, UI-154)
+
+/**
+ * Today's three quests of the signed-in player (`snacc_my_quests()`; progress is computed by the database from
+ * recorded activity, so there is nothing to write). Throws with the database's message on failure, so the
+ * window can tell "could not read" from "no quests".
+ */
+export async function myQuests(c: SupabaseClient): Promise<QuestRow[]> {
+  const { data, error } = await c.rpc("snacc_my_quests");
+  if (error) throw new Error(error.message);
+  return normalizeQuests(data);
+}
+
+const XP_COLS = "user_id,near_account_id,total_xp,level,level_start_xp,next_level_xp,quests_completed,actions";
+
+/** Total XP and level of one player (`player_xp_snacc`); null when nothing has been recorded yet. */
+export async function playerXpOf(c: SupabaseClient, by: { userId?: string; accountId?: string }): Promise<PlayerXpRow | null> {
+  let q = c.from("player_xp_snacc").select(XP_COLS);
+  q = by.userId ? q.eq("user_id", by.userId) : q.eq("near_account_id", by.accountId ?? "");
+  const { data } = await q.maybeSingle();
+  return normalizePlayerXp(data);
+}
+
+/** Level per NEAR account, for the badge in leaderboard rows. */
+export async function levelsByAccounts(c: SupabaseClient, accounts: readonly string[]): Promise<Pick<PlayerXpRow, "near_account_id" | "level">[]> {
+  if (accounts.length === 0) return [];
+  const { data } = await c.from("player_xp_snacc").select("near_account_id,level").in("near_account_id", [...new Set(accounts)]);
+  return ((data as Pick<PlayerXpRow, "near_account_id" | "level">[] | null) ?? []).map((r) => ({ near_account_id: r.near_account_id, level: Number(r.level) || 1 }));
+}
+
+const SEASON_COLS = "season,starts_on,ends_on,rank,user_id,near_account_id,xp,actions,quests_completed";
+
+/** One season's board, best first (`season_leaderboard_snacc`). */
+export async function seasonBoard(c: SupabaseClient, season: number, limit = 50): Promise<SeasonRow[]> {
+  const { data } = await c.from("season_leaderboard_snacc").select(SEASON_COLS).eq("season", season).order("rank", { ascending: true }).limit(limit);
+  return normalizeSeasonRows<SeasonRow>(data);
+}
+
+/** All-time board by total XP (`player_xp_snacc`). */
+export async function allTimeBoard(c: SupabaseClient, limit = 50): Promise<PlayerXpRow[]> {
+  const { data } = await c.from("player_xp_snacc").select(XP_COLS).order("total_xp", { ascending: false }).limit(limit);
+  return normalizeXpRows(data);
+}
+
+/** Top three of every finished season, newest season first (`hall_of_fame_snacc`). */
+export async function hallOfFame(c: SupabaseClient, limit = 60): Promise<HallRow[]> {
+  const { data } = await c
+    .from("hall_of_fame_snacc")
+    .select("season,starts_on,ends_on,rank,user_id,near_account_id,xp,quests_completed")
+    .order("season", { ascending: false })
+    .order("rank", { ascending: true })
+    .limit(limit);
+  return normalizeSeasonRows<HallRow>(data);
 }
 
 // ------------------------------------------------------------------ follows

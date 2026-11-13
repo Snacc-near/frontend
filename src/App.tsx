@@ -61,6 +61,8 @@ import { NotificationsBell } from "./hud/NotificationsBell.tsx";
 // Tool windows load on first open, outside the game's entry chunk.
 // UI-148/149: the profile and notification windows (shown only with the profile features on).
 const ProfileModal = React.lazy(() => import("./hud/ProfileModal.tsx"));
+// UI-153: the daily quests window (shown only with the profile features on).
+const QuestsModal = React.lazy(() => import("./hud/QuestsModal.tsx"));
 const NotificationsModal = React.lazy(() => import("./hud/NotificationsModal.tsx"));
 const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
 const SwapPanel = React.lazy(() => import("./hud/SwapPanel.tsx"));
@@ -76,7 +78,7 @@ const FeedModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) => 
 const GameActions = React.lazy(() => import("./hud/GameActions.tsx"));
 
 /** Toolbar entries that need the optional profile features (UI-148). */
-const PROFILE_TOOLS = ["profile"] as const;
+const PROFILE_TOOLS = ["profile", "quests"] as const;
 
 /** `/app?strain=<id>` (the "Open in game" link of `/snacc/<id>`): the strain to open in the lab. */
 export function strainFromSearch(search: string): number | null {
@@ -911,6 +913,7 @@ export const App: React.FC = () => {
           />
         ) : null}
         {tool === "profile" && account.enabled ? <ProfileModal onClose={closeTool} /> : null}
+        {tool === "quests" && account.enabled ? <QuestsModal onClose={closeTool} /> : null}
         {tool === "notifications" && account.enabled ? (
           <NotificationsModal
             onClose={closeTool}

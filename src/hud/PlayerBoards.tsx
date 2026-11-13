@@ -1,24 +1,31 @@
 /**
  * Player boards for the Great Feast window (UI-148): usernames next to account ids, "Most active
  * (7 days)" from `activity_snacc`, "Longest streaks" from `streaks_snacc`, and a "Following" filter
- * from `follows_snacc`. Names link to the public profile `/p/<account>`. Without the profile
+ * from `follows_snacc`. Names link to the public profile `/p/<account>` and show the player's level
+ * (`player_xp_snacc`, UI-153) once it is read. Without the profile
  * features (no Supabase env) none of this renders.
  */
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useAccount } from "../account/session.tsx";
-import { followeesOf, profilesByAccounts, profilesByUsers, topStreaks, weekActivity } from "../account/api.ts";
+import { followeesOf, levelsByAccounts, profilesByAccounts, profilesByUsers, topStreaks, weekActivity } from "../account/api.ts";
 import { mergeNames, rankActivity, type StreakRow } from "../account/model.ts";
+import { levelMap } from "../account/quests.ts";
 import { profilePath } from "../account/config.ts";
 import { Empty } from "../ui/controls.tsx";
+import { LevelBadge } from "./XpWidgets.tsx";
 import "../account/account.css";
 
-export function PlayerName({ account, username }: { account: string; username: string | null }) {
+/** A player's name linking to their public profile; `level` (UI-153) adds the "Lv" badge when known. */
+export function PlayerName({ account, username, level }: { account: string; username: string | null; level?: number | null }) {
   return (
-    <a className="acct-name fd-a" href={profilePath(account)} data-testid="player-name">
-      {username ? <span className="acct-name__user">{username}</span> : null}
-      <code className="feast-account">{account}</code>
-    </a>
+    <span className="acct-who">
+      <a className="acct-name fd-a" href={profilePath(account)} data-testid="player-name">
+        {username ? <span className="acct-name__user">{username}</span> : null}
+        <code className="feast-account">{account}</code>
+      </a>
+      {typeof level === "number" ? <LevelBadge level={level} /> : null}
+    </span>
   );
 }
 
@@ -70,6 +77,23 @@ export function useNames(client: SupabaseClient | null, accounts: readonly strin
   return names;
 }
 
+/** Level per NEAR account for the given accounts (UI-153; empty map until read, and for players with no recorded XP). */
+export function useLevels(client: SupabaseClient | null, accounts: readonly string[]): Map<string, number> {
+  const key = [...new Set(accounts)].sort().join(",");
+  const [levels, setLevels] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    if (!client || !key) return;
+    let alive = true;
+    void levelsByAccounts(client, key.split(","))
+      .then((rows) => alive && setLevels(levelMap(rows)))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [client, key]);
+  return levels;
+}
+
 /** NEAR accounts the signed-in player follows; null when not signed in. */
 export function useFollowing(client: SupabaseClient | null): Set<string> | null {
   const account = useAccount();
@@ -108,6 +132,7 @@ export function ActivityBoard({ client, only }: { client: SupabaseClient | null;
   }, [client]);
   const shown = Array.isArray(rows) ? rows.filter((r) => !only || only.has(r.account_id)).slice(0, 10) : [];
   const names = useNames(client, shown.map((r) => r.account_id));
+  const levels = useLevels(client, shown.map((r) => r.account_id));
   if (rows === null) return <Empty icon="eye">reading activity_snacc…</Empty>;
   if (rows === "error") return <Empty icon="warn">The profile database did not answer. Nothing is shown in its place.</Empty>;
   if (shown.length === 0) return <Empty icon="podium">{only ? "Nobody you follow has recorded activity in the last 7 days." : "No recorded activity in the last 7 days."}</Empty>;
@@ -118,7 +143,7 @@ export function ActivityBoard({ client, only }: { client: SupabaseClient | null;
           <span className="fd-list__rank" aria-hidden="true">
             {i + 1}
           </span>
-          <PlayerName account={r.account_id} username={names.get(r.account_id) ?? null} />
+          <PlayerName account={r.account_id} username={names.get(r.account_id) ?? null} level={levels.get(r.account_id)} />
           <span className="fd-num feast-amount">
             {r.count} signed action{r.count === 1 ? "" : "s"}
           </span>
@@ -142,6 +167,7 @@ export function StreakBoard({ client, only }: { client: SupabaseClient | null; o
   }, [client]);
   const shown = Array.isArray(rows) ? rows.filter((r) => !only || only.has(r.near_account_id)).slice(0, 10) : [];
   const names = useNames(client, shown.map((r) => r.near_account_id));
+  const levels = useLevels(client, shown.map((r) => r.near_account_id));
   if (rows === null) return <Empty icon="eye">reading streaks_snacc…</Empty>;
   if (rows === "error") return <Empty icon="warn">The profile database did not answer. Nothing is shown in its place.</Empty>;
   if (shown.length === 0) return <Empty icon="podium">{only ? "Nobody you follow has a feed streak right now." : "No feed streaks yet."}</Empty>;
@@ -152,7 +178,7 @@ export function StreakBoard({ client, only }: { client: SupabaseClient | null; o
           <span className="fd-list__rank" aria-hidden="true">
             {i + 1}
           </span>
-          <PlayerName account={r.near_account_id} username={names.get(r.near_account_id) ?? null} />
+          <PlayerName account={r.near_account_id} username={names.get(r.near_account_id) ?? null} level={levels.get(r.near_account_id)} />
           <span className="fd-num feast-amount">
             {r.current_streak_days} day{r.current_streak_days === 1 ? "" : "s"}
           </span>
