@@ -1,21 +1,15 @@
 import * as React from "react";
+import { prefersReducedMotion } from "../../motion.ts";
+import { subscribeMotion } from "../../prefs/motionPref.ts";
 
-const STILLNESS = "(prefers-reduced-motion: reduce)";
 const MARGIN = "120px 0px";
 const LONGEST_FRAME = 1 / 30;
 
-export const asksForStillness = () => typeof window !== "undefined" && window.matchMedia(STILLNESS).matches;
+/** The OS setting, or the override saved in Settings (UI-151) when there is one. */
+export const asksForStillness = () => typeof window !== "undefined" && prefersReducedMotion();
 
 export function useStillness() {
-  return React.useSyncExternalStore(
-    (changed) => {
-      const query = window.matchMedia(STILLNESS);
-      query.addEventListener("change", changed);
-      return () => query.removeEventListener("change", changed);
-    },
-    asksForStillness,
-    () => false,
-  );
+  return React.useSyncExternalStore(subscribeMotion, asksForStillness, () => false);
 }
 
 export function useInView<T extends Element>(ref: React.RefObject<T | null>) {

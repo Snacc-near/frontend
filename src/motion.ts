@@ -2,6 +2,7 @@
  * Motion tokens & exact easing curves from motionmaxxing (FE-26).
  * Avoids uniform CSS transitions ("AI slop"); every event has its own physics.
  */
+import { readMotionPref, resolveReducedMotion } from "./prefs/prefs.ts";
 
 export const ease = {
   /** A smooth exponential landing (k = 3.41) for panel & camera transitions */
@@ -56,13 +57,15 @@ export const dur = {
 } as const;
 
 /**
- * Detects the user's accessibility preference (FE-28 / UI-132).
+ * Detects the user's accessibility preference (FE-28 / UI-132). The OS setting is the default; the
+ * override saved in Settings (UI-151) wins over it.
  */
 export function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return false;
-  }
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const os =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return resolveReducedMotion(readMotionPref(), os);
 }
 
 /**
