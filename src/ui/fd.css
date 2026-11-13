@@ -337,6 +337,12 @@
   overflow-wrap: anywhere;
 }
 
+/* long method signatures (recipes) wrap inside the value cell instead of spilling out of the card */
+.fd-kv dd code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* segmented meter */
 .fd-meter {
   position: relative;
@@ -932,6 +938,18 @@
   }
 
   .tools-bar .tools-bar__more {
+    display: inline-flex;
+    border-right: 0;
+  }
+}
+
+/* with the profile key shown (ten tool keys plus telemetry) the strip needs about 1210 px */
+@media (max-width: 1259.98px) {
+  .tools-bar--full .tools-bar__tool {
+    display: none;
+  }
+
+  .tools-bar--full .tools-bar__more {
     display: inline-flex;
     border-right: 0;
   }
