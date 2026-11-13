@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/og/**/*.js": {
+    "api/og-*.js": {
       "includeFiles": "{server/assets/fonts/*.ttf,node_modules/@resvg/resvg-wasm/index_bg.wasm}"
     }
   },
@@ -15,6 +15,8 @@
       "has": [{ "type": "header", "key": "user-agent", "value": "(?i).*(twitterbot|facebookexternalhit|facebot|discordbot|telegrambot|slackbot|slack-imgproxy|linkedinbot|whatsapp|mastodon|cardyb).*" }],
       "destination": "/api/share?kind=p&account=:account"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/og/snacc/:id", "destination": "/api/og-snacc?id=:id" },
+    { "source": "/api/og/p/:account", "destination": "/api/og-profile?account=:account" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

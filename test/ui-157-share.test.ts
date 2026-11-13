@@ -167,11 +167,23 @@ describe("vercel.json", () => {
     }
   });
 
-  it("keeps the SPA catch-all last, so humans and every other route still get index.html", () => {
+  it("keeps the SPA catch-all last and lets /api/ through, so humans and every page route still get index.html", () => {
     const last = cfg.rewrites[cfg.rewrites.length - 1];
-    expect(last).toEqual({ source: "/(.*)", destination: "/index.html" });
+    expect(last).toEqual({ source: "/((?!api/).*)", destination: "/index.html" });
     expect(last.has).toBeUndefined();
-    expect(cfg.rewrites.filter((r) => !r.has)).toHaveLength(1);
+    // Besides the catch-all, only the two card rewrites carry no user-agent condition.
+    const plain = cfg.rewrites.filter((r) => !r.has);
+    expect(plain).toHaveLength(3);
+    // The catch-all's negative lookahead (same semantics as path-to-regexp/RE2 used by Vercel).
+    const re = /^\/((?!api\/).*)$/;
+    for (const p of ["/", "/app", "/snacc/1", "/p/alice.testnet", "/privacy", "/apiary"]) expect(re.test(p)).toBe(true);
+    for (const p of ["/api/share", "/api/og/snacc/1", "/api/og-snacc"]) expect(re.test(p)).toBe(false);
+  });
+
+  it("maps the public card URLs to the static image functions (dynamic [id] routes lost to the catch-all)", () => {
+    expect(cfg.rewrites.find((r) => r.source === "/api/og/snacc/:id")?.destination).toBe("/api/og-snacc?id=:id");
+    expect(cfg.rewrites.find((r) => r.source === "/api/og/p/:account")?.destination).toBe("/api/og-profile?account=:account");
+    expect(Object.keys(cfg.functions ?? {})).toEqual(["api/og-*.js"]);
   });
 
   it("ships the fonts and the wasm file with the image functions", () => {
