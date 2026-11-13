@@ -18,6 +18,7 @@ import { recordTx as postRecordTx, type ProfileRow } from "./model.ts";
 import { profileByUser } from "./api.ts";
 import { track } from "../telemetry.ts";
 import { claimStoredReferral } from "./referral.ts";
+import { detachThisDevice } from "../push/client.ts";
 
 export type AccountStatus = "off" | "idle" | "loading" | "signing" | "signed-in";
 
@@ -174,6 +175,8 @@ export function SessionProvider({ children, config }: { children: ReactNode; con
 
   const signOut = useCallback(async () => {
     setError(null);
+    // UI-160: this device stops receiving the leaving player's push notifications (no-op without a push subscription).
+    if (cfg && client) await detachThisDevice(cfg, async () => (await client.auth.getSession()).data.session?.access_token ?? null);
     try {
       await client?.auth.signOut({ scope: "local" });
     } catch {
