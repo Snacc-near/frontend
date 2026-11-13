@@ -142,10 +142,6 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       base: null as Cam | null,
       /** composited transform last written on `.ln-world` */
       rel: "",
-      /** frames left before the composited transform may follow a fresh base raster */
-      relHold: 0,
-      /** base the still-shown raster was painted with while a fresh one is landing */
-      shown: null as Cam | null,
       /** time of the last base repaint, so repaints never land back to back */
       baseT: 0,
       layerMoving: false,
@@ -255,22 +251,17 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       // Repaint the figure at the current camera only when the composited move would run out of
       // band, or once the page is still (so a resting frame is painted exactly, never resampled).
       const still = !st.scrolling && cur === target && !pointerEasing;
-      // A base repaint re-rasters the whole figure; until the new raster reaches the screen the
-      // compositor keeps drawing the old one. So the base swaps alone: the composited transform
-      // keeps matching the raster that is still shown (the picture never mixes a new base with an
-      // old transform), and only once the fresh raster has landed (two frames later) does the
-      // transform follow it. That swap frame is what read as a full-screen jump before.
+      // A base repaint re-rasters the whole figure. Back-to-back repaints - an "ahead" recenter
+      // followed by another one a frame later - showed as a full-screen jump, so while moving,
+      // repaints are spaced at least ~90 ms apart and the composited transform covers the gap.
       const cooled = now - st.baseT < 90 && !still; // never repaint twice within ~5 frames
       const base = (cooled ? st.base : paintCam(st.base, cur, still)) ?? cur;
       if (base !== st.base) {
         camEl?.setAttribute("transform", camTransform(base));
-        st.shown = st.base;
         st.base = base;
         st.baseT = now;
-        st.relHold = 2;
       }
-      const relCamShown = base ?? cur;
-      const rel = relCamShown === cur ? "" : relTransform(relCam(relCamShown, cur));
+      const rel = base === cur ? "" : relTransform(relCam(base, cur));
       if (rel !== st.rel) {
         st.rel = rel;
         host.style.transform = rel;
@@ -366,7 +357,7 @@ export function Theatre({ source, finePointer, blocks, map, overlay }: Props) {
       }
       // specks and droplets shrink while the camera is deeper than half-way between colony and cell
       // (read from the painted camera, so the swap lands on a frame that repaints anyway)
-      const deep = st.levels.length > 3 && (base ?? cur).s > Math.sqrt(st.levels[2]! * st.levels[3]!);
+      const deep = st.levels.length > 3 && base.s > Math.sqrt(st.levels[2]! * st.levels[3]!);
       if (deep !== st.deep) {
         st.deep = deep;
         stage.toggleAttribute("data-deep", deep);
