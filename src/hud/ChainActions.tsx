@@ -128,7 +128,7 @@ export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string
 
 export const Footer = () => (
   <>
-    <span>signed in your wallet · {CONTRACT_ID} · $SNACC on testnet has no monetary value</span>
+    <span>every call is signed in your wallet · {CONTRACT_ID} · $SNACC on testnet has no monetary value</span>
     <Tag>testnet</Tag>
   </>
 );
