@@ -1,7 +1,8 @@
 import React from "react";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 import type { AppetiteViewModel, BreachLogItem, NutrientBurstState, StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { OptimisticVitalityState } from "../data/optimistic.ts";
 import type { GameMode } from "../config/constants.ts";
@@ -74,6 +75,8 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
   onTriggerBurst,
   onShiftZone,
 }) => {
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
   return (
     <div className="absolute inset-0 pointer-events-none p-2.5 sm:p-6 flex flex-col justify-between z-10 select-none overflow-hidden">
       {/* Top bar: two-column grid on phones so the dish top stays clear (390x844) */}
@@ -85,7 +88,7 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
             </span>
             <span className="text-slate-500 text-xs">·</span>
             <span className="text-xs text-slate-300 font-medium lowercase hidden min-[420px]:inline">
-              {SKIN_LABELS[skin].crucible}
+              {labels.crucible}
             </span>
           </div>
           <ModeSwitch
@@ -134,34 +137,34 @@ export const HudOverlay: React.FC<HudOverlayProps> = ({
       {mode === "demo" && (
         <div className="flex items-center justify-center gap-2 pointer-events-auto my-auto opacity-80 hover:opacity-100 transition-opacity flex-wrap">
           <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-950/75 border border-slate-800 text-[11px] backdrop-blur-md flex-wrap justify-center">
-            <span className="text-slate-400 px-2 lowercase">dish simulation:</span>
+            <span className="text-slate-400 px-2 lowercase">{t("hud.sim.label")}</span>
             <button
               type="button"
               onClick={() => onShiftZone?.("Hypothermia")}
               className="px-3 py-1.5 rounded-full text-cyan-300 hover:bg-cyan-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-cyan-400 focus:outline-none min-h-[36px]"
             >
-              hypothermia (575)
+              {t("hud.sim.hypothermia")}
             </button>
             <button
               type="button"
               onClick={() => onShiftZone?.("Goldilocks")}
               className="px-3 py-1.5 rounded-full text-emerald-300 hover:bg-emerald-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none min-h-[36px]"
             >
-              goldilocks (605)
+              {t("hud.sim.goldilocks")}
             </button>
             <button
               type="button"
               onClick={() => onShiftZone?.("Fever")}
               className="px-3 py-1.5 rounded-full text-orange-300 hover:bg-orange-950/60 cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-orange-400 focus:outline-none min-h-[36px]"
             >
-              fever (632)
+              {t("hud.sim.fever")}
             </button>
             <button
               type="button"
               onClick={onTriggerBurst}
               className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 font-semibold cursor-pointer lowercase focus-visible:ring-2 focus-visible:ring-emerald-400 focus:outline-none min-h-[36px]"
             >
-              lysis / burst!
+              {t("hud.sim.burst")}
             </button>
           </div>
         </div>

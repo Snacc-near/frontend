@@ -11,6 +11,7 @@ import { accountLabel, useAccount } from "../account/session.tsx";
 import { claimStarterPackWithCaptcha, type StarterOutcome } from "../account/model.ts";
 import { createCaptchaGate, turnstileSiteKey, type CaptchaGate } from "../account/turnstile.ts";
 import { explorerTx } from "../data/nearView.ts";
+import { useT } from "../i18n/react.tsx";
 import { formatYocto } from "../chain/actions.ts";
 import { KeycapButton } from "../ui/controls.tsx";
 import { Icon } from "../ui/fd.tsx";
@@ -18,6 +19,7 @@ import { shortAccount } from "./WalletControl.tsx";
 import "../account/account.css";
 
 export function AccountChip({ compact = false, onOpenProfile }: { compact?: boolean; onOpenProfile: () => void }) {
+  const { t } = useT();
   const account = useAccount();
   const wallet = useWallet();
   if (!account.enabled) return null;
@@ -30,8 +32,8 @@ export function AccountChip({ compact = false, onOpenProfile }: { compact?: bool
         <KeycapButton mono icon="user" onClick={onOpenProfile} aria-haspopup="dialog" title={account.nearAccountId ?? undefined} data-testid="account-open">
           {shortAccount(label)}
         </KeycapButton>
-        <KeycapButton mono icon="close" onClick={() => void account.signOut()} aria-label="sign out of the profile (the wallet stays connected)" data-testid="account-signout">
-          {compact ? null : "sign out"}
+        <KeycapButton mono icon="close" onClick={() => void account.signOut()} aria-label={t("hud.account.signOutAria")} data-testid="account-signout">
+          {compact ? null : t("hud.account.signOut")}
         </KeycapButton>
       </div>
     );
@@ -41,14 +43,14 @@ export function AccountChip({ compact = false, onOpenProfile }: { compact?: bool
   return (
     <div className="fd-ui acct-chip acct-chip--stack" data-testid="account-chip">
       <KeycapButton mono icon="lock" onClick={() => void account.signIn()} disabled={signing || account.status === "loading"} data-testid="account-signin">
-        {signing ? "sign the message in your wallet…" : "Save progress — sign in"}
+        {signing ? t("hud.account.signing") : t("hud.account.signIn")}
       </KeycapButton>
       {account.error ? (
         <span className="fd-field__hint fd-field__hint--bad acct-chip__err" role="alert" data-testid="account-error">
           {account.error}
         </span>
       ) : compact ? null : (
-        <span className="acct-chip__note">signs a message, not a transaction · no fee</span>
+        <span className="acct-chip__note">{t("hud.account.note")}</span>
       )}
     </div>
   );
@@ -71,6 +73,7 @@ export function StarterPackButton({
   /** SEC-119: Cloudflare Turnstile site key (`VITE_TURNSTILE_SITE_KEY`). Empty or null: no script, no widget. */
   siteKey?: string | null;
 }) {
+  const { t } = useT();
   const account = useAccount();
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState<StarterOutcome | null>(null);
@@ -94,14 +97,14 @@ export function StarterPackButton({
       if (!token) {
         const ok = await account.signIn();
         if (!ok) {
-          setOut({ kind: "error", message: "Sign in first to claim the starter pack." });
+          setOut({ kind: "error", message: t("hud.account.signInFirst") });
           return;
         }
         const c = await account.ensureClient();
         token = (await c?.auth.getSession())?.data.session?.access_token ?? null;
       }
       if (!token) {
-        setOut({ kind: "error", message: "Sign in first to claim the starter pack." });
+        setOut({ kind: "error", message: t("hud.account.signInFirst") });
         return;
       }
       // The Turnstile script and widget exist only when a site key is set, and only from the first claim on.
@@ -117,15 +120,15 @@ export function StarterPackButton({
   return (
     <span className="acct-starter" data-testid="starter-pack">
       <KeycapButton mono icon="spark" onClick={() => void claim()} disabled={busy || out?.kind === "sent"} data-testid="starter-pack-claim">
-        {busy ? "asking…" : "Get testnet NEAR to start"}
+        {busy ? t("hud.account.asking") : t("hud.account.getNear")}
       </KeycapButton>
       {siteKey ? <span ref={captchaEl} className="acct-starter__captcha" data-testid="starter-pack-captcha" /> : null}
       {out ? (
         out.kind === "sent" ? (
           <span className="fd-field__hint" role="status" data-testid="starter-pack-sent">
-            Sent {formatYocto(out.amountYocto)} testnet NEAR.{" "}
+            {t("hud.account.sent", { amount: formatYocto(out.amountYocto) })}{" "}
             <a className="fd-a" href={explorerTx(out.txHash)} target="_blank" rel="noopener noreferrer">
-              tx {out.txHash.slice(0, 8)}… <Icon name="ext" />
+              {t("hud.account.tx", { hash: out.txHash.slice(0, 8) })} <Icon name="ext" />
             </a>
           </span>
         ) : (

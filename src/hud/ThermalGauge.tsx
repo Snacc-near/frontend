@@ -6,7 +6,8 @@ import {
   ZONE_THEMES,
 } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 
 interface ThermalGaugeProps {
   crucibleTempMk: number | null;
@@ -17,7 +18,8 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
   const temp = crucibleTempMk ?? 0;
   const zone = classifyZone(temp);
   const theme = ZONE_THEMES[zone];
-  const labels = SKIN_LABELS[skin];
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
 
   const minTemp = 0;
   const maxTemp = FEVER_THRESHOLD_MK * 2;
@@ -30,12 +32,12 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
     <div
       className="plate-panel flex min-w-[210px] flex-col gap-1 px-4 py-2.5 select-none"
       role="region"
-      aria-label={`${labels.zone} ${crucibleTempMk === null ? "—" : crucibleTempMk} milikelvin`}
+      aria-label={t("hud.thermal.region", { zone: labels.zone, temp: crucibleTempMk === null ? "—" : crucibleTempMk })}
     >
       <div className="flex items-center justify-between text-xs">
         <span className="lowercase text-[var(--ink)]">{labels.zone}</span>
         <span className="font-mono font-bold text-[var(--ink-hi)]">
-          {crucibleTempMk === null ? "—" : crucibleTempMk} <span className="font-normal text-[var(--ink)]">mk</span>
+          {crucibleTempMk === null ? "—" : crucibleTempMk} <span className="font-normal text-[var(--ink)]">{t("hud.thermal.unit")}</span>
         </span>
       </div>
 
@@ -43,17 +45,17 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
         <div
           className="absolute top-0 bottom-0 left-0 bg-[var(--frost)]/25"
           style={{ width: `${hypoPct}%` }}
-          title={`hypothermia threshold: < ${HYPOTHERMIA_THRESHOLD_MK} mk`}
+          title={t("hud.thermal.hypothermia", { mk: HYPOTHERMIA_THRESHOLD_MK })}
         />
         <div
           className="absolute top-0 bottom-0 bg-[var(--accent)]/30"
           style={{ left: `${hypoPct}%`, width: `${feverPct - hypoPct}%` }}
-          title={`goldilocks range: ${HYPOTHERMIA_THRESHOLD_MK}..${FEVER_THRESHOLD_MK} mk`}
+          title={t("hud.thermal.goldilocks", { lo: HYPOTHERMIA_THRESHOLD_MK, hi: FEVER_THRESHOLD_MK })}
         />
         <div
           className="absolute top-0 bottom-0 right-0 bg-[var(--warm)]/25"
           style={{ left: `${feverPct}%` }}
-          title={`fever threshold: > ${FEVER_THRESHOLD_MK} mk`}
+          title={t("hud.thermal.fever", { mk: FEVER_THRESHOLD_MK })}
         />
         <div
           className="absolute top-0 bottom-0 -ml-1 w-2 rounded-full border border-[var(--ink-hi)] bg-white transition-all duration-500"
@@ -67,7 +69,7 @@ export const ThermalGauge: React.FC<ThermalGaugeProps> = ({ crucibleTempMk, skin
           <span className="font-semibold lowercase">{theme.label}</span>
         </span>
         <span className="font-mono text-[10px] text-[var(--ink)]">
-          thresholds 600 / 610
+          {t("hud.thermal.thresholds")}
         </span>
       </div>
     </div>

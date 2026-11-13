@@ -1,6 +1,7 @@
 import React from "react";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 import { formatLiveAtp } from "../data/liveView.ts";
 
 interface AtpPillProps {
@@ -13,7 +14,8 @@ interface AtpPillProps {
 }
 
 export const AtpPill: React.FC<AtpPillProps> = ({ atpBalance, liveAtp, isLive = false, skin }) => {
-  const labels = SKIN_LABELS[skin];
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
   // Demo mode shows the in-game collected ATP; live mode shows only API data.
   const shown = isLive ? formatLiveAtp(liveAtp) : atpBalance.toLocaleString("en-US");
 
@@ -28,7 +30,7 @@ export const AtpPill: React.FC<AtpPillProps> = ({ atpBalance, liveAtp, isLive = 
         <span className="text-slate-300 text-[10px] lowercase">{labels.atp}</span>
         <span className="font-mono text-amber-300 font-bold">
           {shown}{" "}
-          <span className="text-slate-400 font-normal">atp</span>
+          <span className="text-slate-400 font-normal">{t("hud.atp.unit")}</span>
         </span>
       </div>
     </div>

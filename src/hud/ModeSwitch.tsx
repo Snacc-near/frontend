@@ -1,5 +1,6 @@
 import React from "react";
 import type { GameMode } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
 
 interface ModeSwitchProps {
   mode: GameMode;
@@ -12,12 +13,13 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
   onChange,
   isBackendConnected,
 }) => {
+  const { t } = useT();
   return (
     <div className="flex flex-col gap-1 items-start">
       <div
         className="hud-seg"
         role="group"
-        aria-label="the game arena mode"
+        aria-label={t("hud.mode.group")}
       >
         <button
           type="button"
@@ -25,7 +27,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
           aria-pressed={mode === "demo"}
           className={`keycap min-h-[40px] rounded-lg px-2.5 py-1.5 text-[11px] sm:min-h-[44px] sm:px-3.5 sm:text-xs ${mode === "demo" ? "keycap--primary" : ""} focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none`}
         >
-          demo · simulated
+          {t("hud.mode.demo")}
         </button>
 
         <button
@@ -38,13 +40,13 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
             className="inline-block h-2 w-2 rounded-full border border-[var(--ink-hi)]"
             style={{ backgroundColor: isBackendConnected ? "var(--ok)" : "var(--accent)", boxShadow: isBackendConnected ? "0 0 0 1px var(--ok)" : "0 0 0 1px var(--accent)" }}
           />
-          live testnet
+          {t("hud.mode.live")}
         </button>
       </div>
 
       {mode === "demo" && (
         <span className="pl-2 font-mono text-[10px] lowercase text-[var(--accent-dk)]">
-          demo · simulated
+          {t("hud.mode.demo")}
         </span>
       )}
     </div>

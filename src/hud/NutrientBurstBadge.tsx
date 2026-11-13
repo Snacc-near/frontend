@@ -1,7 +1,8 @@
 import React from "react";
 import type { NutrientBurstState } from "../data/types.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 
 interface NutrientBurstBadgeProps {
   burst: NutrientBurstState;
@@ -9,7 +10,8 @@ interface NutrientBurstBadgeProps {
 }
 
 export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, skin }) => {
-  const labels = SKIN_LABELS[skin];
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
   const isActive = burst.isActive;
 
   return (
@@ -20,7 +22,11 @@ export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, s
           : "bg-slate-950/80 border-slate-800 text-slate-300"
       }`}
       role="status"
-      aria-label={`${labels.burst}: ${isActive ? `a ${(burst.activeBurstBps / 100).toFixed(0)}% discount` : "standby"}`}
+      aria-label={
+        isActive
+          ? t("hud.burst.ariaActive", { label: labels.burst, pct: (burst.activeBurstBps / 100).toFixed(0) })
+          : t("hud.burst.ariaStandby", { label: labels.burst })
+      }
     >
       <span
         className={`w-2.5 h-2.5 rounded-full ${
@@ -37,11 +43,11 @@ export const NutrientBurstBadge: React.FC<NutrientBurstBadgeProps> = ({ burst, s
               -{(burst.activeBurstBps / 100).toFixed(2)}%
             </span>
             <span className="text-[10px] text-emerald-300 font-mono">
-              until epoch {burst.untilEpoch}
+              {t("hud.burst.until", { epoch: burst.untilEpoch })}
             </span>
           </>
         ) : (
-          <span className="text-[10px] text-slate-400 lowercase">standby</span>
+          <span className="text-[10px] text-slate-400 lowercase">{t("hud.burst.standby")}</span>
         )}
       </div>
     </div>

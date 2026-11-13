@@ -59,9 +59,12 @@ if (rootEl) {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
       {route === "app" ? (
-        <Suspense fallback={<BootFallback label="loading the lab…" />}>
-          <Game />
-        </Suspense>
+        // UI-161: the game HUD follows the language; screens not converted yet stay English.
+        <I18nProvider>
+          <Suspense fallback={<BootFallback label={t(getLocale(), "common.boot.game")} />}>
+            <Game />
+          </Suspense>
+        </I18nProvider>
       ) : route === "sign" ? (
         <Suspense fallback={<BootFallback label="opening the signer…" />}>
           <SignPage />

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { BreachLogItem } from "../data/types.ts";
+import { useT } from "../i18n/react.tsx";
 
 interface BreachLogProps {
   logs: BreachLogItem[];
@@ -8,6 +9,7 @@ interface BreachLogProps {
 }
 
 export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = false }) => {
+  const { t } = useT();
   const [isExpanded, setIsExpanded] = useState(
     () => typeof window === "undefined" || window.innerWidth >= 640,
   );
@@ -16,7 +18,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
     <aside
       className="plate-panel flex w-full max-w-sm flex-col gap-1.5 p-2 select-none"
       role="region"
-      aria-label="the reactor threshold feed"
+      aria-label={t("hud.breach.region")}
     >
       <div className="flex items-center justify-between px-1 font-mono text-[10px] lowercase text-[var(--ink)]">
         <button
@@ -27,12 +29,12 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
           aria-controls="breach-log-list"
         >
           <span className="inline-block h-2 w-2 rounded-full border border-[var(--ink-hi)] bg-[var(--accent)]" aria-hidden="true" />
-          <span>threshold log & events</span>
+          <span>{t("hud.breach.title")}</span>
           <span className="text-[var(--ink-mute)] text-[10px]">
-            [{isExpanded ? "close" : "open"}]
+            [{isExpanded ? t("hud.breach.close") : t("hud.breach.open")}]
           </span>
         </button>
-        <span className="text-[var(--ink-mute)] font-mono">sla &lt; 2000 ms</span>
+        <span className="text-[var(--ink-mute)] font-mono">{t("hud.breach.sla")}</span>
       </div>
 
       {indexerIncomplete && (
@@ -40,7 +42,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
           className="rounded-lg border border-[var(--accent-dk)] bg-[var(--accent-dim)] px-3 py-1.5 font-mono text-[10px] lowercase text-[var(--accent-dk)]"
           role="status"
         >
-          indexer catching up — the event list may be incomplete
+          {t("hud.breach.indexer")}
         </div>
       )}
 
@@ -54,7 +56,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
         >
           {logs.length === 0 ? (
             <div className="rounded-xl border border-[var(--edge)] bg-white px-3 py-2 text-xs lowercase text-[var(--ink)]">
-              no threshold events recorded yet
+              {t("hud.breach.empty")}
             </div>
           ) : (
             logs.slice(0, 4).map((item) => (
@@ -67,7 +69,7 @@ export const BreachLog: React.FC<BreachLogProps> = ({ logs, indexerIncomplete = 
                     {item.actor}
                   </span>
                   <span className="font-mono text-[9px] text-[var(--ink)]">
-                    {item.latencyMs} ms {item.meetsSla ? "sla pass" : "sla miss"}
+                    {item.latencyMs} ms {item.meetsSla ? t("hud.breach.slaPass") : t("hud.breach.slaMiss")}
                   </span>
                 </div>
                 <p className="text-[11px] lowercase leading-snug text-[var(--ink)]">

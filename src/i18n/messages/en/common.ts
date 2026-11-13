@@ -11,6 +11,7 @@ const common = {
   /** Text of the loading screen shown before a route's code has arrived. */
   boot: {
     landing: "warming the incubator…",
+    game: "loading the lab…",
   },
   brand: {
     backToTop: "Snacc, back to top",
