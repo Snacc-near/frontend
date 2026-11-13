@@ -416,15 +416,15 @@ describe("UI-154 season board and hall of fame", () => {
     expect(html).toContain("no tokens, no NEAR");
   });
 
-  it("puts a season xp tab in the leaderboard window next to the existing three", () => {
+  it("puts a season xp tab in the leaderboard window next to the existing three (UI-156 adds a fifth: graveyard)", () => {
     const account: AccountApi = { ...ACCOUNT_OFF, enabled: true, status: "idle", client: {} as SupabaseClient };
     const html = renderToStaticMarkup(
       <AccountContext.Provider value={account}>
         <SocialLeaderboardModal onClose={() => {}} appetite={null} mode="demo" />
       </AccountContext.Provider>,
     );
-    for (const label of ["top feeders", "most active (7 days)", "longest streaks", "season xp"]) expect(html).toContain(label);
-    expect((html.match(/role="tab"/g) ?? []).length).toBe(4);
+    for (const label of ["top feeders", "most active (7 days)", "longest streaks", "season xp", "graveyard"]) expect(html).toContain(label);
+    expect((html.match(/role="tab"/g) ?? []).length).toBe(5);
   });
 
   it("queries one season by rank, all time by total XP, and the hall of fame newest first", async () => {
