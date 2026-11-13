@@ -1,0 +1,114 @@
+/**
+ * Header controls of the optional profile (UI-148), shown next to the wallet chip:
+ * - wallet connected, no session: "Save progress — sign in" (NEAR message signature, no transaction);
+ * - signed in: the username (or account) opening the Profile window, a sign-out key that clears only
+ *   the profile session (the wallet stays connected).
+ * Everything renders nothing when the Supabase env vars are missing.
+ */
+import { useState } from "react";
+import { useWallet } from "../chain/wallet.tsx";
+import { accountLabel, useAccount } from "../account/session.tsx";
+import { claimStarterPack, type StarterOutcome } from "../account/model.ts";
+import { explorerTx } from "../data/nearView.ts";
+import { formatYocto } from "../chain/actions.ts";
+import { KeycapButton } from "../ui/controls.tsx";
+import { Icon } from "../ui/fd.tsx";
+import { shortAccount } from "./WalletControl.tsx";
+import "../account/account.css";
+
+export function AccountChip({ compact = false, onOpenProfile }: { compact?: boolean; onOpenProfile: () => void }) {
+  const account = useAccount();
+  const wallet = useWallet();
+  if (!account.enabled) return null;
+  const walletConnected = wallet.status === "connected" && wallet.accountId !== null;
+
+  if (account.status === "signed-in") {
+    const label = accountLabel(account);
+    return (
+      <div className="fd-ui acct-chip" data-testid="account-chip">
+        <KeycapButton mono icon="user" onClick={onOpenProfile} aria-haspopup="dialog" title={account.nearAccountId ?? undefined} data-testid="account-open">
+          {shortAccount(label)}
+        </KeycapButton>
+        <KeycapButton mono icon="close" onClick={() => void account.signOut()} aria-label="sign out of the profile (the wallet stays connected)" data-testid="account-signout">
+          {compact ? null : "sign out"}
+        </KeycapButton>
+      </div>
+    );
+  }
+  if (!walletConnected) return null;
+  const signing = account.status === "signing";
+  return (
+    <div className="fd-ui acct-chip acct-chip--stack" data-testid="account-chip">
+      <KeycapButton mono icon="lock" onClick={() => void account.signIn()} disabled={signing || account.status === "loading"} data-testid="account-signin">
+        {signing ? "sign the message in your wallet…" : "Save progress — sign in"}
+      </KeycapButton>
+      {account.error ? (
+        <span className="fd-field__hint fd-field__hint--bad acct-chip__err" role="alert" data-testid="account-error">
+          {account.error}
+        </span>
+      ) : compact ? null : (
+        <span className="acct-chip__note">signs a message, not a transaction · no fee</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "Get testnet NEAR to start" (UI-148): shown beside the faucet link when the wallet is low. Signs in
+ * first when needed, then asks the backend's `starter-pack` function to send a little testnet NEAR.
+ */
+export function StarterPackButton({ onSent }: { onSent?: () => void }) {
+  const account = useAccount();
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState<StarterOutcome | null>(null);
+  if (!account.enabled || !account.cfg) return null;
+  const cfg = account.cfg;
+
+  const claim = async () => {
+    setBusy(true);
+    setOut(null);
+    try {
+      let token = account.accessToken;
+      if (!token) {
+        const ok = await account.signIn();
+        if (!ok) {
+          setOut({ kind: "error", message: "Sign in first to claim the starter pack." });
+          return;
+        }
+        const c = await account.ensureClient();
+        token = (await c?.auth.getSession())?.data.session?.access_token ?? null;
+      }
+      if (!token) {
+        setOut({ kind: "error", message: "Sign in first to claim the starter pack." });
+        return;
+      }
+      const result = await claimStarterPack(cfg, token);
+      setOut(result);
+      if (result.kind === "sent") onSent?.();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <span className="acct-starter" data-testid="starter-pack">
+      <KeycapButton mono icon="spark" onClick={() => void claim()} disabled={busy || out?.kind === "sent"} data-testid="starter-pack-claim">
+        {busy ? "asking…" : "Get testnet NEAR to start"}
+      </KeycapButton>
+      {out ? (
+        out.kind === "sent" ? (
+          <span className="fd-field__hint" role="status" data-testid="starter-pack-sent">
+            Sent {formatYocto(out.amountYocto)} testnet NEAR.{" "}
+            <a className="fd-a" href={explorerTx(out.txHash)} target="_blank" rel="noopener noreferrer">
+              tx {out.txHash.slice(0, 8)}… <Icon name="ext" />
+            </a>
+          </span>
+        ) : (
+          <span className={out.kind === "error" ? "fd-field__hint fd-field__hint--bad" : "fd-field__hint"} role="status" data-testid="starter-pack-msg">
+            {out.message}
+          </span>
+        )
+      ) : null}
+    </span>
+  );
+}

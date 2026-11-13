@@ -95,7 +95,7 @@ export const TERMS: LegalDoc = {
 export const PRIVACY: LegalDoc = {
   title: "Privacy",
   file: "privacy.md",
-  lead: "Short version: Snacc has no accounts and no database of its own today, runs no analytics or ads, and keeps a few settings in your browser.",
+  lead: "Short version: Snacc runs no analytics or ads and keeps a few settings in your browser. An optional profile database stores your username, bio, avatar, recorded activity and notifications only if you sign in to a profile.",
   sections: [
     {
       id: "wallet-id",
@@ -109,7 +109,7 @@ export const PRIVACY: LegalDoc = {
       id: "email",
       heading: "Email login (Privy)",
       paragraphs: [
-        "Email login is optional and appears in the wallet picker only when it is switched on for this site. If you use it, the sign-in runs in a popup page of this site that loads Privy's software, and Privy handles your email under Privy's own terms and privacy policy. Snacc has no database of its own and does not store your email address.",
+        "Email login is optional and appears in the wallet picker only when it is switched on for this site. If you use it, the sign-in runs in a popup page of this site that loads Privy's software, and Privy handles your email under Privy's own terms and privacy policy. Snacc does not store your email address, not even in the optional profile database.",
       ],
     },
     {
@@ -133,13 +133,30 @@ export const PRIVACY: LegalDoc = {
         "Privy and a pinned script on raw.githubusercontent.com, only when email login is on and you use it.",
         "Rhea Finance and NEAR Intents (1Click) price and quote services, only when you open the swap quote window. Quotes are for display and do not feed the game.",
         "testnet.nearblocks.io, only when you follow an explorer link.",
+        "Supabase (supabase.co), which hosts the optional profile database, only once a wallet is connected or you have signed in to a profile, and on public profile pages.",
       ],
     },
     {
-      id: "planned",
-      heading: "Planned: a profile database (Supabase)",
+      id: "profiles",
+      heading: "The optional profile database (Supabase)",
       paragraphs: [
-        "A profile database on Supabase is planned. It is not live: today nothing is sent to it and nothing is stored there. Before it goes live this page will be updated to say what it stores, why, and how to have it deleted.",
+        "The profile database on Supabase is live. It is optional: nothing is stored there unless you press \"Save progress — sign in\" next to your wallet and sign a short message (a NEP-413 message, not a transaction, no fee). Signing in only proves that you control the NEAR account.",
+        "After you sign in, the database stores:",
+      ],
+      items: [
+        "your NEAR account id, linked to a sign-in record created for it;",
+        "the username, bio and avatar strain id you choose in the Profile window (public, shown on /p/<your account>);",
+        "the transaction hashes of the signed game actions you make while signed in, with the method, strain id and block time (public, used for streaks, achievements and the activity boards);",
+        "your achievements and feed streak (public);",
+        "who you follow (public);",
+        "your notifications, whether you have read them, and which kinds you want (private to you).",
+      ],
+    },
+    {
+      id: "profiles-delete",
+      heading: "Deleting your profile",
+      paragraphs: [
+        "The Profile window has a \"Delete my profile\" button. It removes your profile, follows, notification settings and notifications, as far as the database lets a signed-in player remove their own rows. The sign-in record and the recorded activity can only be removed by the project owner: ask for that through GitHub issues. Transactions on the NEAR blockchain stay public whatever happens to the database.",
       ],
     },
     {

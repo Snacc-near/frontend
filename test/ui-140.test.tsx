@@ -96,8 +96,9 @@ describe("every tool window is a labelled modal dialog", () => {
 describe("toolbar", () => {
   it("folds the seven tools plus help and settings (UI-151) into one toolbar with a mobile overflow key", () => {
     const html = renderToStaticMarkup(<ToolsToolbar skin="biolab" panelsOpen={false} onTogglePanels={() => {}} onOpen={() => {}} guestLabel={null} />);
-    expect(TOOLS).toHaveLength(9);
-    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(9);
+    // UI-148 added "profile" (the app hides it when the profile features are off).
+    expect(TOOLS).toHaveLength(10);
+    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(10);
     expect(html).toContain("tools-bar__more");
     expect(html).toContain('aria-label="game tools"');
     expect(html).not.toMatch(/\p{Emoji_Presentation}|️/u);
@@ -113,6 +114,8 @@ describe("honesty guards over all of src", () => {
   const DISCLAIMER_PHRASE = /\b(no|a) promise of profit\b/gi;
   const GLOSSARY_FILE = path.join("help", "content.ts");
   const DIVIDEND_TERM = /\bdividends?\b/gi;
+  // UI-149: the backend's notification kind is the quoted identifier "dividend" (`notifications_snacc.kind`).
+  const NOTIFICATION_KIND_ID = /"dividend"/g;
 
   it("has none of the banned words in UI strings or comments", () => {
     const hits = SOURCES.flatMap((f) =>
@@ -120,7 +123,7 @@ describe("honesty guards over all of src", () => {
         .readFileSync(f, "utf8")
         .split("\n")
         .map((line, i) => {
-          const clean = line.replace(IDENTIFIERS, "").replace(DISCLAIMER_PHRASE, "");
+          const clean = line.replace(IDENTIFIERS, "").replace(DISCLAIMER_PHRASE, "").replace(NOTIFICATION_KIND_ID, "");
           return { line: rel(f) === GLOSSARY_FILE ? clean.replace(DIVIDEND_TERM, "") : clean, at: `${rel(f)}:${i + 1}` };
         })
         .filter((x) => BANNED.test(x.line))
@@ -156,7 +159,8 @@ describe("honesty guards over all of src", () => {
   });
 
   it("puts no API key in a VITE_ variable", () => {
-    const hits = SOURCES.filter((f) => /VITE_[A-Z_]*(KEY|SECRET|TOKEN_SECRET|JWT)/.test(fs.readFileSync(f, "utf8"))).map(rel);
+    // UI-148: the Supabase publishable key is public by design (row-level security guards the data).
+    const hits = SOURCES.filter((f) => /VITE_[A-Z_]*(KEY|SECRET|TOKEN_SECRET|JWT)/.test(fs.readFileSync(f, "utf8").replace(/VITE_SUPABASE_PUBLISHABLE_KEY/g, ""))).map(rel);
     expect(hits).toEqual([]);
   });
 });

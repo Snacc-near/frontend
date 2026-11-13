@@ -53,8 +53,13 @@ import { useWallet } from "./chain/wallet.tsx";
 import { useAccountInfo } from "./chain/useAccountInfo.ts";
 import { WalletControl } from "./hud/WalletControl.tsx";
 import type { GameActionKey } from "./hud/GameActions.tsx";
+import { useAccount } from "./account/session.tsx";
+import { achievementToast } from "./account/model.ts";
+import { AccountChip, StarterPackButton } from "./hud/AccountChip.tsx";
 
 // Tool windows load on first open, outside the game's entry chunk.
+// UI-148: the profile window (shown only with the profile features on).
+const ProfileModal = React.lazy(() => import("./hud/ProfileModal.tsx"));
 const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
 const SwapPanel = React.lazy(() => import("./hud/SwapPanel.tsx"));
 const NpcPanel = React.lazy(() => import("./hud/NpcPanel.tsx"));
@@ -67,6 +72,17 @@ const HatchModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) =>
 const FeedModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) => ({ default: m.FeedModal })));
 // UI-150: the remaining player actions, one chunk loaded on first open.
 const GameActions = React.lazy(() => import("./hud/GameActions.tsx"));
+
+/** Toolbar entries that need the optional profile features (UI-148). */
+const PROFILE_TOOLS = ["profile"] as const;
+
+/** `/app?strain=<id>` (the "Open in game" link of `/snacc/<id>`): the strain to open in the lab. */
+export function strainFromSearch(search: string): number | null {
+  const raw = new URLSearchParams(search).get("strain");
+  if (!raw || !/^\d{1,9}$/.test(raw)) return null;
+  const n = Number(raw);
+  return n >= 1 ? n : null;
+}
 
 /** Dock key shown only in live mode with a connected wallet (UI-146). */
 const HATCH_DOCK = { key: "hatch", label: "Hatch", hint: "incubate_strain" } as const;
@@ -186,6 +202,12 @@ export const App: React.FC = () => {
   const [chainRefresh, setChainRefresh] = useState(0);
   const accountInfo = useAccountInfo(wallet.accountId, chainRefresh);
   const effectiveAccount = wallet.accountId ?? userAccount;
+  // UI-148: optional profile session (inert without the Supabase env).
+  const account = useAccount();
+  const recordTxRef = useRef(account.recordTx);
+  recordTxRef.current = account.recordTx;
+  /** UI-148: "Get testnet NEAR to start" beside the faucet link (renders nothing when the features are off). */
+  const starterPack = account.enabled ? <StarterPackButton onSent={() => setChainRefresh((n) => n + 1)} /> : null;
   const walletConnected = wallet.status === "connected" && wallet.accountId !== null;
   /** Live mode + wallet: the hatch and feed keys send real testnet transactions. */
   const signedActions = mode === "live" && walletConnected;
@@ -379,11 +401,20 @@ export const App: React.FC = () => {
 
   /** After a signed action: re-read the wallet views, restart the poller and reload the open strain. */
   const handleChainDone = useCallback(
-    (ok: boolean) => {
+    (ok: boolean, txHash?: string | null) => {
       if (!ok) return;
       setChainRefresh((n) => n + 1);
       bioSound.playFeed();
       if (selectedId !== null && labOpen) void loadStrain(selectedId);
+      // UI-148: record the activity when signed in to the profile. Fire and forget: `recordTx` never
+      // rejects, and a failure only means no achievement toast.
+      void recordTxRef.current(txHash).then((codes) => {
+        const text = achievementToast(codes);
+        if (text) {
+          setToast(text);
+          window.setTimeout(() => setToast(null), 4000);
+        }
+      });
     },
     [selectedId, labOpen, loadStrain],
   );
@@ -435,6 +466,20 @@ export const App: React.FC = () => {
       setSim(createInitialSimulation());
     }
   };
+
+  // UI-148: `/app?strain=<id>` switches to live mode once and opens that strain in the lab.
+  const deepStrain = useRef<number | null>(typeof window === "undefined" ? null : strainFromSearch(window.location.search));
+  useEffect(() => {
+    if (deepStrain.current === null) return;
+    if (mode !== "live") {
+      setMode("live");
+      setLogs([]);
+      return;
+    }
+    const id = deepStrain.current;
+    deepStrain.current = null;
+    void loadStrain(id);
+  }, [mode, loadStrain]);
 
   const showToast = (message: string) => {
     setToast(message);
@@ -656,8 +701,9 @@ export const App: React.FC = () => {
               </span>
             </div>
             <div className="flex flex-col items-end gap-1.5">
-              <div className="pointer-events-auto">
-                <WalletControl wallet={wallet} info={accountInfo} />
+              <div className="pointer-events-auto flex items-start gap-1.5">
+                <AccountChip onOpenProfile={() => setTool("profile")} />
+                <WalletControl wallet={wallet} info={accountInfo} lowBalanceExtra={starterPack} />
               </div>
               <div className="pointer-events-auto">
                 <SkinSwitch skin={skin} onChange={setSkin} />
@@ -689,8 +735,13 @@ export const App: React.FC = () => {
               <ResourceBar mode={mode} resources={resources} skin={skin} />
             </div>
             <div className="pointer-events-auto flex w-full min-w-0 justify-end">
-              <WalletControl wallet={wallet} info={accountInfo} compact />
+              <WalletControl wallet={wallet} info={accountInfo} compact lowBalanceExtra={starterPack} />
             </div>
+            {account.enabled ? (
+              <div className="pointer-events-auto flex w-full min-w-0 items-start justify-end gap-1.5">
+                <AccountChip compact onOpenProfile={() => setTool("profile")} />
+              </div>
+            ) : null}
             {moreOpen ? (
               <div className="pointer-events-auto flex flex-col gap-1.5 rounded-xl border border-[var(--edge)] bg-[var(--panel)] p-2 shadow-[0_2px_0_var(--edge)]" data-testid="mobile-more">
                 {walletConnected ? null : (
@@ -735,6 +786,7 @@ export const App: React.FC = () => {
               onTogglePanels={() => setPanelsOpen((v) => !v)}
               onOpen={setTool}
               guestLabel={guest?.label || null}
+              hidden={account.enabled ? [] : PROFILE_TOOLS}
             />
             <span className="label-plate pointer-events-auto hidden lowercase sm:inline-flex">
               <span className="lp-label">
@@ -848,6 +900,7 @@ export const App: React.FC = () => {
             refreshKey={chainRefresh}
           />
         ) : null}
+        {tool === "profile" && account.enabled ? <ProfileModal onClose={closeTool} /> : null}
         {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
         {tool === "social" ? <SocialLeaderboardModal onClose={closeTool} appetite={appetite} mode={mode} skin={skin} /> : null}
         {tool === "thesis" ? <ThesisDashboardModal onClose={closeTool} mode={mode} skin={skin} /> : null}

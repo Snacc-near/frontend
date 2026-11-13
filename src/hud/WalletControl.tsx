@@ -3,6 +3,7 @@
  * account chip with the account id, its spendable testnet NEAR and its `$SNACC` balance
  * (`ft_balance_of`), plus a disconnect key. `$SNACC` on testnet has no monetary value.
  */
+import type { ReactNode } from "react";
 import type { WalletApi } from "../chain/wallet.tsx";
 import type { AccountInfo } from "../chain/useAccountInfo.ts";
 import { LOW_NEAR_YOCTO, TESTNET_FAUCET_URL, formatYocto } from "../chain/actions.ts";
@@ -15,6 +16,8 @@ export interface WalletControlProps {
   info: AccountInfo;
   /** Tighter layout for the phone header. */
   compact?: boolean;
+  /** UI-148: shown beside the faucet link when the wallet is low (the optional starter pack). */
+  lowBalanceExtra?: ReactNode;
 }
 
 /** Shortens long implicit (64-hex) account ids for the chip; named accounts stay whole. */
@@ -22,7 +25,7 @@ export function shortAccount(id: string): string {
   return id.length > 24 ? `${id.slice(0, 8)}…${id.slice(-6)}` : id;
 }
 
-export function WalletControl({ wallet, info, compact = false }: WalletControlProps) {
+export function WalletControl({ wallet, info, compact = false, lowBalanceExtra = null }: WalletControlProps) {
   const { status, accountId } = wallet;
   if (status !== "connected" || !accountId) {
     const busy = status === "connecting" || status === "restoring";
@@ -78,6 +81,7 @@ export function WalletControl({ wallet, info, compact = false }: WalletControlPr
         <span className="fd-field__hint" data-testid="wallet-faucet">
           Not enough testnet NEAR to hatch (about 0.27 NEAR with fees). Get free testnet NEAR from the{" "}
           <ExtLink href={TESTNET_FAUCET_URL}>NEAR testnet faucet</ExtLink>.
+          {lowBalanceExtra}
         </span>
       ) : null}
     </div>

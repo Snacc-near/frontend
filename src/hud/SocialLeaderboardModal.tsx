@@ -3,7 +3,17 @@
  * none, reads `get_appetite_meter` + `get_top_feeder` straight from the contract; with no data it
  * shows an empty state. Demo mode shows invented feeders, each number labelled SIMULATION.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { useAccount } from "../account/session.tsx";
+import { ActivityBoard, PlayerName, StreakBoard, useFollowing, useNames, usePublicClient } from "./PlayerBoards.tsx";
+import { KeycapButton, TabPanel, Tabs, type TabDef } from "../ui/controls.tsx";
+
+type BoardTab = "feeders" | "active" | "streaks";
+const BOARD_TABS: readonly TabDef<BoardTab>[] = [
+  { id: "feeders", label: "top feeders", icon: "podium" },
+  { id: "active", label: "most active (7 days)", icon: "spark" },
+  { id: "streaks", label: "longest streaks", icon: "lines" },
+];
 import type { GameMode, SkinMode } from "../config/constants.ts";
 import type { AppetiteViewModel } from "../data/types.ts";
 import { DEMO_FEAST, fetchFeastBoard, formatSnacc, formatSocialPost, type FeastBoard } from "../swap/socialFormat.ts";
@@ -51,6 +61,18 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
   const source = live ? (fromBackend ? "backend /api/appetite" : `contract views on ${CONTRACT_ID}`) : "demo fixture";
   const S = () => (live ? null : <Sim />);
 
+  // UI-148: player names and boards, only with the profile features on and a loaded client.
+  const account = useAccount();
+  const client = usePublicClient(false);
+  const players = account.enabled && client !== null;
+  const [tab, setTab] = useState<BoardTab>("feeders");
+  const following = useFollowing(players ? client : null);
+  const [onlyFollowing, setOnlyFollowing] = useState(false);
+  const only = onlyFollowing && following ? following : null;
+  const feeders = (board?.topFeeders ?? []).filter((f) => !only || only.has(f.account_id)).slice(0, 3);
+  const names = useNames(players && live ? client : null, feeders.map((f) => f.account_id));
+  const tabsId = useId();
+
   return (
     <Modal
       title="great-feast.md"
@@ -65,7 +87,27 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
       }
     >
       <div className="fd-stack">
-        {live && rpcBoard === "loading" && !fromBackend ? (
+        {players ? (
+          <div className="fd-stack" data-testid="board-tabs">
+            <Tabs label="leaderboards" idBase={tabsId} tabs={BOARD_TABS} value={tab} onChange={setTab} />
+            {following ? (
+              <KeycapButton mono icon={onlyFollowing ? "check" : "user"} aria-pressed={onlyFollowing} onClick={() => setOnlyFollowing((v) => !v)} data-testid="board-following">
+                {onlyFollowing ? `following only (${following.size})` : "show only players I follow"}
+              </KeycapButton>
+            ) : null}
+          </div>
+        ) : null}
+        {players && tab === "active" ? (
+          <TabPanel idBase={tabsId} id="active">
+            <ActivityBoard client={client} only={only} />
+            <p className="fd-field__hint">Counts signed actions recorded by signed-in players in the last 7 days (activity_snacc).</p>
+          </TabPanel>
+        ) : players && tab === "streaks" ? (
+          <TabPanel idBase={tabsId} id="streaks">
+            <StreakBoard client={client} only={only} />
+            <p className="fd-field__hint">Days in a row with at least one recorded feed (streaks_snacc).</p>
+          </TabPanel>
+        ) : live && rpcBoard === "loading" && !fromBackend ? (
           <Empty icon="eye">reading get_appetite_meter and get_top_feeder…</Empty>
         ) : !board ? (
           <Empty icon="podium">No Great Feast data yet: the backend and the testnet RPC returned nothing. Nothing is shown in its place.</Empty>
@@ -95,12 +137,16 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
               <Empty icon="podium">No feeds recorded this epoch.</Empty>
             ) : (
               <ol className="fd-list" aria-label="top feeders" data-testid="feast-podium">
-                {board.topFeeders.slice(0, 3).map((f, i) => (
+                {(only ? feeders : board.topFeeders.slice(0, 3)).map((f, i) => (
                   <li key={f.account_id} className="fd-row" data-first={i === 0 ? "" : undefined}>
                     <span className="fd-list__rank" aria-hidden="true">
                       {i + 1}
                     </span>
-                    <code className="feast-account">{f.account_id}</code>
+                    {players && live ? (
+                      <PlayerName account={f.account_id} username={names.get(f.account_id) ?? null} />
+                    ) : (
+                      <code className="feast-account">{f.account_id}</code>
+                    )}
                     <span className="fd-num feast-amount">
                       {formatSnacc(f.amount)} $SNACC <S />
                     </span>

@@ -113,14 +113,15 @@ export function plan(call: ContractCall | null, accountId: string, info: Account
   });
 }
 
-export function useSend(wallet: WalletApi, onDone: (ok: boolean) => void) {
+export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string | null) => void) {
   const [phase, setPhase] = useState<TxPhase>({ kind: "idle" });
   const send = async (calls: ContractCall[]) => {
     if (calls.length === 0) return;
     setPhase({ kind: "pending" });
     const result = await wallet.signAndSend(calls);
     setPhase({ kind: "done", result });
-    onDone(result.ok);
+    // UI-148: the hash goes along so the app can record the activity (fire and forget).
+    onDone(result.ok, result.txHash);
   };
   return { phase, send };
 }
@@ -137,7 +138,7 @@ export interface ChainActionProps {
   info: AccountInfo;
   onClose: () => void;
   /** Called after the chain answers; `ok` true means the views should refresh. */
-  onDone: (ok: boolean) => void;
+  onDone: (ok: boolean, txHash?: string | null) => void;
 }
 
 export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) {

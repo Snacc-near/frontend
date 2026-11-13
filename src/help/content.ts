@@ -260,6 +260,16 @@ export const GLOSSARY: readonly GlossaryEntry[] = [
     term: "Nutrient burst",
     body: `Snacking a Snacc releases a discount on feeding for one epoch. It starts at a base of ${bpsToPct(BASE_BURST_BPS)}, grows with what was released, and is capped at ${bpsToPct(MAX_BURST_BPS)}.`,
   },
+  {
+    id: "profile",
+    term: "Profile",
+    body: "Optional. \"Save progress — sign in\" next to the wallet asks the wallet to sign a short message (no transaction, no fee). You then get a username, a bio, an avatar picked from your own Snaccs, notifications, and a public page at /p/<your account>. The game works the same without one.",
+  },
+  {
+    id: "achievements",
+    term: "Achievements and streak",
+    body: "Badges the profile database awards from your recorded signed actions, such as a first hatch, ten feeds or a seven-day feed streak. The streak counts days in a row with at least one recorded feed. They are recorded only while you are signed in, and they have no value.",
+  },
 ];
 
 // ------------------------------------------------------------------ what things cost

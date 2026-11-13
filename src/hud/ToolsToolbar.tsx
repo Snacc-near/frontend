@@ -8,7 +8,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
 
-export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "help" | "settings";
+export type ToolId = "collection" | "npc" | "swap" | "social" | "thesis" | "recipes" | "guest" | "profile" | "notifications" | "help" | "settings";
 
 export interface ToolDef {
   id: ToolId;
@@ -24,6 +24,8 @@ export const TOOLS: readonly ToolDef[] = [
   { id: "thesis", label: () => "thesis", icon: "doc" },
   { id: "recipes", label: () => "recipes", icon: "search" },
   { id: "guest", label: (_s, g) => (g ? `guest: ${g}` : "guest label"), icon: "user" },
+  // UI-148: hidden (see `hidden`) when the profile features are off.
+  { id: "profile", label: () => "profile", icon: "user" },
   { id: "help", label: () => "help", icon: "spark" },
   { id: "settings", label: () => "settings", icon: "gauge" },
 ];
@@ -34,17 +36,20 @@ export interface ToolsToolbarProps {
   onTogglePanels: () => void;
   onOpen: (id: ToolId) => void;
   guestLabel: string | null;
+  /** Tools to leave out, e.g. `profile` when the profile features are off. */
+  hidden?: readonly ToolId[];
 }
 
-export function ToolsToolbar({ skin, panelsOpen, onTogglePanels, onOpen, guestLabel }: ToolsToolbarProps) {
+export function ToolsToolbar({ skin, panelsOpen, onTogglePanels, onOpen, guestLabel, hidden = [] }: ToolsToolbarProps) {
   const [sheet, setSheet] = useState(false);
+  const tools = TOOLS.filter((t) => !hidden.includes(t.id));
   return (
     <>
       <div className="fd-toolbar fd-dither tools-bar pointer-events-auto" role="group" aria-label="game tools" data-testid="tools-bar">
         <KeycapButton mono icon="lines" aria-expanded={panelsOpen} onClick={onTogglePanels}>
           telemetry
         </KeycapButton>
-        {TOOLS.map((t) => (
+        {tools.map((t) => (
           <KeycapButton key={t.id} mono icon={t.icon} className="tools-bar__tool" aria-haspopup="dialog" onClick={() => onOpen(t.id)}>
             <span className="tools-bar__label">{t.label(skin, guestLabel)}</span>
           </KeycapButton>
@@ -56,7 +61,7 @@ export function ToolsToolbar({ skin, panelsOpen, onTogglePanels, onOpen, guestLa
       {sheet ? (
         <Modal title="tools.menu" heading="Tools" onClose={() => setSheet(false)} testId="tools-sheet">
           <div className="fd-tiles">
-            {TOOLS.map((t) => (
+            {tools.map((t) => (
               <KeycapButton
                 key={t.id}
                 mono
