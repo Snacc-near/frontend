@@ -5,8 +5,11 @@
  * - The connector library is loaded on demand (`import()`), so neither the landing page nor the
  *   first paint of `/app` pays for it. It loads at mount only when NEAR Connect already remembers a
  *   wallet in this browser (its own `selected-wallet` entry) or the app runs inside a wallet frame.
- * - The app never sees, stores or handles a private key: wallets run in NEAR Connect's sandboxed
- *   iframes and sign there. The app keeps no wallet state of its own beyond React memory.
+ * - The app never sees, stores or handles the wallet's private keys: wallets run in NEAR Connect's
+ *   sandboxed iframes and sign there. The app keeps no wallet state of its own beyond React memory.
+ * - RES-111 one-tap play (opt-in, Settings): the app makes its OWN limited key in this browser, the
+ *   wallet adds it to the account once (`AddKey`, function-call permission for the Snacc contract),
+ *   and deposit-free game calls are then signed here without a popup (`chain/oneTap*.ts`).
  * - Without a provider (tests, guest mode) `useWallet()` returns a disconnected no-op wallet.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -15,6 +18,10 @@ import { MARKET_ID } from "../data/nearView.ts";
 import { readOutcome, readThrown, type TxResult } from "./txResult.ts";
 import { privyManifestFromEnv } from "./privy.ts";
 import { track } from "../telemetry.ts";
+import { ONE_TAP_RPCS, checkWalletTx, type WalletAction, type WalletTx } from "./oneTap.ts";
+import { ed25519Available, pickOneTapStore } from "./oneTapKeys.ts";
+import { OneTapContext, OneTapController, sendWithOneTap, type OneTapHandle } from "./oneTapSession.ts";
+import { appStorage } from "../prefs/prefs.ts";
 
 export const NETWORK = "testnet" as const;
 /**
@@ -97,12 +104,7 @@ export function useWallet(): WalletApi {
 interface ConnectorWallet {
   manifest: { id: string; name: string };
   getAccounts(data?: { network?: string }): Promise<Array<{ accountId: string }>>;
-  signAndSendTransaction(params: {
-    network?: string;
-    signerId?: string;
-    receiverId: string;
-    actions: ReturnType<typeof toWalletActions>;
-  }): Promise<unknown>;
+  signAndSendTransaction(params: { network?: string; signerId?: string; receiverId: string; actions: WalletAction[] }): Promise<unknown>;
   signMessage(params: { message: string; recipient: string; nonce: Uint8Array; network?: string; signerId?: string }): Promise<SignedMessage>;
 }
 interface Connector {
@@ -237,34 +239,70 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setStatus("idle");
   }, []);
 
-  const signAndSend = useCallback(async (calls: ContractCall[], receiverId?: string): Promise<TxResult> => {
-    const signer = accountRef.current;
-    if (!signer) return notConnected();
-    // The game call is the last action (a storage registration may come first).
-    const method = calls[calls.length - 1]?.methodName;
-    // Only the Snacc contract (the default) and the testnet market can be a receiver; nothing else reaches the wallet.
-    const receiver = resolveReceiver(receiverId);
-    if (receiver === null) return readThrown(new Error(`receiver ${receiverId} is not a contract this game signs for`), method);
-    // OPS-127: anonymous funnel counts (method name only; never the account or the hash).
-    const report = (r: TxResult): TxResult => {
-      track(r.ok ? "tx_succeeded" : "tx_failed", { method: method ?? "unknown", rejected: !r.ok && Boolean(r.rejected) });
-      return r;
-    };
-    track("tx_submitted", { method: method ?? "unknown" });
-    try {
-      const connector = await loadConnector();
-      const wallet = await connector.wallet();
-      const outcome = await wallet.signAndSendTransaction({
-        network: NETWORK,
-        signerId: signer,
-        receiverId: receiver,
-        actions: toWalletActions(calls),
+  // RES-111: one controller per provider; it follows the connected account.
+  const oneTapRef = useRef<OneTapController | null>(null);
+  oneTapRef.current ??= new OneTapController(defaultOneTapDeps());
+  const oneTap = oneTapRef.current;
+  useEffect(() => {
+    void oneTap.setAccount(accountId);
+  }, [oneTap, accountId]);
+
+  /**
+   * The only door to the wallet's `signAndSendTransaction`. `checkWalletTx` lets through
+   * FunctionCalls to `SIGNABLE_RECEIVERS`, the one-tap `AddKey` to your own account, and a
+   * `DeleteKey` of the one-tap key this browser holds; anything else is refused before the wallet.
+   */
+  const walletTx = useCallback(
+    async (tx: WalletTx, method?: string): Promise<TxResult> => {
+      const refused = checkWalletTx(tx, { signerId: accountRef.current, receivers: SIGNABLE_RECEIVERS, deletableKey: oneTap.deletableKey() });
+      if (refused) return readThrown(new Error(refused), method);
+      try {
+        const connector = await loadConnector();
+        const wallet = await connector.wallet();
+        const outcome = await wallet.signAndSendTransaction({ network: NETWORK, signerId: tx.signerId, receiverId: tx.receiverId, actions: tx.actions });
+        return readOutcome(outcome, method);
+      } catch (e) {
+        return readThrown(e, method);
+      }
+    },
+    [oneTap],
+  );
+
+  const signAndSend = useCallback(
+    async (calls: ContractCall[], receiverId?: string): Promise<TxResult> => {
+      const signer = accountRef.current;
+      if (!signer) return notConnected();
+      // The game call is the last action (a storage registration may come first).
+      const method = calls[calls.length - 1]?.methodName;
+      // Only the Snacc contract (the default) and the testnet market can be a receiver; nothing else reaches the wallet.
+      const receiver = resolveReceiver(receiverId);
+      if (receiver === null) return readThrown(new Error(`receiver ${receiverId} is not a contract this game signs for`), method);
+      // OPS-127: anonymous funnel counts (method name only; never the account or the hash).
+      const report = (r: TxResult): TxResult => {
+        track(r.ok ? "tx_succeeded" : "tx_failed", { method: method ?? "unknown", rejected: !r.ok && Boolean(r.rejected) });
+        return r;
+      };
+      // RES-111: deposit-free calls try the one-tap key first (it tracks its own `signless: true` events).
+      return sendWithOneTap(oneTap, signer, calls, receiver, async () => {
+        track("tx_submitted", { method: method ?? "unknown" });
+        return report(await walletTx({ signerId: signer, receiverId: receiver, actions: toWalletActions(calls) }, method));
       });
-      return report(readOutcome(outcome, method));
-    } catch (e) {
-      return report(readThrown(e, method));
-    }
-  }, []);
+    },
+    [oneTap, walletTx],
+  );
+
+  const oneTapHandle = useMemo<OneTapHandle>(
+    () => ({
+      subscribe: oneTap.subscribe,
+      getSnapshot: oneTap.getSnapshot,
+      covers: oneTap.covers,
+      enable: () => oneTap.enable((tx) => walletTx(tx)),
+      disable: () => oneTap.disable((tx) => walletTx(tx)),
+      forget: () => oneTap.forget(),
+      refresh: () => oneTap.refresh(),
+    }),
+    [oneTap, walletTx],
+  );
 
   const signMessage = useCallback(async (input: { message: string; recipient: string; nonce: Uint8Array }): Promise<SignedMessage> => {
     const signer = accountRef.current;
@@ -279,5 +317,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     () => ({ status, accountId, walletName, error, connect, disconnect, signAndSend, signMessage }),
     [status, accountId, walletName, error, connect, disconnect, signAndSend, signMessage],
   );
-  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+  return (
+    <WalletContext.Provider value={value}>
+      <OneTapContext.Provider value={oneTapHandle}>{children}</OneTapContext.Provider>
+    </WalletContext.Provider>
+  );
+}
+
+/** Browser wiring of the one-tap controller: FastNEAR RPC with a fallback, Web Crypto, IndexedDB (localStorage fallback). */
+function defaultOneTapDeps(): ConstructorParameters<typeof OneTapController>[0] {
+  const idb = (): IDBFactory | null => {
+    try {
+      return typeof indexedDB !== "undefined" ? indexedDB : null;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    network: NETWORK,
+    rpc: { urls: ONE_TAP_RPCS, fetch: (input, init) => fetch(input, init) },
+    subtle: () => (typeof crypto !== "undefined" && crypto.subtle ? crypto.subtle : null),
+    ed25519: (subtle) => ed25519Available(subtle),
+    pickStore: (subtle) => pickOneTapStore({ indexedDB: idb(), localStorage: appStorage(), subtle }),
+    track: (name, props) => track(name, props),
+  };
 }

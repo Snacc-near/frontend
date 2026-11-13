@@ -27,6 +27,7 @@ import {
 import type { AccountInfo } from "../chain/useAccountInfo.ts";
 import type { WalletApi } from "../chain/wallet.tsx";
 import type { TxResult } from "../chain/txResult.ts";
+import { useOneTap } from "../chain/oneTapSession.ts";
 import { CONTRACT_ID, explorerTx } from "../data/nearView.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { ExtLink, Field, Input, KeycapButton, Select } from "../ui/controls.tsx";
@@ -34,7 +35,8 @@ import { Tag } from "../ui/fd.tsx";
 
 export { TESTNET_FAUCET_URL };
 
-export type TxPhase = { kind: "idle" } | { kind: "pending" } | { kind: "done"; result: TxResult };
+/** `oneTap`: RES-111, the call is expected to go out with this browser's one-tap key (no wallet popup). */
+export type TxPhase = { kind: "idle" } | { kind: "pending"; oneTap?: boolean } | { kind: "done"; result: TxResult };
 
 const ROLE_HINT: Record<StrainRole, string> = {
   Extractor: "extracts spores",
@@ -45,6 +47,14 @@ const ROLE_HINT: Record<StrainRole, string> = {
 export function TxStatusView({ phase }: { phase: TxPhase }) {
   if (phase.kind === "idle") return null;
   if (phase.kind === "pending") {
+    if (phase.oneTap) {
+      return (
+        <p className="fd-note" role="status" data-testid="tx-pending">
+          <strong>Sending with one-tap play.</strong> This browser signs this deposit-free action, no wallet popup; this window updates when the
+          chain answers.
+        </p>
+      );
+    }
     return (
       <p className="fd-note" role="status" data-testid="tx-pending">
         <strong>Waiting for your wallet.</strong> Approve the transaction there; this window updates when the chain answers.
@@ -52,10 +62,17 @@ export function TxStatusView({ phase }: { phase: TxPhase }) {
     );
   }
   const r = phase.result;
+  // RES-111: why a deposit-free action used the wallet after all (one line).
+  const notice = r.notice ? (
+    <p className="fd-field__hint" data-testid="tx-notice">
+      {r.notice}
+    </p>
+  ) : null;
   if (r.ok) {
     return (
       <div className="fd-note" role="status" data-testid="tx-success">
-        <strong>Done on testnet.</strong>{" "}
+        {notice}
+        <strong>{r.signless ? "Done on testnet with one-tap play." : "Done on testnet."}</strong>{" "}
         {r.txHash ? (
           <>
             tx <ExtLink href={explorerTx(r.txHash)}>{`${r.txHash.slice(0, 10)}…`}</ExtLink>
@@ -68,6 +85,7 @@ export function TxStatusView({ phase }: { phase: TxPhase }) {
   }
   return (
     <div className="fd-stack" role="alert" data-testid="tx-failure">
+      {notice}
       <p className="fd-field__hint fd-field__hint--bad">{r.message}</p>
       {r.txHash ? (
         <p className="fd-field__hint">
@@ -115,9 +133,10 @@ export function plan(call: ContractCall | null, accountId: string, info: Account
 
 export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string | null) => void) {
   const [phase, setPhase] = useState<TxPhase>({ kind: "idle" });
+  const oneTap = useOneTap();
   const send = async (calls: ContractCall[]) => {
     if (calls.length === 0) return;
-    setPhase({ kind: "pending" });
+    setPhase({ kind: "pending", oneTap: oneTap.covers(calls) });
     const result = await wallet.signAndSend(calls);
     setPhase({ kind: "done", result });
     // UI-148: the hash goes along so the app can record the activity (fire and forget).
@@ -126,12 +145,19 @@ export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string
   return { phase, send };
 }
 
-export const Footer = () => (
-  <>
-    <span>every call is signed in your wallet · {CONTRACT_ID} · $SNACC on testnet has no monetary value</span>
-    <Tag>testnet</Tag>
-  </>
-);
+export function Footer() {
+  const st = useOneTap().snapshot.status;
+  const oneTapOn = st.kind === "on" && st.chain !== "missing";
+  return (
+    <>
+      <span>
+        {oneTapOn ? "deposit-free calls are signed by your one-tap key, the rest in your wallet" : "every call is signed in your wallet"} · {CONTRACT_ID} ·
+        $SNACC on testnet has no monetary value
+      </span>
+      <Tag>testnet</Tag>
+    </>
+  );
+}
 
 export interface ChainActionProps {
   wallet: WalletApi;
@@ -313,7 +339,7 @@ export function FeedModal({ wallet, info, onClose, onDone, preferredStrainId }: 
             </KeycapButton>
           ) : (
             <KeycapButton variant="primary" icon="spark" disabled={calls.length === 0 || busy} onClick={() => void send(calls)} data-testid="feed-sign">
-              {busy ? "waiting for wallet…" : "sign and feed"}
+              {busy ? (phase.kind === "pending" && phase.oneTap ? "sending (one-tap)…" : "waiting for wallet…") : "sign and feed"}
             </KeycapButton>
           )}
         </div>
