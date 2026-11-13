@@ -5,9 +5,9 @@
  */
 import type { WalletApi } from "../chain/wallet.tsx";
 import type { AccountInfo } from "../chain/useAccountInfo.ts";
-import { formatYocto } from "../chain/actions.ts";
+import { LOW_NEAR_YOCTO, TESTNET_FAUCET_URL, formatYocto } from "../chain/actions.ts";
 import { explorerAccount } from "../data/nearView.ts";
-import { KeycapButton } from "../ui/controls.tsx";
+import { ExtLink, KeycapButton } from "../ui/controls.tsx";
 import { Chip, Icon, Tag } from "../ui/fd.tsx";
 
 export interface WalletControlProps {
@@ -74,6 +74,12 @@ export function WalletControl({ wallet, info, compact = false }: WalletControlPr
       <span className="font-mono text-[10px] lowercase text-[var(--ink)]">
         {wallet.walletName ? `${wallet.walletName} · ` : ""}$SNACC on testnet has no monetary value
       </span>
+      {info.nearYocto !== null && BigInt(info.nearYocto) < BigInt(LOW_NEAR_YOCTO) ? (
+        <span className="fd-field__hint" data-testid="wallet-faucet">
+          Not enough testnet NEAR to hatch (about 0.27 NEAR with fees). Get free testnet NEAR from the{" "}
+          <ExtLink href={TESTNET_FAUCET_URL}>NEAR testnet faucet</ExtLink>.
+        </span>
+      ) : null}
     </div>
   );
 }

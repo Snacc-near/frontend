@@ -4,9 +4,12 @@
  * more option inside the same NEAR Connect wallet picker, so `useWallet()` and the action builders
  * do not change.
  *
- * It is switched on only when BOTH public client ids are set at build time:
- *   VITE_PRIVY_APP_ID, VITE_PRIVY_CLIENT_ID   (from the Privy dashboard; not secrets)
- * Otherwise nothing is registered and the picker lists the normal wallets only.
+ * It is switched on when the public Privy App ID is set at build time (from the Privy dashboard;
+ * not a secret):
+ *   VITE_PRIVY_APP_ID      required
+ *   VITE_PRIVY_CLIENT_ID   optional; passed to the Privy client only when set
+ *                          (`PrivyOptions.clientId?: string` in @privy-io/js-sdk-core 0.72.1)
+ * Without the App ID nothing is registered and the picker lists the normal wallets only.
  *
  * How it fits: the dApp registers one extra sandboxed wallet whose executor script (pinned to an
  * immutable commit, as the plugin README requires) opens this app's `/sign` page in a popup. The
@@ -18,26 +21,30 @@ export const PRIVY_WALLET_ID = "snacc-privy";
 /** Path of the signing page this app serves (see `src/sign/`). */
 export const PRIVY_SIGN_PATH = "/sign";
 /**
- * Executor of `@peerfolio/privy-near-connect`, pinned to the commit its README references
- * (same bytes as the package's `dist/executor.js`, 0.0.8). Bump deliberately.
+ * Executor of `@peerfolio/privy-near-connect`, pinned to an immutable commit of the repo's
+ * `release` branch whose `executor.js` is byte-identical to the installed package's
+ * `dist/executor.js` (0.0.8, 30 s READY timeout). The README's example commit is older (5 s
+ * timeout). Bump together with the package, deliberately.
  */
 export const PRIVY_EXECUTOR_URL =
-  "https://raw.githubusercontent.com/beneviolabs/privy-near-connect/3d56b782669d242a1ea432921e291abc26b4ebc7/executor.js";
+  "https://raw.githubusercontent.com/beneviolabs/privy-near-connect/9a149fcb319b9208557452a1ea1287a0e4877c6c/executor.js";
 
 export interface PrivyConfig {
   appId: string;
-  clientId: string;
+  /** Present only when `VITE_PRIVY_CLIENT_ID` is set. */
+  clientId?: string;
 }
 
 type Env = Record<string, string | boolean | undefined>;
 
 const clean = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
-/** Both ids present and non-blank → config; anything else → null (Privy stays off). */
+/** A non-blank App ID → config (client id added only when set); otherwise null (Privy stays off). */
 export function privyConfigFromEnv(env: Env): PrivyConfig | null {
   const appId = clean(env.VITE_PRIVY_APP_ID);
   const clientId = clean(env.VITE_PRIVY_CLIENT_ID);
-  return appId && clientId ? { appId, clientId } : null;
+  if (!appId) return null;
+  return clientId ? { appId, clientId } : { appId };
 }
 
 /** NEAR Connect manifest entry for the Privy wallet, or null when Privy is not configured. */

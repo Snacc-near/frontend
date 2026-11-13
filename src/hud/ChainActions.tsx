@@ -12,6 +12,7 @@ import {
   STAKE_PRESETS_NEAR,
   STORAGE_MIN_FALLBACK_YOCTO,
   STRAIN_ROLES,
+  TESTNET_FAUCET_URL,
   buildFeed,
   buildIncubate,
   checkStake,
@@ -31,8 +32,7 @@ import { Modal } from "../ui/Modal.tsx";
 import { ExtLink, Field, Input, KeycapButton, Select } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
 
-/** Official NEAR testnet faucet page on docs.near.org. */
-export const TESTNET_FAUCET_URL = "https://docs.near.org/tools/faucet";
+export { TESTNET_FAUCET_URL };
 
 export type TxPhase = { kind: "idle" } | { kind: "pending" } | { kind: "done"; result: TxResult };
 

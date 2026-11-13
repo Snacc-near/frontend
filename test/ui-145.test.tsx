@@ -12,6 +12,7 @@ import { PRIVY_EXECUTOR_URL, privyConfigFromEnv, privyManifestFromEnv } from "..
 import { DISCONNECTED_WALLET, NEAR_CONNECT_CSP_NONCE, type WalletApi } from "../src/chain/wallet.tsx";
 import { EMPTY_ACCOUNT_INFO, type AccountInfo } from "../src/chain/useAccountInfo.ts";
 import { WalletControl, shortAccount } from "../src/hud/WalletControl.tsx";
+import { describePayload, formatYocto as payloadYocto } from "../src/sign/payload.ts";
 
 const connected: WalletApi = { ...DISCONNECTED_WALLET, status: "connected", accountId: "alice.testnet", walletName: "Meteor Wallet" };
 const info: AccountInfo = {
@@ -73,17 +74,21 @@ describe("UI-145 wallet control", () => {
   });
 });
 
-describe("UI-145 Privy is enabled only when both ids are set", () => {
-  it("needs VITE_PRIVY_APP_ID and VITE_PRIVY_CLIENT_ID, both non-blank", () => {
+describe("UI-145 Privy is enabled by the App ID alone", () => {
+  it("needs a non-blank VITE_PRIVY_APP_ID; VITE_PRIVY_CLIENT_ID is optional", () => {
     expect(privyConfigFromEnv({})).toBeNull();
-    expect(privyConfigFromEnv({ VITE_PRIVY_APP_ID: "app" })).toBeNull();
     expect(privyConfigFromEnv({ VITE_PRIVY_CLIENT_ID: "client" })).toBeNull();
     expect(privyConfigFromEnv({ VITE_PRIVY_APP_ID: "  ", VITE_PRIVY_CLIENT_ID: "client" })).toBeNull();
-    expect(privyConfigFromEnv({ VITE_PRIVY_APP_ID: "app", VITE_PRIVY_CLIENT_ID: "client" })).toEqual({ appId: "app", clientId: "client" });
+    // App ID set, no Client ID → enabled, and no client id is passed on
+    expect(privyConfigFromEnv({ VITE_PRIVY_APP_ID: "app" })).toEqual({ appId: "app" });
+    expect(privyConfigFromEnv({ VITE_PRIVY_APP_ID: "app", VITE_PRIVY_CLIENT_ID: "" })).toEqual({ appId: "app" });
+    expect(privyConfigFromEnv({ VITE_PRIVY_APP_ID: " app ", VITE_PRIVY_CLIENT_ID: "client" })).toEqual({ appId: "app", clientId: "client" });
   });
 
   it("registers a testnet sandbox wallet with a pinned executor and this origin's sign page", () => {
-    expect(privyManifestFromEnv({ VITE_PRIVY_APP_ID: "app" }, "https://x.test")).toBeNull();
+    expect(privyManifestFromEnv({}, "https://x.test")).toBeNull();
+    expect(privyManifestFromEnv({ VITE_PRIVY_CLIENT_ID: "client" }, "https://x.test")).toBeNull();
+    expect(privyManifestFromEnv({ VITE_PRIVY_APP_ID: "app" }, "https://x.test")).not.toBeNull();
     const m = privyManifestFromEnv({ VITE_PRIVY_APP_ID: "app", VITE_PRIVY_CLIENT_ID: "client" }, "https://x.test");
     expect(m?.type).toBe("sandbox");
     expect(m?.features.testnet).toBe(true);
@@ -94,5 +99,31 @@ describe("UI-145 Privy is enabled only when both ids are set", () => {
     expect(PRIVY_EXECUTOR_URL).toMatch(/\/[0-9a-f]{40}\/executor\.js$/);
     // the ids themselves never go into the manifest
     expect(JSON.stringify(m)).not.toContain("client");
+    expect(JSON.stringify(m)).not.toContain('"app"');
+  });
+});
+
+describe("UI-145 signing page summary", () => {
+  it("describes sign-in and transactions in plain words, with attached NEAR", () => {
+    expect(describePayload({ kind: "signIn", network: "testnet" })).toEqual(["sign in and share your NEAR account id (testnet)"]);
+    expect(
+      describePayload({
+        kind: "signAndSendTransaction",
+        receiverId: "snacc-v001.testnet",
+        actions: [
+          { type: "FunctionCall", params: { methodName: "storage_deposit", deposit: "5000000000000000000000" } },
+          { type: "FunctionCall", params: { methodName: "feed_strain", deposit: "0" } },
+        ],
+      }),
+    ).toEqual(["call storage_deposit, attaches 0.005 NEAR on snacc-v001.testnet", "call feed_strain on snacc-v001.testnet"]);
+    expect(describePayload(null)).toEqual(["unknown request"]);
+    expect(payloadYocto("250000000000000000000000")).toBe("0.25");
+  });
+
+  it("shows a faucet line in the account chip when the balance cannot cover a hatch", () => {
+    const poor = renderToStaticMarkup(<WalletControl wallet={connected} info={{ ...info, nearYocto: "0" }} />);
+    expect(poor).toContain('data-testid="wallet-faucet"');
+    expect(poor).toContain("https://docs.near.org/tools/faucet");
+    expect(renderToStaticMarkup(<WalletControl wallet={connected} info={info} />)).not.toContain("wallet-faucet");
   });
 });
