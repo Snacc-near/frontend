@@ -6,7 +6,7 @@
 
 export const GUEST_LABEL_KEY = "snacc_guest_label";
 /** Key used by an earlier build that stored email addresses; removed on load. */
-const LEGACY_SESSION_KEY = "snacc_auth_session";
+export const LEGACY_SESSION_KEY = "snacc_auth_session";
 
 export const MAX_LABEL_CHARS = 32;
 

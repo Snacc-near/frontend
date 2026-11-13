@@ -94,10 +94,10 @@ describe("every tool window is a labelled modal dialog", () => {
 });
 
 describe("toolbar", () => {
-  it("folds the seven tools into one toolbar with a mobile overflow key", () => {
+  it("folds the seven tools plus help and settings (UI-151) into one toolbar with a mobile overflow key", () => {
     const html = renderToStaticMarkup(<ToolsToolbar skin="biolab" panelsOpen={false} onTogglePanels={() => {}} onOpen={() => {}} guestLabel={null} />);
-    expect(TOOLS).toHaveLength(7);
-    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(7);
+    expect(TOOLS).toHaveLength(9);
+    expect((html.match(/tools-bar__tool/g) ?? []).length).toBe(9);
     expect(html).toContain("tools-bar__more");
     expect(html).toContain('aria-label="game tools"');
     expect(html).not.toMatch(/\p{Emoji_Presentation}|️/u);
@@ -108,13 +108,21 @@ describe("honesty guards over all of src", () => {
   // Contract and backend identifiers are copied verbatim from the spec and are not prose.
   const IDENTIFIERS = /\b(dividend_claimed|industrial_dividend_pool|epoch_dividend_inflow|sum_dividend_pool|claim_industrial_dividend|aether_burned_for_dividend|get_dividend_pool)\b/g;
   const BANNED = /\b(gamefi|investments?|invest|investing|investors?|yields?|yielding|profits?|profitable|dividends?|earnings?)\b|real money/i;
+  // UI-151: the disclaimers must be able to say "no promise of profit", and the Help glossary defines the
+  // game's own "dividends" (the fee-sharing pool). Both stay exact: the phrase, and one file.
+  const DISCLAIMER_PHRASE = /\b(no|a) promise of profit\b/gi;
+  const GLOSSARY_FILE = path.join("help", "content.ts");
+  const DIVIDEND_TERM = /\bdividends?\b/gi;
 
   it("has none of the banned words in UI strings or comments", () => {
     const hits = SOURCES.flatMap((f) =>
       fs
         .readFileSync(f, "utf8")
         .split("\n")
-        .map((line, i) => ({ line: line.replace(IDENTIFIERS, ""), at: `${rel(f)}:${i + 1}` }))
+        .map((line, i) => {
+          const clean = line.replace(IDENTIFIERS, "").replace(DISCLAIMER_PHRASE, "");
+          return { line: rel(f) === GLOSSARY_FILE ? clean.replace(DIVIDEND_TERM, "") : clean, at: `${rel(f)}:${i + 1}` };
+        })
         .filter((x) => BANNED.test(x.line))
         .map((x) => x.at),
     );

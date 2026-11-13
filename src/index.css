@@ -92,15 +92,26 @@ canvas {
   outline-offset: 2px;
 }
 
+/* Reduce motion: the OS setting by default; `html[data-motion]` is the user's override from Settings
+   (`reduce` forces it, `full` turns it off). See src/prefs/motionPref.ts. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion="full"]) *,
+  html:not([data-motion="full"]) *::before,
+  html:not([data-motion="full"]) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* ---- shared anatomy-style components ---- */
@@ -682,9 +693,14 @@ canvas {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cell--breathe, .cell--shiver, .atp-spark, .eyepiece-ring, .coin, .coin-roll, .milestone-plate {
+  html:not([data-motion="full"]) :is(.cell--breathe, .cell--shiver, .atp-spark, .eyepiece-ring, .coin, .coin-roll, .milestone-plate) {
     animation: none !important;
   }
-  .coin-arc { display: none; }
+  html:not([data-motion="full"]) .coin-arc { display: none; }
 }
+
+html[data-motion="reduce"] :is(.cell--breathe, .cell--shiver, .atp-spark, .eyepiece-ring, .coin, .coin-roll, .milestone-plate) {
+  animation: none !important;
+}
+html[data-motion="reduce"] .coin-arc { display: none; }
 

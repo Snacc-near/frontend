@@ -112,7 +112,12 @@ const FAQ: ReadonlyArray<{ q: string; a: React.ReactNode }> = [
   },
   {
     q: "Do I need a wallet?",
-    a: <>Not to look around. This page and the lab demo only read testnet data; nothing here asks you to sign anything.</>,
+    a: (
+      <>
+        Not to look around. This page and the demo need no wallet and sign nothing. In live testnet mode you sign testnet transactions yourself,
+        with your own NEAR wallet or the optional email login; the app never sees your keys.
+      </>
+    ),
   },
 ];
 

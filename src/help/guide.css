@@ -1,0 +1,210 @@
+/* Intro, Help and Settings windows (UI-151). Builds on fd.css; only the pieces fd.css does not have. */
+
+.guide-lead {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-hi);
+}
+
+.guide-points {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-points > li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-hi);
+}
+
+.guide-points > li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.6em;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--ink-hi);
+  background: var(--accent);
+}
+
+.guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.guide-actions__right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* progress dots (decorative; the "step n of m" text is the accessible indicator) */
+.guide-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-dots {
+  display: inline-flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-dots > li {
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper-hi);
+}
+
+.guide-dots > li[aria-current="step"] {
+  background: var(--accent);
+}
+
+.guide-dots > li[data-done] {
+  background: var(--ink-hi);
+}
+
+/* step change: a short rise, only when motion is allowed */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-motion="reduce"]) .guide-step {
+    animation: guide-rise 200ms var(--ease-out, ease-out) both;
+  }
+}
+
+html[data-motion="full"] .guide-step {
+  animation: guide-rise 200ms var(--ease-out, ease-out) both;
+}
+
+@keyframes guide-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* help: rules and glossary */
+.guide-rule {
+  display: grid;
+  gap: 4px;
+}
+
+.guide-rule p,
+.guide-cost p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-hi);
+}
+
+.guide-gloss {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper-hi);
+}
+
+.guide-gloss > div {
+  padding: 10px 12px;
+}
+
+.guide-gloss > div + div {
+  border-top: 1px dashed var(--rule-dash);
+}
+
+.guide-gloss dt {
+  font: 600 12.5px/1.3 var(--sans);
+  color: var(--ink-hi);
+}
+
+.guide-gloss dd {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-hi);
+}
+
+.guide-cost {
+  display: grid;
+  gap: 4px;
+}
+
+.guide-cost__value {
+  font: 600 13px/1.4 var(--sans);
+  color: var(--ink-hi);
+  overflow-wrap: anywhere;
+}
+
+.guide-source {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.guide-source code {
+  font-size: 1em;
+}
+
+/* settings */
+.guide-section {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule-dash);
+}
+
+.guide-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.guide-range {
+  width: 100%;
+  min-height: 40px;
+  accent-color: var(--accent-dk);
+  cursor: pointer;
+}
+
+.guide-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.guide-keys {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  border: 1px solid var(--ink-hi);
+  background: var(--paper-hi);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.guide-keys code {
+  color: var(--ink-hi);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

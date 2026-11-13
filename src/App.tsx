@@ -41,7 +41,10 @@ import {
 } from "./game/simulation.ts";
 import type { GameMode } from "./config/constants.ts";
 import { irisMode, receiptLine } from "./plate/iso/layout.ts";
-import { prefersReducedMotion } from "./motion.ts";
+import { useReducedMotion } from "./prefs/motionPref.ts";
+import { readSkinPref } from "./prefs/prefs.ts";
+import { GuideLayer } from "./help/GuideLayer.tsx";
+import { AppLegalLinks } from "./help/AppLegalLinks.tsx";
 import { bioSound } from "./sound.ts";
 
 import { ColonyPlate } from "./plate/ColonyPlate.tsx";
@@ -110,11 +113,11 @@ function formatSimNumber(value: number): string {
 
 export const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>("demo");
-  const [skin, setSkin] = useState<SkinMode>("biolab");
+  const [skin, setSkin] = useState<SkinMode>(() => readSkinPref());
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [zone, setZone] = useState<MacroZone>("Goldilocks");
   const [crucibleTempMk, setCrucibleTempMk] = useState<number | null>(null);
-  const [reducedMotion] = useState<boolean>(() => prefersReducedMotion());
+  const reducedMotion = useReducedMotion();
   const [atpBalance, setAtpBalance] = useState(INITIAL_ATP);
   const [guest, setGuest] = useState<GuestLabel | null>(() => readGuestLabel());
   // The guest label may only seed the highlight filter with a valid `.testnet` account.
@@ -766,6 +769,7 @@ export const App: React.FC = () => {
               demo · simulated — numbers come from local constants, not the chain
             </span>
           ) : null}
+          <AppLegalLinks />
         </div>
       </div>
 
@@ -871,6 +875,7 @@ export const App: React.FC = () => {
           />
         ) : null}
       </React.Suspense>
+      <GuideLayer tool={tool} onCloseTool={closeTool} skin={skin} onSkin={setSkin} />
     </main>
   );
 };

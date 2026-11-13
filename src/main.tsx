@@ -17,6 +17,8 @@ const Game = React.lazy(() => import("./app-entry.tsx"));
 const Landing = React.lazy(() => import("./landing/Landing.tsx"));
 // Privy signing popup for the optional email login (only reachable when Privy is configured).
 const SignPage = React.lazy(() => import("./sign/SignPage.tsx"));
+// Terms, privacy and the 404 page share one small static chunk (UI-151).
+const StaticPage = React.lazy(() => import("./legal/StaticPage.tsx"));
 
 function BootFallback({ label }: { label: string }) {
   return (
@@ -50,6 +52,10 @@ if (rootEl) {
       ) : route === "sign" ? (
         <Suspense fallback={<BootFallback label="opening the signer…" />}>
           <SignPage />
+        </Suspense>
+      ) : route === "terms" || route === "privacy" || route === "notfound" ? (
+        <Suspense fallback={<BootFallback label="loading…" />}>
+          <StaticPage page={route} />
         </Suspense>
       ) : (
         <Suspense fallback={<BootFallback label="warming the incubator…" />}>
