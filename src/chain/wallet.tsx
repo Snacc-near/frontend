@@ -208,6 +208,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const signAndSend = useCallback(async (calls: ContractCall[]): Promise<TxResult> => {
     const signer = accountRef.current;
     if (!signer) return notConnected();
+    // The game call is the last action (a storage registration may come first).
+    const method = calls[calls.length - 1]?.methodName;
     try {
       const connector = await loadConnector();
       const wallet = await connector.wallet();
@@ -217,9 +219,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         receiverId: CONTRACT_ID,
         actions: toWalletActions(calls),
       });
-      return readOutcome(outcome);
+      return readOutcome(outcome, method);
     } catch (e) {
-      return readThrown(e);
+      return readThrown(e, method);
     }
   }, []);
 

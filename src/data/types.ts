@@ -126,6 +126,10 @@ export interface StrainDetail {
   };
   status: string;
   effective_vitality: number;
+  /** `last_allocate_epoch` (UI-150: `allocate_atp` is once per epoch); absent on older reads. */
+  last_allocate_epoch?: number;
+  /** `phenotype_trait` (UI-150: elixir-aether needs a past TEE mutation); null when none. */
+  phenotype_trait?: string | null;
 }
 
 export interface BreachLogItem {
