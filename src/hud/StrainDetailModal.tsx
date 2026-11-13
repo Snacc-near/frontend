@@ -130,9 +130,9 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
           <div className="grid grid-cols-3 gap-2 text-center" role="group" aria-label="organelle levels">
             {(
               [
-                ["mitokondria", strain.organel.mitokondria],
-                ["nukleus", strain.organel.nukleus],
-                ["lisosom", strain.organel.lisosom],
+                ["mitochondria", strain.organel.mitokondria],
+                ["nucleus", strain.organel.nukleus],
+                ["lysosome", strain.organel.lisosom],
               ] as const
             ).map(([name, level]) => (
               <div key={name} className="flex flex-col gap-0.5 border border-[var(--ink-hi)] bg-[var(--paper)] p-2">
