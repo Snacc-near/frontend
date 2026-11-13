@@ -2,12 +2,16 @@ import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { selectRoute } from "./route.ts";
 import { startTelemetry } from "./telemetry.ts";
+import { captureReferral } from "./account/referral.ts";
 // Order matters: iso.css first, index.css second (index.css tokens must win the cascade, as before the
 // route split). iso.css is tiny (~2 KB gzip), so it stays in the entry chunk instead of the game chunk.
 import "./plate/iso/iso.css";
 import "./index.css";
 
 const route = selectRoute(window.location.pathname);
+
+// UI-158: remember an invite link (`?ref=<account>`) from any page for seven days; claimed after sign-in.
+captureReferral(window.location.search);
 
 // The game is a fixed full-viewport stage (no page scroll); see `html.route-app` in index.css.
 // Set before first render so the page never flashes the wrong layout.

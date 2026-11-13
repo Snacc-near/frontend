@@ -1,0 +1,43 @@
+/* UI-164 Market: the listing rows. Built on the fd.css primitives and the thumbnail/meter classes of collection.css. */
+
+.coll-list > .mkt-row,
+.mkt-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 8px 12px;
+}
+
+.mkt-meta {
+  font: 500 11px/1.4 var(--mono);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.mkt-side {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.mkt-price {
+  font: 600 13px/1.2 var(--mono);
+  color: var(--ink-hi);
+  white-space: nowrap;
+}
+
+@media (max-width: 639.98px) {
+  .mkt-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .mkt-side {
+    grid-column: 1 / -1;
+    grid-auto-flow: column;
+    justify-content: space-between;
+    justify-items: start;
+    align-items: center;
+  }
+}

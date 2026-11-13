@@ -133,6 +133,8 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   // UI-153: awarded by the database when a daily quest is finished (cosmetic, off-chain).
   { code: "quest_first", name: "First quest", how: "Finish a daily quest." },
   { code: "quest_streak_7", name: "Seven quest days", how: "Finish at least one daily quest on seven days in a row." },
+  // UI-158: awarded to the referrer when a friend who joined through their invite link hatches a first Snacc.
+  { code: "recruiter", name: "Recruiter", how: "A friend you invited hatches their first Snacc." },
 ];
 
 export function achievementName(code: string): string {

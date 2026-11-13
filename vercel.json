@@ -1,3 +1,22 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "functions": {
+    "api/og-*.js": {
+      "includeFiles": "{server/assets/fonts/*.ttf,node_modules/@resvg/resvg-wasm/index_bg.wasm}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/snacc/:id(\\d+)",
+      "has": [{ "type": "header", "key": "user-agent", "value": "(?i).*(twitterbot|facebookexternalhit|facebot|discordbot|telegrambot|slackbot|slack-imgproxy|linkedinbot|whatsapp|mastodon|cardyb).*" }],
+      "destination": "/api/share?kind=snacc&id=:id"
+    },
+    {
+      "source": "/p/:account",
+      "has": [{ "type": "header", "key": "user-agent", "value": "(?i).*(twitterbot|facebookexternalhit|facebot|discordbot|telegrambot|slackbot|slack-imgproxy|linkedinbot|whatsapp|mastodon|cardyb).*" }],
+      "destination": "/api/share?kind=p&account=:account"
+    },
+    { "source": "/api/og/snacc/:id", "destination": "/api/og-snacc?id=:id" },
+    { "source": "/api/og/p/:account", "destination": "/api/og-profile?account=:account" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
 }

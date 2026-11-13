@@ -17,6 +17,7 @@ import { AccountError, signInWithNear } from "./signIn.ts";
 import { recordTx as postRecordTx, type ProfileRow } from "./model.ts";
 import { profileByUser } from "./api.ts";
 import { track } from "../telemetry.ts";
+import { claimStoredReferral } from "./referral.ts";
 
 export type AccountStatus = "off" | "idle" | "loading" | "signing" | "signed-in";
 
@@ -159,6 +160,15 @@ export function SessionProvider({ children, config }: { children: ReactNode; con
   useEffect(() => {
     void refreshProfile();
   }, [refreshProfile]);
+
+  // UI-158: once per signed-in user and page load, attach the invite link stored from `?ref=` (if any). Quiet by
+  // design: every answer is ignored and a failure never touches the sign-in state.
+  const claimedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!client || !userId || !profile || claimedFor.current === userId) return;
+    claimedFor.current = userId;
+    void claimStoredReferral(client, profile.near_account_id).catch(() => undefined);
+  }, [client, userId, profile]);
 
   const nearAccountId = profile?.near_account_id ?? signedAs ?? accountFromSession(session);
 

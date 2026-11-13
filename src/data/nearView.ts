@@ -5,6 +5,8 @@
  */
 
 export const CONTRACT_ID = "snacc-v001.testnet";
+/** UI-164: the testnet marketplace contract (`contracts/market`); the only other receiver the wallet layer signs for. */
+export const MARKET_ID = "snacc-market.testnet";
 export const RPCS = ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"] as const;
 /** `$SNACC` decimals (`ft_metadata.decimals`). */
 export const SNACC_DECIMALS = 24;
@@ -23,15 +25,16 @@ export function parseJsonBig<T>(text: string): T {
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
-/** Calls a view method; tries each RPC for 7 s and returns `null` when all fail. */
+/** Calls a view method; tries each RPC (`rpcs`, default `RPCS`) for 7 s and returns `null` when all fail. */
 export async function viewCall<T>(
   method: string,
   args: unknown,
   signal?: AbortSignal,
   fetchImpl: FetchLike = (i, init) => fetch(i, init),
   contractId: string = CONTRACT_ID,
+  rpcs: readonly string[] = RPCS,
 ): Promise<T | null> {
-  for (const url of RPCS) {
+  for (const url of rpcs) {
     if (signal?.aborted) return null;
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), 7000);

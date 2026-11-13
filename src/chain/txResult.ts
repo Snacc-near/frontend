@@ -62,6 +62,19 @@ const CONTRACT_ERRORS: Record<string, string> = {
   ERR_DIVIDEND_ALREADY_CLAIMED: "This Snacc already claimed that epoch.",
   ERR_DIVIDEND_CLAIM_EXPIRED: "That epoch is older than the 8-epoch claim window.",
   ERR_DIVIDEND_POOL_EMPTY: "Nothing to pay for that epoch (no contribution, or the pool is empty).",
+  // UI-164 (codes from `contracts/market/src/lib.rs`).
+  ERR_LISTING_NOT_FOUND: "That listing is gone: it was bought, taken back or never existed. Refresh the list.",
+  ERR_SELLER_CANNOT_BUY: "You cannot buy your own listing.",
+  ERR_NOT_SELLER: "Only the seller can change or take back this listing.",
+  ERR_BAD_PRICE: "The price must be greater than zero and at most 10,000 NEAR.",
+  ERR_MORE_GAS_REQUIRED: "Too little gas was attached for this call. Try again with the wallet's default gas.",
+  ERR_LISTINGS_PAUSED: "The market is not taking new listings right now.",
+  ERR_ALREADY_LISTED: "That Snacc is already listed.",
+  ERR_SELLER_LISTING_CAP: "You already have 20 open listings, the most one account can have.",
+  ERR_MARKET_FULL: "The market is full (1,000 open listings). Try again later.",
+  ERR_BAD_MSG: "The listing message was not accepted by the market.",
+  ERR_NOT_NFT_CONTRACT: "The market only takes Snaccs from the Snacc contract.",
+  ERR_NOT_OWNER: "Only the market owner can do this.",
 };
 
 /**
@@ -103,6 +116,13 @@ const METHOD_ERRORS: Record<string, Record<string, string>> = {
     ERR_NOT_OWNED_BY_CALLEE: "You can only give a Snacc you own.",
     ERR_ALREADY_LIQUIDATED: "A dead Snacc cannot be given away.",
   },
+  // UI-164: the market calls.
+  nft_transfer_call: {
+    ERR_NOT_OWNED_BY_CALLEE: "You can only list a Snacc you own.",
+    ERR_ALREADY_LIQUIDATED: "A dead Snacc cannot be listed.",
+    ERR_SAME_STRAIN: "You cannot list a Snacc to yourself.",
+  },
+  buy: { ERR_INSUFFICIENT_DEPOSIT: "The NEAR attached is below the listed price. Reload the list: the price may have changed." },
 };
 
 const REJECT_PATTERNS = [/user rejected/i, /rejected by user/i, /user cancel/i, /cancelled/i, /canceled/i, /closed the (window|popup)/i, /user denied/i];
