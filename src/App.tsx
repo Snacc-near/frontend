@@ -46,6 +46,9 @@ import { bioSound } from "./sound.ts";
 
 import { ColonyPlate } from "./plate/ColonyPlate.tsx";
 import { IrisOverlay } from "./hud/IrisOverlay.tsx";
+import { useWallet } from "./chain/wallet.tsx";
+import { useAccountInfo } from "./chain/useAccountInfo.ts";
+import { WalletControl } from "./hud/WalletControl.tsx";
 
 // Tool windows load on first open, outside the game's entry chunk.
 const MyCollection = React.lazy(() => import("./hud/MyCollection.tsx"));
@@ -55,6 +58,14 @@ const SocialLeaderboardModal = React.lazy(() => import("./hud/SocialLeaderboardM
 const ThesisDashboardModal = React.lazy(() => import("./hud/ThesisDashboardModal.tsx"));
 const GuestLabelModal = React.lazy(() => import("./hud/GuestLabelModal.tsx"));
 const RecipeSearchModal = React.lazy(() => import("./hud/RecipeSearchModal.tsx"));
+// Signed actions (UI-146) load on first open as well.
+const HatchModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) => ({ default: m.HatchModal })));
+const FeedModal = React.lazy(() => import("./hud/ChainActions.tsx").then((m) => ({ default: m.FeedModal })));
+
+/** Dock key shown only in live mode with a connected wallet (UI-146). */
+const HATCH_DOCK = { key: "hatch", label: "Hatch", hint: "incubate_strain" } as const;
+/** Dock keys that send a real transaction when a wallet is connected in live mode. */
+const SIGNED_DOCK_KEYS = new Set(["hatch", "feed"]);
 
 const demoSeedLogs: BreachLogItem[] = [
   {
@@ -153,12 +164,29 @@ export const App: React.FC = () => {
 
   const [logs, setLogs] = useState<BreachLogItem[]>(demoSeedLogs);
 
+  // UI-145: a connected wallet is the effective account; the manual highlight still works without one.
+  const wallet = useWallet();
+  const [chainRefresh, setChainRefresh] = useState(0);
+  const accountInfo = useAccountInfo(wallet.accountId, chainRefresh);
+  const effectiveAccount = wallet.accountId ?? userAccount;
+  const walletConnected = wallet.status === "connected" && wallet.accountId !== null;
+  /** Live mode + wallet: the hatch and feed keys send real testnet transactions. */
+  const signedActions = mode === "live" && walletConnected;
+  const [chainAction, setChainAction] = useState<"hatch" | "feed" | null>(null);
+  /** Strain picked in My collection for the signed feed; the dock falls back to the plate selection. */
+  const [feedTarget, setFeedTarget] = useState<number | null>(null);
+  const closeChainAction = useCallback(() => setChainAction(null), []);
+  const openFeedFor = useCallback((strainId: number) => {
+    setFeedTarget(strainId);
+    setChainAction("feed");
+  }, []);
+
   const matchedStrainsCount = useMemo(() => {
-    const q = userAccount.trim().toLowerCase();
+    const q = effectiveAccount.trim().toLowerCase();
     if (!q) return 0;
     if (mode === "demo") return 1;
     return liveStrains.filter((s) => s.owner_id.toLowerCase().includes(q)).length;
-  }, [userAccount, liveStrains, mode]);
+  }, [effectiveAccount, liveStrains, mode]);
 
   // Simulation tick (demo only).
   useEffect(() => {
@@ -253,7 +281,7 @@ export const App: React.FC = () => {
     });
     poller.start();
     return () => poller.stop();
-  }, [mode, userAccount]);
+  }, [mode, effectiveAccount, chainRefresh]);
 
   const loadStrain = useCallback(
     async (cellId: number) => {
@@ -264,7 +292,7 @@ export const App: React.FC = () => {
           const vitality = simRef.current.vitality;
           setSelectedStrain({
             strain_id: 1,
-            owner_id: userAccount.trim() || "player.testnet",
+            owner_id: effectiveAccount.trim() || "player.testnet",
             vault_subaccount: "v1.snacc-crucible.testnet",
             vitality,
             efficiency_bps: 9850,
@@ -324,7 +352,18 @@ export const App: React.FC = () => {
         setIsLoadingStrain(false);
       }
     },
-    [mode, userAccount],
+    [mode, effectiveAccount],
+  );
+
+  /** After a signed action: re-read the wallet views, restart the poller and reload the open strain. */
+  const handleChainDone = useCallback(
+    (ok: boolean) => {
+      if (!ok) return;
+      setChainRefresh((n) => n + 1);
+      bioSound.playFeed();
+      if (selectedId !== null && labOpen) void loadStrain(selectedId);
+    },
+    [selectedId, labOpen, loadStrain],
   );
 
   const handleCellSelect = useCallback(
@@ -416,15 +455,20 @@ export const App: React.FC = () => {
 
   const handleDock = useCallback(
     (key: string) => {
-      const def = DOCK_DEFS.find((d) => d.key === key);
-      if (!def) return;
       if (mode === "live") {
-        showToast("on-chain transactions need a wallet — outside this demo");
+        if (signedActions && (key === "hatch" || key === "feed")) {
+          setFeedTarget(null);
+          setChainAction(key);
+          return;
+        }
+        showToast(walletConnected ? "only hatch and feed are signed from this app so far" : "connect a wallet to hatch and feed on testnet");
         return;
       }
+      const def = DOCK_DEFS.find((d) => d.key === key);
+      if (!def) return;
       doSimAction(def.action);
     },
-    [mode, doSimAction],
+    [mode, doSimAction, signedActions, walletConnected],
   );
 
   const handleCollect = useCallback(
@@ -503,12 +547,12 @@ export const App: React.FC = () => {
       id: s.strain_id,
       vitalityRatio: typeof s.vitality === "number" ? s.vitality / 10000 : null,
       status: s.status ?? "Active",
-      highlighted: Boolean(userAccount && s.owner_id.toLowerCase().includes(userAccount.trim().toLowerCase())),
+      highlighted: Boolean(effectiveAccount && s.owner_id.toLowerCase().includes(effectiveAccount.trim().toLowerCase())),
       index: i,
       generation: s.generation ?? 1,
       producing: false,
     }));
-  }, [mode, sim.vitality, sim.generation, sim.queue, liveStrains, userAccount]);
+  }, [mode, sim.vitality, sim.generation, sim.queue, liveStrains, effectiveAccount]);
 
   const resources = useMemo(
     () =>
@@ -532,13 +576,13 @@ export const App: React.FC = () => {
 
   const dock: DockButton[] = useMemo(
     () =>
-      DOCK_DEFS.map((d) => ({
+      [...(signedActions ? [HATCH_DOCK] : []), ...DOCK_DEFS].map((d) => ({
         key: d.key,
         label: d.label,
         hint: d.hint,
-        disabled: mode === "live",
+        disabled: mode === "live" && !(signedActions && SIGNED_DOCK_KEYS.has(d.key)),
       })),
-    [mode],
+    [mode, signedActions],
   );
 
   const governedLogs = useMemo(() => filterLogsForMode(logs, mode), [logs, mode]);
@@ -571,13 +615,18 @@ export const App: React.FC = () => {
                 </span>
               </span>
               <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
-              <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+              {walletConnected ? null : (
+                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+              )}
               <span className="label-plate">
                 vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
                 <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
               </span>
             </div>
             <div className="flex flex-col items-end gap-1.5">
+              <div className="pointer-events-auto">
+                <WalletControl wallet={wallet} info={accountInfo} />
+              </div>
               <div className="pointer-events-auto">
                 <SkinSwitch skin={skin} onChange={setSkin} />
               </div>
@@ -607,9 +656,14 @@ export const App: React.FC = () => {
             <div className="pointer-events-auto w-full min-w-0">
               <ResourceBar mode={mode} resources={resources} skin={skin} />
             </div>
+            <div className="pointer-events-auto flex w-full min-w-0 justify-end">
+              <WalletControl wallet={wallet} info={accountInfo} compact />
+            </div>
             {moreOpen ? (
               <div className="pointer-events-auto flex flex-col gap-1.5 rounded-xl border border-[var(--edge)] bg-[var(--panel)] p-2 shadow-[0_2px_0_var(--edge)]" data-testid="mobile-more">
-                <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                {walletConnected ? null : (
+                  <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
+                )}
                 <SkinSwitch skin={skin} onChange={setSkin} />
                 <span className="label-plate">
                   vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
@@ -651,7 +705,9 @@ export const App: React.FC = () => {
               guestLabel={guest?.label || null}
             />
             <span className="label-plate pointer-events-auto hidden lowercase sm:inline-flex">
-              <span className="lp-label">{mode === "demo" ? "demo · simulated" : "live · testnet reads only"}</span>
+              <span className="lp-label">
+                {mode === "demo" ? "demo · simulated" : signedActions ? "live · testnet · wallet connected" : "live · testnet reads only"}
+              </span>
             </span>
           </div>
           {panelsOpen ? (
@@ -694,10 +750,17 @@ export const App: React.FC = () => {
               demo · simulated — {receiptLine(sim.totalIn, sim.totalOut)}
             </span>
           ) : (
-            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
-              on-chain transactions need a wallet — outside this demo
+            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]" data-testid="live-tx-note">
+              {signedActions
+                ? "hatch and feed are signed in your wallet on testnet · $SNACC on testnet has no monetary value"
+                : "connect a wallet to hatch and feed on testnet · reads work without one"}
             </span>
           )}
+          {mode === "demo" && walletConnected ? (
+            <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
+              wallet connected · switch to live to send real testnet transactions
+            </span>
+          ) : null}
           {mode === "demo" ? (
             <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
               demo · simulated — numbers come from local constants, not the chain
@@ -741,7 +804,16 @@ export const App: React.FC = () => {
       ) : null}
 
       <React.Suspense fallback={<div className="fd-modal fd-ui" role="status" aria-label="loading tool" />}>
-        {tool === "collection" ? <MyCollection accountId={userAccount || null} skin={skin} mode={mode} onClose={closeTool} /> : null}
+        {tool === "collection" ? (
+          <MyCollection
+            accountId={effectiveAccount || null}
+            skin={skin}
+            mode={mode}
+            onClose={closeTool}
+            onFeedStrain={walletConnected ? openFeedFor : undefined}
+            refreshKey={chainRefresh}
+          />
+        ) : null}
         {tool === "swap" ? <SwapPanel mode={mode} onClose={closeTool} skin={skin} /> : null}
         {tool === "social" ? <SocialLeaderboardModal onClose={closeTool} appetite={appetite} mode={mode} skin={skin} /> : null}
         {tool === "thesis" ? <ThesisDashboardModal onClose={closeTool} mode={mode} skin={skin} /> : null}
@@ -785,6 +857,19 @@ export const App: React.FC = () => {
           />
         ) : null}
         {tool === "recipes" ? <RecipeSearchModal onClose={closeTool} skin={skin} zone={zone} /> : null}
+        {chainAction === "hatch" && signedActions ? (
+          <HatchModal wallet={wallet} info={accountInfo} onClose={closeChainAction} onDone={handleChainDone} />
+        ) : null}
+        {/* My collection is always live data, so its feed only needs the wallet; the dock also needs live mode. */}
+        {chainAction === "feed" && walletConnected ? (
+          <FeedModal
+            wallet={wallet}
+            info={accountInfo}
+            onClose={closeChainAction}
+            onDone={handleChainDone}
+            preferredStrainId={feedTarget ?? selectedId}
+          />
+        ) : null}
       </React.Suspense>
     </main>
   );

@@ -19,7 +19,7 @@ describe("Guest label (local only)", () => {
   it("says what it is and offers sign-in only as disabled planned options", () => {
     const html = renderToStaticMarkup(<GuestLabelModal current={null} onSave={() => {}} onClear={() => {}} onClose={() => {}} />);
     expect(html).toContain("Guest label — local only, no on-chain account, nothing is signed.");
-    expect(html).toContain("This app has no wallet connection.");
+    expect(html).toContain("It is separate from the wallet: to sign testnet transactions, use connect wallet in the header.");
     expect(html.match(/disabled="" aria-describedby="guest-planned-note"/g) ?? []).toHaveLength(2);
     expect(html).toContain("near.email");
     expect(html).toContain("Auth0");

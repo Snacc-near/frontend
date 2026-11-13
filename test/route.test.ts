@@ -19,6 +19,13 @@ describe("selectRoute", () => {
     expect(selectRoute("/story/app")).toBe("landing");
   });
 
+  it("serves the Privy signing popup at /sign only", () => {
+    expect(selectRoute("/sign")).toBe("sign");
+    expect(selectRoute("/sign/")).toBe("sign");
+    expect(selectRoute("/signup")).toBe("landing");
+    expect(selectRoute("/sign/x")).toBe("landing");
+  });
+
   it("falls back to the landing page for unknown paths", () => {
     expect(selectRoute("/nope")).toBe("landing");
   });

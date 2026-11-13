@@ -15,6 +15,8 @@ if (route === "app") document.documentElement.classList.add("route-app");
 // Each route is its own chunk: visitors on `/` never download the game, and vice versa.
 const Game = React.lazy(() => import("./app-entry.tsx"));
 const Landing = React.lazy(() => import("./landing/Landing.tsx"));
+// Privy signing popup for the optional email login (only reachable when Privy is configured).
+const SignPage = React.lazy(() => import("./sign/SignPage.tsx"));
 
 function BootFallback({ label }: { label: string }) {
   return (
@@ -44,6 +46,10 @@ if (rootEl) {
       {route === "app" ? (
         <Suspense fallback={<BootFallback label="loading the lab…" />}>
           <Game />
+        </Suspense>
+      ) : route === "sign" ? (
+        <Suspense fallback={<BootFallback label="opening the signer…" />}>
+          <SignPage />
         </Suspense>
       ) : (
         <Suspense fallback={<BootFallback label="warming the incubator…" />}>

@@ -6,11 +6,13 @@ cells on an isometric colony plate, open a chosen cell in its **Cell Lab**
 bio-reactor, and drive the whole economy through twelve lab actions — each
 one plays the real cell-biology mechanism it is named after (a mitochondrion
 power plant, a Krebs wheel, an ATP-synthase turbine). Every lab action is
-mapped to the exact contract method it stands for — the map below — but
-this UI never submits a contract call itself. In **demo** mode the numbers come from local simulation constants and are
+mapped to the exact contract method it stands for — the map below. The Cell
+Lab actions never submit a contract call. In **demo** mode the numbers come from local simulation constants and are
 labelled `demo · simulated`. In **live** mode every value comes from the
-backend API; missing values render as `—` and transactions are preview-only
-(`preview only — on-chain transactions need a wallet`).
+backend API; missing values render as `—` and the Cell Lab actions are preview-only
+(`preview only — on-chain transactions need a wallet`). With a NEAR wallet
+connected, live mode adds two signed testnet actions: **hatch**
+(`incubate_strain`) and **feed** (`feed_strain`); see [Wallet](#wallet-testnet).
 
 ## Screens
 
@@ -136,7 +138,7 @@ and under 640 px they open as bottom sheets. Each loads on first open.
 
 | Window | What it shows | Data source |
 |---|---|---|
-| NPC merchants (ADR-30) | The three contract NPCs, their stock and a spore quote with the contract's `reasoning_tooltip` | **live:** views `get_npc`, `npc_quote_spores` on `snacc-v001.testnet`; buying needs the signed call `npc_buy_spores`, which this wallet-less app cannot make. **demo:** the same rule on genesis state, every number labelled SIMULATION |
+| NPC merchants (ADR-30) | The three contract NPCs, their stock and a spore quote with the contract's `reasoning_tooltip` | **live:** views `get_npc`, `npc_quote_spores` on `snacc-v001.testnet`; buying needs the signed call `npc_buy_spores`, which this app does not send. **demo:** the same rule on genesis state, every number labelled SIMULATION |
 | Swap quote | Rhea reference price and a NEAR Intents 1Click **dry** quote between listed assets | public APIs in both modes (`api.rhea.finance/list-token-price`, `POST 1click.chaindefuser.com/v0/quote` with `dry: true`, no API key). `$SNACC` is a testnet token and is listed on neither |
 | Great Feast | Epoch, zone, feast volume and the top-3 feeders, plus a near.social markdown post to copy | **live:** backend `/api/appetite`, else views `get_appetite_meter` + `get_top_feeder`; empty state when both are empty. **demo:** invented feeders, labelled SIMULATION |
 | Thesis | Four numbers from the testnet rehearsal of 2026-11-09, each linked to its tx (or named view); live mode adds a fresh view read. SQL **query templates — not executed** (Snacc is testnet-only) | `src/data/evidence.ts` (copied from the umbrella repo's evidence pack), views `get_macro_state`, `get_global_solvency`, `get_crucible_temp` |
@@ -150,6 +152,37 @@ Optional configuration (`.env`):
 - `VITE_REF_INDEXER_URL` — Rhea price list base URL (default `https://api.rhea.finance`).
 - `VITE_INTENTS_API_URL` — 1Click API base URL (default `https://1click.chaindefuser.com`).
 - `VITE_SNACC_TOKEN_ID` — a mainnet `$SNACC` token id, if one ever exists; unset today.
+- `VITE_PRIVY_APP_ID` — Privy App ID (public). Set it to add "Email or social login (Privy)" to the
+  wallet picker; empty turns it off. `VITE_PRIVY_CLIENT_ID` is optional and only passed on when set.
+
+## Wallet (testnet)
+
+The header has a **connect wallet** key (`src/chain/wallet.tsx`, [NEAR Connect](https://github.com/hot-dao/near-selector),
+network `testnet`). The connector loads on demand, so the landing page never downloads it. Wallets
+run in NEAR Connect's sandboxed iframes and sign there; the app never sees or stores a key. Once
+connected, the header shows the account, its spendable testnet NEAR and its `$SNACC`
+(`ft_balance_of`; testnet, no monetary value), and the wallet account becomes the highlighted
+account and the My collection account.
+
+In live mode the dock then offers two signed calls to `snacc-v001.testnet` (builders in
+`src/chain/actions.ts`, mirroring the deposit rules of `sdk/src/client.ts`):
+
+| Action | Call | Attached NEAR |
+|---|---|---|
+| Hatch | `incubate_strain(role, initial_snacc_stake, initial_spores)` | the stake (default 0.25 NEAR) |
+| Feed | `feed_strain(strain_id, amount)` on an owned strain | none |
+| First signed call only | `storage_deposit(account_id, registration_only: true)` | `storage_balance_bounds().min` |
+
+Each window shows the cost before signing and then the result: the tx hash with a nearblocks link,
+or the contract error in plain English with the raw text underneath. A faucet link
+(docs.near.org/tools/faucet) appears when the account lacks testnet NEAR. Demo mode keeps the
+simulated dock. With `VITE_PRIVY_APP_ID` set, Privy email login (via `@peerfolio/privy-near-connect`)
+appears in the same picker; its signing popup is the `/sign` route, a separate chunk. A Privy
+account is new and starts with 0 NEAR.
+
+`index.html` carries the CSP the wallets need: a fixed nonce for NEAR Connect's `srcdoc` wallet
+frames (`script-src … 'nonce-…'`, same value as `NEAR_CONNECT_CSP_NONCE`) and `https:` for wallet
+icons, styles, fonts and frames.
 
 ## Tests
 
