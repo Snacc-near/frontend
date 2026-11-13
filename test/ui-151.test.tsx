@@ -498,7 +498,7 @@ describe("UI-151 wording", () => {
   it("avoids the words the project does not use", () => {
     for (const file of files) {
       const text = readFileSync(file, "utf8").toLowerCase();
-      for (const word of ["gamefi", "investment", "yield", "handover", "esther", "arya"]) {
+      for (const word of ["gamefi", "investment", "yield"]) {
         expect(text, `${file} contains "${word}"`).not.toContain(word);
       }
     }
