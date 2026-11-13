@@ -1,7 +1,7 @@
 /**
  * UI-162: the newest unexpired announcement from `announcements_snacc` (written by admins through
  * `snacc_admin_broadcast()`), shown as a slim dismissible banner once the profile client is loaded
- * (wallet connected or profile session); the same text also arrives as a notification for every
+ * (after a wallet connects, or with a stored profile session); the same text also arrives as a notification for every
  * profile. Dismissed ids are remembered in this browser. Inert without Supabase.
  */
 import { useEffect, useState } from "react";
