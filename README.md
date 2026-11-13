@@ -207,7 +207,7 @@ file with real values (`.env.local`) is not committed.
 
 | Folder | What lives there |
 | --- | --- |
-| `src/chain/` | Everything that touches the wallet and signed transactions, see [Wallet](#wallet-testnet): `wallet.tsx` (NEAR Connect provider and `useWallet()`), `actions.ts` (the call builders and their guards), `txResult.ts` (wallet outcome and contract panic text, to plain English), `privy.ts` (optional Privy entry for the picker), `accountViews.ts` and `useAccountInfo.ts` (NEAR and `$SNACC` balance, NEP-145 registration, owned strains), `gameViews.ts` (the views the action windows need) |
+| `src/chain/` | Everything that touches the wallet and signed transactions, see [Wallet](#wallet-testnet): `wallet.tsx` (NEAR Connect provider and `useWallet()`), `actions.ts` (the call builders and their guards), `txResult.ts` (wallet outcome and contract panic text, to plain English), `privy.ts` (optional Privy entry for the picker), `accountViews.ts` and `useAccountInfo.ts` (NEAR and `$SNACC` balance, NEP-145 registration, owned strains), `gameViews.ts` (the views the action windows need), `oneTap.ts`, `oneTapKeys.ts`, `oneTapSession.ts` (opt-in [one-tap play](#one-tap-play-res-111)) |
 | `src/account/` | Optional player profiles on Supabase, see [Player profiles](#player-profiles-optional-ui-148ui-149): `config.ts` (the env gate, pure), `signIn.ts` (NEP-413 sign-in), `session.tsx` (provider and `useAccount()`), `api.ts` and `model.ts` (reads, writes, `record-tx`, starter pack), `notifications.tsx`, `client.ts` (lazy Supabase client) |
 | `src/help/` | First-run intro (`OnboardingModal`), the Help window with rules, glossary and costs (`HelpModal`), Settings (`SettingsModal`), `content.ts` (the copy; numbers come from code constants) |
 | `src/legal/` | `/terms`, `/privacy` and the 404 page (`StaticPage.tsx`, `content.ts`) |
@@ -341,7 +341,8 @@ simply has no level. Code: `api/` (thin entry points) and `server/share/` (plain
 
 The header has a **connect wallet** key (`src/chain/wallet.tsx`, [NEAR Connect](https://github.com/hot-dao/near-selector),
 network `testnet`). The connector loads on demand, so the landing page never downloads it. Wallets
-run in NEAR Connect's sandboxed iframes and sign there; the app never sees or stores a key. Once
+run in NEAR Connect's sandboxed iframes and sign there; the app never sees or stores a wallet key
+(the optional [one-tap play](#one-tap-play-res-111) key is the app's own, separate key). Once
 connected, the header shows the account, its spendable testnet NEAR and its `$SNACC`
 (`ft_balance_of`; testnet, no monetary value), and the wallet account becomes the highlighted
 account and the My collection account.
@@ -391,6 +392,52 @@ for the other builders. The builders' arguments are unit-tested (`npm test`).
 frames (`script-src … 'nonce-…'`, same value as `NEAR_CONNECT_CSP_NONCE`) and `https:` for wallet
 icons, styles, fonts and frames.
 
+### One-tap play (RES-111)
+
+Opt-in, in **Settings → One-tap play**. Deposit-free game actions are signed in this browser with a
+NEAR function-call access key, so they go through without a wallet popup each time. Code:
+`src/chain/oneTap.ts` (method list, wallet allowlist, Borsh, RPC, signless send),
+`src/chain/oneTapKeys.ts` (Web Crypto key and storage), `src/chain/oneTapSession.ts` (state and
+`useOneTap()`), `src/help/OneTapSettings.tsx` (the Settings section). No new dependency.
+
+- **Turning it on** makes an Ed25519 key pair in the browser (Web Crypto) and asks the wallet for ONE
+  transaction to your own account: `AddKey` with a function-call permission, receiver
+  `snacc-v001.testnet`, allowance 0.25 NEAR (`ONE_TAP_ALLOWANCE_NEAR`), methods exactly
+  `ONE_TAP_METHODS`: `adopt`, `allocate_atp`, `claim_industrial_dividend`, `divide_strain`,
+  `feed_strain`, `harvest_starving_strain`, `hostile_takeover_splice`, `npc_buy_spores`,
+  `splice_strains`, `synthesize_and_redeem_aether`. These are the deposit-free methods the app sends
+  (not `#[payable]` in `contracts/snacc/src/lib.rs`, or payable only to refund a stray deposit), a
+  subset of the SDK's `SIGNLESS_METHODS`.
+- **Still the wallet:** anything that attaches NEAR, because NEAR refuses a deposit on a
+  function-call key: `incubate_strain` (stake), `extract_spores`, `transmute_spores_to_enzyme`,
+  `synthesize_elixir` (catalyst fee), `storage_deposit` (and any action sent together with it),
+  `nft_transfer`, `nft_transfer_call`, `ft_transfer` (1 yoctoNEAR) and every market call. No relayer
+  and no gas station: the player's own account pays the gas, capped by the allowance.
+- **Signing path:** `view_access_key` (final) gives the nonce, a recent block hash and the remaining
+  allowance; the transaction (one `FunctionCall`) is Borsh-encoded by hand, its sha256 signed with the
+  Web Crypto key, and sent with `send_tx` (`EXECUTED_OPTIMISTIC`) to FastNEAR, then
+  `rpc.testnet.near.org`; the outcome goes through the same `readOutcome` as the wallet path. The
+  encoding is pinned by two test vectors made with near-api-js 7.4.0 (see `test/res-111.test.tsx`).
+- **Fallback, never a double send:** no key, a key gone from the account, too little allowance, a
+  method the key does not allow, an unreachable RPC or an invalid-transaction answer all go to the
+  normal wallet popup with a one-line notice. Once a broadcast may have reached the network (timeout,
+  lost connection), the result says "not confirmed" with the locally computed hash and the wallet is
+  not asked again.
+- **The key** stays in this browser only, per network and account (`testnet:<account>`): IndexedDB
+  `snacc_one_tap` as a non-extractable `CryptoKey`; only when IndexedDB cannot hold one, localStorage
+  `snacc_one_tap` with the raw PKCS#8 bytes (Settings says so). It is never sent anywhere. Without
+  Ed25519 in Web Crypto the section says one-tap play is not available in this browser.
+- **Turning it off** checks on chain that the key is this game's function-call key, then asks the
+  wallet for ONE `DeleteKey` of that key (to your own account) and wipes it here. "Forget on this
+  device" only wipes it here. The wallet allowlist (`checkWalletTx`) accepts exactly these two extra
+  transaction shapes besides game calls to the Snacc contract and the market.
+- Telemetry reuses `tx_submitted` / `tx_succeeded` / `tx_failed` with `signless: true` (method name only).
+
+**Status, honestly:** covered by unit tests with a fake RPC and fake wallet only. It has not been
+tried end to end with a real wallet on testnet, and not yet with every wallet: whether each NEAR
+Connect wallet accepts this `AddKey` is unverified (NEAR Connect 0.12's `AddKeyAction` type and the
+Privy executor's `AddKey` conversion match this shape by code reading).
+
 ## Tests
 
 ```bash
@@ -405,7 +452,8 @@ values), simulation, poller, optimistic vitality, zones, isometric plate geometr
 quote rule against a real contract response, the tool windows' dialog semantics and keyboard logic,
 the transaction builders and their guards, wallet and Privy configuration, the tx result and error
 text, the first-run intro, Help, Settings and legal copy, the profile modules (`src/account/`), the
-public-route parsing, and word guards over all of `src`. Because there is no DOM, Escape, focus trap and
+public-route parsing, one-tap play (`test/res-111.test.tsx`: method list, wallet allowlist, Borsh
+vectors, nonce and fallback paths against a fake RPC, storage scoping), and word guards over all of `src`. Because there is no DOM, Escape, focus trap and
 focus return are covered through the shared keyboard logic (`src/ui/a11y.ts`) and checked by hand in
 a browser. The wallet popups, Privy login and Supabase are not exercised by tests: they need real
 services.
