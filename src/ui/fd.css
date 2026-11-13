@@ -943,8 +943,8 @@
   }
 }
 
-/* with the profile key shown (ten tool keys plus telemetry) the strip needs about 1210 px */
-@media (max-width: 1259.98px) {
+/* with the profile and quests keys shown (eleven tool keys plus telemetry) the strip needs about 1310 px */
+@media (max-width: 1359.98px) {
   .tools-bar--full .tools-bar__tool {
     display: none;
   }
