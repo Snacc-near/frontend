@@ -19,6 +19,7 @@ export const SECTIONS: readonly SectionTab[] = [
   { id: "live", label: "Live" },
   { id: "hood", label: "Hood" },
   { id: "ch-07", label: "Open" },
+  { id: "faq", label: "FAQ" },
 ] as const;
 
 export const SECTION_IDS: readonly string[] = SECTIONS.map((s) => s.id);

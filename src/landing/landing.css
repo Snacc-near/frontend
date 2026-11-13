@@ -784,6 +784,31 @@ html {
   fill: rgba(248, 170, 6, 0.05);
 }
 
+/* Dew on the door glass follows the appetite zone the meter sets (data-zone on the figure root):
+   a hot medium fogs the glass (more, fuller drops), a cold one leaves it nearly clear; normal keeps
+   the figure's own look. Static values only, no transitions: the zone only changes when the meter
+   crosses a boundary, and that frame repaints the figure anyway. Size changes skip the deep zoom,
+   where the drops are already shrunk by the rule above. */
+.inc[data-zone="frenzy"] .drop {
+  fill-opacity: 0.95;
+  stroke-width: 0.7px;
+}
+
+.inc[data-zone="famine"] .drop {
+  fill-opacity: 0.28;
+  stroke-opacity: 0.45;
+}
+
+.ln-stage:not([data-deep]) .inc[data-zone="frenzy"] .drop {
+  rx: 2.6px;
+  ry: 3.5px;
+}
+
+.ln-stage:not([data-deep]) .inc[data-zone="famine"] .drop {
+  rx: 1.2px;
+  ry: 1.6px;
+}
+
 .inc .w-stomach {
   transform-box: fill-box;
   transform-origin: 50% 100%;

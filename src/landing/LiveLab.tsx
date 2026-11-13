@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 import { CONTRACT_ID, EVIDENCE_TXS, explorerAccount, explorerTx, fetchNftCards, type NftCard } from "./lib/chain.ts";
-import { countUp, formatToken, shortHash, tokenToNumber, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
+import { countUp, formatToken, liveChipText, shortHash, tokenToNumber, zoneFromApi, zoneFromTemp } from "./lib/live.ts";
 import type { LiveState } from "./useLive.ts";
 
 function useInView<T extends Element>(margin = "0px 0px -10% 0px") {
@@ -219,7 +219,7 @@ export function LiveLab({ live }: { live: LiveState }) {
     <section id="live" className="ln-section ln-live" aria-labelledby="ln-live-title">
       <div className="ln-section__inner">
         <header className="ln-section__head" data-reveal="">
-          <Chip dot={live.status === "live" ? "live" : "off"}>live · NEAR testnet · {CONTRACT_ID}</Chip>
+          <Chip dot={live.status === "live" ? "live" : "off"}>{liveChipText(live.status, CONTRACT_ID)}</Chip>
           <h2 id="ln-live-title" className="ln-section__title">
             <Accent text="Not a mockup. This colony is on-chain." accent="on-chain" />
           </h2>
