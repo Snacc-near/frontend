@@ -149,7 +149,24 @@ function convertedFiles(): string[] {
     "src/hud/ThesisDashboardModal.tsx",
     "src/hud/CellLab.tsx",
   ];
-  return [...landing, ...hud, ...actions, ...windows,"src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
+  // Phase B4: the help windows, the first-run intro, Settings (and its one-tap section) and the legal line in the game.
+  const help = [
+    "src/help/AppLegalLinks.tsx",
+    "src/help/HelpModal.tsx",
+    "src/help/OnboardingModal.tsx",
+    "src/help/OneTapSettings.tsx",
+    "src/help/SettingsModal.tsx",
+  ];
+  return [
+    ...landing,
+    ...hud,
+    ...actions,
+    ...windows,
+    ...help,
+    "src/help/LanguageSettings.tsx",
+    "src/i18n/LanguageToggle.tsx",
+    "src/i18n/react.tsx",
+  ];
 }
 
 /** JSX attributes that carry text a reader sees or hears. */

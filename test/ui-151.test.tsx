@@ -37,6 +37,7 @@ import { OFFICIAL } from "../src/landing/lib/live.ts";
 import { DISTRESS_MAX_EFFECTIVE_VITALITY } from "../src/data/collection.ts";
 import { DEFAULT_FEED_SNACC, DEFAULT_STAKE_NEAR } from "../src/chain/actions.ts";
 import { bioSound } from "../src/sound.ts";
+import { tEn } from "../src/i18n/catalog.ts";
 import { TOOLS, ToolsToolbar } from "../src/hud/ToolsToolbar.tsx";
 import { OnboardingModal } from "../src/help/OnboardingModal.tsx";
 import { HelpModal } from "../src/help/HelpModal.tsx";
@@ -175,6 +176,8 @@ describe("UI-151 reset local data", () => {
         "snacc_telemetry",
         "snacc_device_id",
         "snacc_one_tap",
+        // UI-161: the language choice is listed too, so Settings, the privacy page and the reset all name it.
+        "snacc_locale",
       ].sort(),
     );
     expect(APP_LOCAL_KEY_INFO.map((k) => k.key)).toEqual([...APP_LOCAL_KEYS]);
@@ -494,7 +497,9 @@ describe("UI-151 landing edits", () => {
   it("no longer says that nothing asks you to sign", () => {
     const src = readFileSync(join(ROOT, "src/landing/Finale.tsx"), "utf8");
     expect(src).not.toContain("nothing here asks you to sign");
-    expect(src).toContain("In live testnet mode you sign testnet transactions yourself");
+    // UI-161: the FAQ copy lives in the dictionary now, so the pinned sentence is checked there (English).
+    expect(tEn("landing.faq.wallet.a")).toContain("In live testnet mode you sign testnet transactions yourself");
+    expect(tEn("landing.faq.wallet.a")).not.toContain("nothing here asks you to sign");
   });
 });
 

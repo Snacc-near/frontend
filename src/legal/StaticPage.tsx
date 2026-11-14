@@ -1,8 +1,14 @@
 /**
  * Static pages on the docs look (UI-151): `/terms`, `/privacy` and the 404 page. One small lazy chunk;
  * it loads only `fd.css` and `legal.css`, never the landing or the game.
+ *
+ * UI-161 phase B4: Terms and Privacy stay English. With the UI in Indonesian a one-line note at the
+ * top says so (`help.legal.onlyEnglish`); there is no `I18nProvider` here on purpose, so `<html lang>`
+ * stays `en` for the English text.
  */
 import { useEffect } from "react";
+import { useT } from "../i18n/react.tsx";
+import { DEFAULT_LOCALE } from "../i18n/types.ts";
 import { Chip, Icon, Win } from "../ui/fd.tsx";
 import { DISCLAIMER, ISSUES_URL, LEGAL_UPDATED, NOT_FOUND, PRIVACY, TERMS, type LegalDoc } from "./content.ts";
 import "../ui/fd.css";
@@ -53,9 +59,16 @@ function Footer() {
 }
 
 function Doc({ doc }: { doc: LegalDoc }) {
+  const { t, locale } = useT();
   return (
     <Win title={doc.file} className="lg-doc">
       <div className="lg-stack">
+        {/* UI-161: the legal text stays English on purpose; when the UI is Indonesian, say so once at the top. */}
+        {locale !== DEFAULT_LOCALE ? (
+          <p className="lg-meta" lang={locale} data-testid="legal-language-note">
+            {t("help.legal.onlyEnglish")}
+          </p>
+        ) : null}
         <h1 className="lg-title">{doc.title}</h1>
         <p className="lg-meta">Last updated {LEGAL_UPDATED}</p>
         <Chip>{DISCLAIMER}</Chip>

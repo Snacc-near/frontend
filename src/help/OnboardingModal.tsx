@@ -3,14 +3,18 @@
  * progress dots, arrow-key navigation and Escape to skip. Escape, the close key and Skip all count as
  * done; the caller stores the seen-flag. The step change animation is plain CSS and is switched off
  * by reduce motion (see `guide.css`).
+ *
+ * UI-161 phase B4: the steps and the buttons come from the `onboarding` dictionary (`introSteps()` in
+ * `content.ts` fills the figures from the constants).
  */
 import type { KeyboardEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useT } from "../i18n/react.tsx";
 import { track } from "../telemetry.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 import { Cap } from "../ui/fd.tsx";
-import { INTRO_STEPS } from "./content.ts";
+import { introSteps } from "./content.ts";
 import "../ui/fd.css";
 import "./guide.css";
 
@@ -20,10 +24,12 @@ export interface OnboardingModalProps {
 }
 
 export function OnboardingModal({ onDone }: OnboardingModalProps) {
+  const { t, locale } = useT();
   const [index, setIndex] = useState(0);
   useEffect(() => track("onboarding_started"), []);
-  const total = INTRO_STEPS.length;
-  const step = INTRO_STEPS[index];
+  const steps = useMemo(() => introSteps(locale), [locale]);
+  const total = steps.length;
+  const step = steps[index];
   const last = index === total - 1;
 
   const next = () => (last ? onDone() : setIndex((i) => Math.min(total - 1, i + 1)));
@@ -46,11 +52,9 @@ export function OnboardingModal({ onDone }: OnboardingModalProps) {
       testId="onboarding-modal"
       footer={
         <div className="guide-progress" data-testid="onboarding-progress">
-          <span>
-            step {index + 1} of {total}
-          </span>
+          <span>{t("onboarding.step", { n: index + 1, total })}</span>
           <ol className="guide-dots" aria-hidden="true">
-            {INTRO_STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <li key={s.id} aria-current={i === index ? "step" : undefined} data-done={i < index ? "" : undefined} />
             ))}
           </ol>
@@ -74,17 +78,17 @@ export function OnboardingModal({ onDone }: OnboardingModalProps) {
         <div className="guide-actions">
           {last ? null : (
             <KeycapButton mono onClick={onDone} data-testid="onboarding-skip">
-              skip intro
+              {t("onboarding.skip")}
             </KeycapButton>
           )}
           <div className="guide-actions__right">
             {index > 0 ? (
               <KeycapButton mono onClick={back} data-testid="onboarding-back">
-                back
+                {t("onboarding.back")}
               </KeycapButton>
             ) : null}
             <KeycapButton variant="primary" mono icon={last ? "check" : undefined} onClick={next} data-autofocus="" data-testid="onboarding-next">
-              {last ? "start playing" : "next"}
+              {last ? t("onboarding.start") : t("onboarding.next")}
             </KeycapButton>
           </div>
         </div>

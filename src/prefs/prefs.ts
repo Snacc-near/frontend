@@ -11,6 +11,7 @@ import type { SkinMode } from "../config/constants.ts";
 import { GUEST_LABEL_KEY, LEGACY_SESSION_KEY } from "../auth/guestLabel.ts";
 import { BROWSER_ALERTS_KEY, SESSION_STORAGE_KEY } from "../account/config.ts";
 import { DEVICE_KEY, TELEMETRY_KEY, track } from "../telemetry.ts";
+import type { MessageKey } from "../i18n/catalog.ts";
 import { LOCALE_KEY } from "../i18n/locale.ts";
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -22,21 +23,27 @@ export const SKIN_KEY = "snacc_skin";
 /** RES-111: the one-tap play key, only when this browser cannot keep it in IndexedDB (`chain/oneTapKeys.ts`). */
 export const ONE_TAP_LOCAL_KEY = "snacc_one_tap";
 
-/** What each app-owned key holds, in the order the Settings window lists them. */
-export const APP_LOCAL_KEY_INFO: readonly { key: string; what: string }[] = [
-  { key: ONBOARDING_KEY, what: "the intro has been shown" },
-  { key: SOUND_KEY, what: "sound on or off and the volume" },
-  { key: MOTION_KEY, what: "your reduce-motion choice" },
-  { key: SKIN_KEY, what: "bio-lab or fintech wording" },
-  { key: GUEST_LABEL_KEY, what: "your guest label and highlighted account" },
-  { key: LEGACY_SESSION_KEY, what: "a leftover key from an earlier build" },
-  { key: SESSION_STORAGE_KEY, what: "your profile sign-in session, only after you sign in to a profile" },
-  { key: BROWSER_ALERTS_KEY, what: "browser alerts turned on for notifications" },
-  { key: TELEMETRY_KEY, what: "your choice about sharing anonymous usage stats" },
-  { key: DEVICE_KEY, what: "a random id for anonymous usage stats (a new one is made after a reset)" },
+/**
+ * What each app-owned key holds, in the order the Settings window lists them. `what` is the English
+ * text (the privacy page quotes it and it stays English); `label` is the dictionary key the Settings
+ * window shows in the current language (`settings.keys.*`, kept in step with `what` by a test).
+ */
+export const APP_LOCAL_KEY_INFO: readonly { key: string; what: string; label: MessageKey }[] = [
+  { key: ONBOARDING_KEY, what: "the intro has been shown", label: "settings.keys.onboarding" },
+  { key: SOUND_KEY, what: "sound on or off and the volume", label: "settings.keys.sound" },
+  { key: MOTION_KEY, what: "your reduce-motion choice", label: "settings.keys.motion" },
+  { key: SKIN_KEY, what: "bio-lab or fintech wording", label: "settings.keys.skin" },
+  { key: LOCALE_KEY, what: "your language choice (English or Bahasa Indonesia)", label: "settings.keys.locale" },
+  { key: GUEST_LABEL_KEY, what: "your guest label and highlighted account", label: "settings.keys.guest" },
+  { key: LEGACY_SESSION_KEY, what: "a leftover key from an earlier build", label: "settings.keys.legacySession" },
+  { key: SESSION_STORAGE_KEY, what: "your profile sign-in session, only after you sign in to a profile", label: "settings.keys.profileSession" },
+  { key: BROWSER_ALERTS_KEY, what: "browser alerts turned on for notifications", label: "settings.keys.browserAlerts" },
+  { key: TELEMETRY_KEY, what: "your choice about sharing anonymous usage stats", label: "settings.keys.telemetry" },
+  { key: DEVICE_KEY, what: "a random id for anonymous usage stats (a new one is made after a reset)", label: "settings.keys.deviceId" },
   {
     key: ONE_TAP_LOCAL_KEY,
     what: "the one-tap play key, only if you turned one-tap play on and this browser blocks IndexedDB (clearing it does not remove the key from your account; turn one-tap play off for that)",
+    label: "settings.keys.oneTap",
   },
 ];
 
@@ -184,14 +191,14 @@ export function saveSkinPref(skin: SkinMode, store: StorageLike | null = appStor
 // ------------------------------------------------------------------ reset
 
 /**
- * Removes the app's own keys (`APP_LOCAL_KEYS`) and the language choice (`LOCALE_KEY`), and returns the
- * ones that were present. Any other key in the store, such as the wallet's, is left alone.
+ * Removes the app's own keys (`APP_LOCAL_KEYS`, which includes the language choice `LOCALE_KEY`) and
+ * returns the ones that were present. Any other key in the store, such as the wallet's, is left alone.
  */
 export function resetLocalData(store: StorageLike | null = appStorage()): string[] {
   const removed: string[] = [];
   resetOnboardingMemory();
   if (!store) return removed;
-  for (const key of [...APP_LOCAL_KEYS, LOCALE_KEY]) {
+  for (const key of APP_LOCAL_KEYS) {
     try {
       if (store.getItem(key) !== null) removed.push(key);
       store.removeItem(key);
@@ -206,8 +213,7 @@ export function resetLocalData(store: StorageLike | null = appStorage()): string
 
 /**
  * The language choice (`en` or `id`) lives under `snacc_locale`; `i18n/locale.ts` reads and writes it
- * and the Language section of Settings explains it. It is cleared by `resetLocalData` above. It is not
- * in `APP_LOCAL_KEY_INFO` yet (that list is pinned by the UI-151 tests and the privacy page copy);
- * move it there together with those two when the legal copy is updated.
+ * and the Language section of Settings explains it. It is listed in `APP_LOCAL_KEY_INFO` above, so the
+ * Settings key list, the privacy page and `resetLocalData` all name it.
  */
 export { LOCALE_KEY };

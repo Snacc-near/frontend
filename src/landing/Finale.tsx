@@ -87,11 +87,7 @@ export function Finale({ source }: { source: FigureSource | null }) {
   );
 }
 
-/**
- * FAQ entries, by dictionary key (`landing.faq.<key>.q` / `.a`). The English answer of "Do I need a
- * wallet?" says "In live testnet mode you sign testnet transactions yourself" (UI-151 pins that
- * wording; it lives in `i18n/messages/en/landing.ts`).
- */
+/** FAQ entries, by dictionary key (`landing.faq.<key>.q` / `.a`). */
 const FAQ_KEYS = ["token", "live", "hungry", "wallet"] as const;
 
 export function Faq() {
