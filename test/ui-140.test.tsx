@@ -112,7 +112,8 @@ describe("honesty guards over all of src", () => {
   // UI-151: the disclaimers must be able to say "no promise of profit", and the Help glossary defines the
   // game's own "dividends" (the fee-sharing pool). Both stay exact: the phrase, and one file.
   const DISCLAIMER_PHRASE = /\b(no|a) promise of profit\b/gi;
-  const GLOSSARY_FILE = path.join("help", "content.ts");
+  // UI-161: the glossary text lives in the English help dictionary now, so that file is allowed too.
+  const GLOSSARY_FILES = new Set([path.join("help", "content.ts"), path.join("i18n", "messages", "en", "help.ts")]);
   const DIVIDEND_TERM = /\bdividends?\b/gi;
   // UI-149: the backend's notification kind is the quoted identifier "dividend" (`notifications_snacc.kind`).
   const NOTIFICATION_KIND_ID = /"dividend"/g;
@@ -124,7 +125,7 @@ describe("honesty guards over all of src", () => {
         .split("\n")
         .map((line, i) => {
           const clean = line.replace(IDENTIFIERS, "").replace(DISCLAIMER_PHRASE, "").replace(NOTIFICATION_KIND_ID, "");
-          return { line: rel(f) === GLOSSARY_FILE ? clean.replace(DIVIDEND_TERM, "") : clean, at: `${rel(f)}:${i + 1}` };
+          return { line: GLOSSARY_FILES.has(rel(f)) ? clean.replace(DIVIDEND_TERM, "") : clean, at: `${rel(f)}:${i + 1}` };
         })
         .filter((x) => BANNED.test(x.line))
         .map((x) => x.at),

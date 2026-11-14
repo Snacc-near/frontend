@@ -3,49 +3,54 @@
  * player's own account; deposit-free game actions are then signed in this browser without a popup.
  * The copy says which actions, what still uses the wallet, the allowance, where the key lives and
  * how to remove it. Status: tried with the logic tests and fakes only, not yet with every wallet.
+ *
+ * UI-161 phase B4: the copy comes from the `onetap` dictionary (English or Indonesian). Method names
+ * and the contract id are code and are never translated.
  */
 import { useState } from "react";
 import { CONTRACT_ID, formatYocto } from "../chain/actions.ts";
 import { ATTACHES_NEAR_METHODS, ONE_TAP_ALLOWANCE_NEAR, ONE_TAP_METHODS, PAYS_OTHER_METHODS } from "../chain/oneTap.ts";
 import { useOneTap, type OneTapStatus } from "../chain/oneTapSession.ts";
 import { useWallet } from "../chain/wallet.tsx";
+import { useT } from "../i18n/react.tsx";
 import { KeycapButton } from "../ui/controls.tsx";
 
 const shortKey = (k: string) => (k.length > 24 ? `${k.slice(0, 14)}…${k.slice(-6)}` : k);
 
 function StatusLine({ status, accountId }: { status: OneTapStatus; accountId: string | null }) {
+  const { t, rich } = useT();
   switch (status.kind) {
     case "signed-out":
-      return <p className="fd-field__hint">Connect a wallet to turn on one-tap play.</p>;
+      return <p className="fd-field__hint">{t("onetap.status.signedOut")}</p>;
     case "loading":
-      return <p className="fd-field__hint">Checking this browser…</p>;
+      return <p className="fd-field__hint">{t("onetap.status.loading")}</p>;
     case "unsupported":
       return (
         <p className="fd-field__hint fd-field__hint--bad" data-testid="one-tap-unsupported">
-          One-tap play is not available in this browser: {status.reason} Every action keeps using your wallet.
+          {t("onetap.status.unsupported", { reason: status.reason })}
         </p>
       );
     case "off":
-      return <p className="fd-field__hint">One-tap play is off{accountId ? ` for ${accountId}` : ""}. Every action uses your wallet.</p>;
+      return <p className="fd-field__hint">{accountId ? t("onetap.status.offFor", { account: accountId }) : t("onetap.status.off")}</p>;
     case "on":
       return (
         <div className="fd-stack" data-testid="one-tap-on">
           <p className="fd-field__hint">
-            <strong>On{accountId ? ` for ${accountId}` : ""}.</strong> Key <code>{shortKey(status.publicKey)}</code> · allowance left{" "}
-            {status.chain === "ok" ? (status.allowanceYocto === null ? "unlimited" : `${formatYocto(status.allowanceYocto)} NEAR`) : "—"} ·{" "}
-            {status.storage === "indexeddb"
-              ? "kept in this browser's IndexedDB as a non-exportable key"
-              : "kept in this browser's localStorage as raw key bytes, because IndexedDB is blocked here"}
+            {rich("onetap.status.onLine", {
+              state: <strong>{accountId ? t("onetap.status.onFor", { account: accountId }) : t("onetap.status.on")}</strong>,
+              key: <code>{shortKey(status.publicKey)}</code>,
+              allowance:
+                status.chain === "ok" ? (status.allowanceYocto === null ? t("onetap.status.unlimited") : `${formatYocto(status.allowanceYocto)} NEAR`) : "—",
+              where: status.storage === "indexeddb" ? t("onetap.status.indexeddb") : t("onetap.status.localstorage"),
+            })}
           </p>
           {status.chain === "missing" ? (
             <p className="fd-field__hint fd-field__hint--bad" data-testid="one-tap-missing">
-              This key is no longer on your account (deleted elsewhere, or the add did not land). Deposit-free actions use your wallet again; forget
-              the key here and turn one-tap play on again if you want it back.
+              {t("onetap.status.missing")}
             </p>
           ) : status.outdated ? (
             <p className="fd-field__hint fd-field__hint--bad" data-testid="one-tap-outdated">
-              This key was made by an older version of the game and allows a different list of actions, so one-tap play does not use it: every
-              action goes through your wallet. Replace it (2 wallet popups: delete the old key, add the new one) or turn it off.
+              {t("onetap.status.outdated")}
             </p>
           ) : null}
         </div>
@@ -62,6 +67,7 @@ const codeList = (methods: readonly string[]) =>
   ));
 
 export function OneTapSettings() {
+  const { t, rich } = useT();
   const wallet = useWallet();
   const oneTap = useOneTap();
   const { status, busy, error, message, accountId } = oneTap.snapshot;
@@ -71,29 +77,20 @@ export function OneTapSettings() {
   return (
     <section className="guide-section" aria-labelledby="settings-one-tap-h" data-testid="settings-one-tap">
       <h4 id="settings-one-tap-h" className="fd-h">
-        One-tap play
+        {t("onetap.heading")}
       </h4>
-      <p className="fd-note">
-        Signs deposit-free game actions in this browser, so they go through without a wallet popup each time. Testnet only, and not yet tried with
-        every wallet.
-      </p>
+      <p className="fd-note">{t("onetap.intro")}</p>
       <p className="fd-field__hint" data-testid="one-tap-methods">
-        One-tap actions ({ONE_TAP_METHODS.length}): {codeList(ONE_TAP_METHODS)}.
+        {rich("onetap.methods", { count: ONE_TAP_METHODS.length, list: codeList(ONE_TAP_METHODS) })}
       </p>
       <p className="fd-field__hint" data-testid="one-tap-wallet-only">
-        Still in your wallet: the actions that attach NEAR (a stake, a catalyst fee, the storage deposit or 1 yoctoNEAR), {codeList(ATTACHES_NEAR_METHODS)};
-        the actions that pay $SNACC to another player or take over their Snacc, {codeList(PAYS_OTHER_METHODS)}; every market call; and any action
-        sent together with the first storage registration.
+        {rich("onetap.walletOnly", { attaches: codeList(ATTACHES_NEAR_METHODS), paysOther: codeList(PAYS_OTHER_METHODS) })}
       </p>
       <p className="fd-field__hint">
-        Turning it on asks your wallet once to add a limited key to your own account. That key can only call the one-tap actions above on{" "}
-        <code>{CONTRACT_ID}</code>, cannot attach NEAR, and can spend at most {ONE_TAP_ALLOWANCE_NEAR} NEAR of gas (its allowance), paid from your
-        account. The private key is made in this browser and stays here; it is never sent anywhere, only its public key goes on chain. Anyone who
-        could run code on this site in this browser could use it for those actions until you turn it off.
+        {rich("onetap.key", { contract: <code>{CONTRACT_ID}</code>, allowance: ONE_TAP_ALLOWANCE_NEAR })}
       </p>
       <p className="fd-field__hint" data-testid="one-tap-sign-out">
-        Disconnecting the wallet does not remove the key: it stays in this browser and on your account until you turn one-tap play off. To remove
-        it, connect the same account and press &quot;turn off&quot; here, or delete the key in your wallet&apos;s list of access keys.
+        {t("onetap.signOut")}
       </p>
 
       <StatusLine status={status} accountId={accountId} />
@@ -111,7 +108,7 @@ export function OneTapSettings() {
       {connected && status.kind === "off" ? (
         <div className="fd-row">
           <KeycapButton mono variant="primary" icon="spark" disabled={busy !== null} onClick={() => void oneTap.enable()} data-testid="one-tap-enable">
-            {busy === "enabling" ? "waiting for wallet…" : "turn on one-tap play (1 wallet popup)"}
+            {busy === "enabling" ? t("onetap.button.waiting") : t("onetap.button.enable")}
           </KeycapButton>
         </div>
       ) : null}
@@ -121,29 +118,26 @@ export function OneTapSettings() {
           <div className="fd-row">
             {status.chain !== "missing" && status.outdated ? (
               <KeycapButton mono variant="primary" icon="spark" disabled={busy !== null} onClick={() => void oneTap.replace()} data-testid="one-tap-replace">
-                {busy ? "waiting for wallet…" : "replace the key (2 wallet popups)"}
+                {busy ? t("onetap.button.waiting") : t("onetap.button.replace")}
               </KeycapButton>
             ) : null}
             {status.chain !== "missing" ? (
               <KeycapButton mono icon="close" disabled={busy !== null} onClick={() => void oneTap.disable()} data-testid="one-tap-disable">
-                {busy === "disabling" ? "waiting for wallet…" : "turn off (delete the key, 1 wallet popup)"}
+                {busy === "disabling" ? t("onetap.button.waiting") : t("onetap.button.disable")}
               </KeycapButton>
             ) : null}
             <KeycapButton mono disabled={busy !== null} onClick={() => void oneTap.refresh()} data-testid="one-tap-refresh">
-              check again
+              {t("onetap.button.refresh")}
             </KeycapButton>
             {confirmForget ? null : (
               <KeycapButton mono disabled={busy !== null} onClick={() => setConfirmForget(true)} data-testid="one-tap-forget">
-                forget on this device
+                {t("onetap.button.forget")}
               </KeycapButton>
             )}
           </div>
           {confirmForget ? (
-            <div className="fd-stack" role="group" aria-label="confirm forget">
-              <p className="fd-field__hint">
-                This only removes the key from this browser. It stays on your account (unusable, since only this browser had it) until you delete it
-                with &quot;turn off&quot; first or in your wallet&apos;s key list.
-              </p>
+            <div className="fd-stack" role="group" aria-label={t("onetap.confirmForget.group")}>
+              <p className="fd-field__hint">{t("onetap.confirmForget.note")}</p>
               <div className="fd-row">
                 <KeycapButton
                   mono
@@ -155,10 +149,10 @@ export function OneTapSettings() {
                   }}
                   data-testid="one-tap-forget-confirm"
                 >
-                  forget the key here
+                  {t("onetap.button.forgetConfirm")}
                 </KeycapButton>
                 <KeycapButton mono onClick={() => setConfirmForget(false)}>
-                  cancel
+                  {t("onetap.button.cancel")}
                 </KeycapButton>
               </div>
             </div>

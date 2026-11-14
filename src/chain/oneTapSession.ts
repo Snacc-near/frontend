@@ -11,8 +11,8 @@
 import { createContext, useContext, useSyncExternalStore } from "react";
 import { CONTRACT_ID, type ContractCall } from "./actions.ts";
 import {
-  FALLBACK_NOTICE,
   ONE_TAP_ALLOWANCE_YOCTO,
+  fallbackNotice,
   ONE_TAP_METHODS,
   buildAddKeyAction,
   buildDeleteKeyAction,
@@ -28,6 +28,9 @@ import {
 import { generateOneTapKey, newRecord, scopeOf, signerFromRecord, wipeOneTapDevice, type KeyStorageKind, type OneTapRecord, type OneTapStore } from "./oneTapKeys.ts";
 import { readThrown, type TxFailure, type TxResult } from "./txResult.ts";
 import { appStorage } from "../prefs/prefs.ts";
+import { t, tEn, type MessageKey } from "../i18n/catalog.ts";
+import { getLocale } from "../i18n/locale.ts";
+import type { Vars } from "../i18n/types.ts";
 
 export type OneTapStatus =
   | { kind: "signed-out" }
@@ -86,6 +89,15 @@ export type TrySend = { kind: "skip" } | { kind: "fallback"; notice: string } | 
 
 const failure = (message: string, raw = message): TxFailure => ({ ok: false, txHash: null, message, raw, rejected: false });
 
+/**
+ * A line of one-tap copy (`onetap.session.*`) in the language the UI speaks when the line is made
+ * (UI-161): English outside a browser. A line already shown does not change if the language is
+ * switched afterwards; the next one does.
+ */
+const say = (key: MessageKey, vars?: Vars): string => t(getLocale(), key, vars);
+/** A failure with the player-facing line in this language and the English line as its raw text. */
+const failureOf = (key: MessageKey, vars?: Vars): TxFailure => failure(say(key, vars), tEn(key, vars));
+
 type KeyCheck = { kind: "found"; read: Extract<AccessKeyRead, { kind: "found" }> } | { kind: "missing" } | { kind: "unknown" };
 
 export class OneTapController {
@@ -118,10 +130,10 @@ export class OneTapController {
   private support(): Promise<Support> {
     this.supportP ??= (async (): Promise<Support> => {
       const subtle = this.deps.subtle();
-      if (!subtle) return { ok: false, reason: "this browser has no Web Crypto." };
-      if (!(await this.deps.ed25519(subtle))) return { ok: false, reason: "this browser cannot sign with Ed25519 in Web Crypto." };
+      if (!subtle) return { ok: false, reason: say("onetap.session.noCrypto") };
+      if (!(await this.deps.ed25519(subtle))) return { ok: false, reason: say("onetap.session.noEd25519") };
       const stores = await this.deps.pickStores(subtle).catch(() => []);
-      if (stores.length === 0) return { ok: false, reason: "this browser blocks site storage (IndexedDB and localStorage)." };
+      if (stores.length === 0) return { ok: false, reason: say("onetap.session.noStorage") };
       return { ok: true, stores, subtle };
     })();
     return this.supportP;
@@ -251,7 +263,7 @@ export class OneTapController {
     const check = signlessCall(calls, receiverId, rec.methodNames);
     if (!check.ok) return { kind: "skip" };
     // A key from an older version (e.g. one that still allows `adopt`) is never used.
-    if (st.outdated || !isCurrentMethodList(rec.methodNames)) return { kind: "fallback", notice: FALLBACK_NOTICE.outdated };
+    if (st.outdated || !isCurrentMethodList(rec.methodNames)) return { kind: "fallback", notice: fallbackNotice("outdated") };
     const method = check.call.methodName;
     const support = await this.support();
     if (!support.ok || this.record !== rec) return { kind: "skip" };
@@ -259,7 +271,7 @@ export class OneTapController {
     try {
       signer = await this.signerFor(rec, support.subtle);
     } catch {
-      return { kind: "fallback", notice: FALLBACK_NOTICE["load-failed"] };
+      return { kind: "fallback", notice: fallbackNotice("load-failed") };
     }
     // The account changed while the key loaded: nothing was sent, and this record is not current any more.
     if (this.record !== rec || signer.publicKey !== rec.publicKey) return { kind: "skip" };
@@ -304,17 +316,17 @@ export class OneTapController {
         track?.("tx_failed", { method, rejected: false, signless: true });
         return { kind: "sent", result: { ...readThrown(e, method), signless: true } };
       }
-      return { kind: "fallback", notice: "One-tap play hit an error before sending, so your wallet signs this one." };
+      return { kind: "fallback", notice: say("onetap.session.errorBeforeSending") };
     }
   }
 
   /** Turn on: make a key in this browser, then ONE wallet transaction adds it to the account. */
   async enable(sendWalletTx: WalletTxSender): Promise<TxResult> {
     const accountId = this.snap.accountId;
-    if (!accountId) return failure("Connect a wallet first.");
-    if (this.snap.busy) return failure("One-tap play is busy. Try again in a moment.");
+    if (!accountId) return failureOf("onetap.session.connectFirst");
+    if (this.snap.busy) return failureOf("onetap.session.busy");
     const support = await this.support();
-    if (!support.ok) return failure(`One-tap play is not available in this browser: ${support.reason}`);
+    if (!support.ok) return failureOf("onetap.session.notAvailable", { reason: support.reason });
     const fail = (message: string, raw = message) => {
       const r = failure(message, raw);
       if (this.snap.accountId === accountId) this.set({ error: r.message });
@@ -331,8 +343,8 @@ export class OneTapController {
       const existing = this.record ?? (await this.findRecord(support.stores, accountId));
       if (existing) {
         const read = await readAccessKey(this.deps.rpc, accountId, existing.publicKey);
-        if (read.kind === "found") return fail("This browser already has a one-tap key on your account. Turn it off (or replace it) first.");
-        if (read.kind === "unreachable") return fail("Could not reach NEAR testnet to check the existing one-tap key. Nothing was sent. Try again.", read.raw);
+        if (read.kind === "found") return fail(say("onetap.session.alreadyHasKey"), tEn("onetap.session.alreadyHasKey"));
+        if (read.kind === "unreachable") return fail(say("onetap.session.unreachableExisting"), read.raw);
         await this.removeEverywhere(support.stores, accountId, existing.publicKey);
         if (this.record === existing) this.record = null;
       }
@@ -386,10 +398,10 @@ export class OneTapController {
     this.record = rec;
     const status = check.kind === "found" ? this.statusFromRead(rec, check.read) : this.onStatus(rec, "unknown", null);
     const message = result.ok
-      ? "One-tap play is on."
+      ? say("onetap.session.isOn")
       : check.kind === "found"
-        ? "The wallet reported an error, but the key is on your account, so one-tap play is on."
-        : "The wallet reported an error and testnet could not be checked. The key is kept here so it can still be turned off.";
+        ? say("onetap.session.walletErrorKeyFound")
+        : say("onetap.session.walletErrorUnknown");
     this.set({ status: status ?? this.onStatus(rec, "unknown", null), message, error: null });
     return result;
   }
@@ -401,8 +413,8 @@ export class OneTapController {
   async disable(sendWalletTx: WalletTxSender): Promise<TxResult> {
     const rec = this.record;
     const accountId = this.snap.accountId;
-    if (!rec || !accountId) return failure("One-tap play is already off.");
-    if (this.snap.busy) return failure("One-tap play is busy. Try again in a moment.");
+    if (!rec || !accountId) return failureOf("onetap.session.alreadyOff");
+    if (this.snap.busy) return failureOf("onetap.session.busy");
     const report = (r: TxResult, patch: Partial<OneTapSnapshot>) => {
       if (this.snap.accountId === accountId) this.set(patch);
       return r;
@@ -412,21 +424,21 @@ export class OneTapController {
       const read = await readAccessKey(this.deps.rpc, accountId, rec.publicKey);
       if (read.kind === "missing") {
         await this.forgetRecord(rec);
-        const notice = "The key was already gone from your account, so it was only forgotten on this device.";
+        const notice = say("onetap.session.keyAlreadyGone");
         return report({ ok: true, txHash: null, notice }, { message: notice });
       }
       if (read.kind === "unreachable") {
-        const r = failure("Could not reach NEAR testnet to check the key. Nothing was sent. Try again.", read.raw);
+        const r = failure(say("onetap.session.unreachableKey"), read.raw);
         return report(r, { error: r.message });
       }
       if (read.permission.kind !== "FunctionCall" || read.permission.receiverId !== CONTRACT_ID) {
-        const r = failure("That key is not a one-tap play key for this game, so it was not deleted.");
+        const r = failureOf("onetap.session.notOurKey");
         return report(r, { error: r.message });
       }
       const result = await sendWalletTx({ signerId: accountId, receiverId: accountId, actions: [buildDeleteKeyAction(rec.publicKey)] });
       if (!result.ok) return report(result, { error: result.rejected ? null : result.message });
       await this.forgetRecord(rec);
-      return report(result, { message: "One-tap play is off. The key was deleted from your account." });
+      return report(result, { message: say("onetap.session.nowOff") });
     } catch (e) {
       const r = readThrown(e);
       return report(r, { error: r.message });
@@ -456,7 +468,7 @@ export class OneTapController {
     this.signers.delete(rec.publicKey);
     if (this.record !== rec) return;
     this.record = null;
-    this.set({ status: { kind: "off" }, message: "Forgot the one-tap key on this device." });
+    this.set({ status: { kind: "off" }, message: say("onetap.session.forgot") });
   }
 
   /** Closes the stores' connections (before "Reset local data" deletes the database). */
@@ -511,9 +523,9 @@ export const NO_ONE_TAP: OneTapHandle = {
   subscribe: () => () => undefined,
   getSnapshot: () => OFF_SNAPSHOT,
   covers: () => false,
-  enable: async () => failure("Connect a wallet first."),
-  disable: async () => failure("One-tap play is already off."),
-  replace: async () => failure("One-tap play is already off."),
+  enable: async () => failureOf("onetap.session.connectFirst"),
+  disable: async () => failureOf("onetap.session.alreadyOff"),
+  replace: async () => failureOf("onetap.session.alreadyOff"),
   forget: async () => undefined,
   refresh: async () => undefined,
   wipeDevice: () => wipeOneTapDevice({ indexedDB: typeof indexedDB !== "undefined" ? indexedDB : null, localStorage: appStorage() }),

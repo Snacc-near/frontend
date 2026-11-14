@@ -167,8 +167,8 @@ describe("UI-161 saved key", () => {
     const store = fakeStore({ [LOCALE_KEY]: "id", "selected-wallet": "meteor-wallet", unrelated: "keep" });
     expect(resetLocalData(store)).toEqual([LOCALE_KEY]);
     expect([...store.data.keys()].sort()).toEqual(["selected-wallet", "unrelated"]);
-    // Pinned by the UI-151 tests together with the privacy copy; see the note in prefs.ts.
-    expect(APP_LOCAL_KEYS).not.toContain(LOCALE_KEY);
+    // UI-161 phase B4: listed in APP_LOCAL_KEY_INFO, so Settings and the privacy page name it as well.
+    expect(APP_LOCAL_KEYS).toContain(LOCALE_KEY);
   });
 });
 

@@ -3,8 +3,14 @@
  * it), the terminology skin, and "Reset local data", which lists the exact localStorage keys it
  * clears. The wallet's own entries are never touched. RES-111 adds "One-tap play"; the reset also
  * deletes this browser's one-tap key database (not the key on the account).
+ *
+ * UI-161 phase B4: every sentence comes from the `settings` dictionary (English or Indonesian). The
+ * Notifications, usage-stats, data-download and admin sections come from `hud/` and `account/` and
+ * are not converted yet.
  */
 import { useState } from "react";
+import { useT } from "../i18n/react.tsx";
+import type { MessageKey } from "../i18n/catalog.ts";
 import type { SkinMode } from "../config/constants.ts";
 import { SkinSwitch } from "../hud/SkinSwitch.tsx";
 import { setMotionPref } from "../prefs/motionPref.ts";
@@ -35,10 +41,13 @@ export interface SettingsModalProps {
   onSkin: (skin: SkinMode) => void;
 }
 
-const MOTION_CHOICES: readonly { id: MotionPref; label: string }[] = [
-  { id: "system", label: "follow system" },
-  { id: "reduce", label: "reduce" },
-  { id: "full", label: "full motion" },
+/** The key NEAR Connect keeps for the chosen wallet; Reset local data never touches it. */
+const WALLET_KEY = "selected-wallet";
+
+const MOTION_CHOICES: readonly { id: MotionPref; label: MessageKey }[] = [
+  { id: "system", label: "settings.motion.system" },
+  { id: "reduce", label: "settings.motion.reduce" },
+  { id: "full", label: "settings.motion.full" },
 ];
 
 function osReducesMotion(): boolean {
@@ -46,6 +55,7 @@ function osReducesMotion(): boolean {
 }
 
 export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
+  const { t, rich } = useT();
   const [sound, setSound] = useState(() => readSoundPrefs());
   const [motion, setMotion] = useState<MotionPref>(() => readMotionPref());
   const [confirmReset, setConfirmReset] = useState(false);
@@ -61,20 +71,20 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
   return (
     <Modal
       title="settings.cfg"
-      heading="Settings"
+      heading={t("settings.modal.heading")}
       onClose={onClose}
       testId="settings-modal"
       footer={
         <>
-          <span>saved in this browser only</span>
-          <Tag>local</Tag>
+          <span>{t("settings.modal.footer")}</span>
+          <Tag>{t("settings.modal.tag")}</Tag>
         </>
       }
     >
       <div className="fd-stack">
         <section className="guide-section" aria-labelledby="settings-sound-h">
           <h4 id="settings-sound-h" className="fd-h">
-            Sound
+            {t("settings.sound.heading")}
           </h4>
           <div className="fd-row">
             <KeycapButton
@@ -86,10 +96,10 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
               data-autofocus=""
               data-testid="settings-sound"
             >
-              sound effects {sound.on ? "on" : "off"}
+              {sound.on ? t("settings.sound.on") : t("settings.sound.off")}
             </KeycapButton>
           </div>
-          <Field id="settings-volume" label={`volume ${volumePct}%`}>
+          <Field id="settings-volume" label={t("settings.sound.volume", { pct: volumePct })}>
             <input
               id="settings-volume"
               className="guide-range"
@@ -109,9 +119,9 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
 
         <section className="guide-section" aria-labelledby="settings-motion-h">
           <h4 id="settings-motion-h" className="fd-h">
-            Reduce motion
+            {t("settings.motion.heading")}
           </h4>
-          <div className="fd-tabs fd-dither skin-switch" role="group" aria-label="reduce motion">
+          <div className="fd-tabs fd-dither skin-switch" role="group" aria-label={t("settings.motion.group")}>
             {MOTION_CHOICES.map((c) => (
               <button
                 key={c.id}
@@ -124,22 +134,21 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
                 }}
                 data-testid={`settings-motion-${c.id}`}
               >
-                {c.label}
+                {t(c.label)}
               </button>
             ))}
           </div>
           <p className="fd-field__hint">
-            Follow system uses your device setting, which is currently {osReducesMotion() ? "reduce motion" : "full motion"}. Your choice here
-            is saved and wins over it.
+            {t("settings.motion.hint", { current: osReducesMotion() ? t("settings.motion.reduceNow") : t("settings.motion.full") })}
           </p>
         </section>
 
         <section className="guide-section" aria-labelledby="settings-skin-h">
           <h4 id="settings-skin-h" className="fd-h">
-            Wording
+            {t("settings.skin.heading")}
           </h4>
           <SkinSwitch skin={skin} onChange={onSkin} />
-          <p className="fd-field__hint">The same mechanics named as a bio-lab or as a fintech desk.</p>
+          <p className="fd-field__hint">{t("settings.skin.hint")}</p>
         </section>
 
         <LanguageSettings />
@@ -157,23 +166,24 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
 
         <section className="guide-section" aria-labelledby="settings-data-h">
           <h4 id="settings-data-h" className="fd-h">
-            Local data
+            {t("settings.data.heading")}
           </h4>
           <p className="fd-note">
-            <strong>Reset local data</strong> clears exactly these keys in this browser, then reloads the page. Your wallet&apos;s own entries,
-            such as the <code>selected-wallet</code> key NEAR Connect keeps, are not touched. The intro will show again. It also deletes the
-            one-tap play key database (IndexedDB <code>{ONE_TAP_DB}</code>) in this browser; that does not remove a one-tap key from your account,
-            so turn one-tap play off first if it is on.
+            {rich("settings.data.note", {
+              reset: <strong>{t("settings.data.resetName")}</strong>,
+              walletKey: <code>{WALLET_KEY}</code>,
+              db: <code>{ONE_TAP_DB}</code>,
+            })}
           </p>
           <ul className="guide-keys" data-testid="settings-keys">
             {APP_LOCAL_KEY_INFO.map((k) => (
               <li key={k.key}>
-                <code>{k.key}</code> · {k.what}
+                <code>{k.key}</code> · {t(k.label)}
               </li>
             ))}
           </ul>
           {confirmReset ? (
-            <div className="fd-row" role="group" aria-label="confirm reset">
+            <div className="fd-row" role="group" aria-label={t("settings.data.confirmGroup")}>
               <KeycapButton
                 mono
                 variant="primary"
@@ -185,16 +195,16 @@ export function SettingsModal({ onClose, skin, onSkin }: SettingsModalProps) {
                 }}
                 data-testid="settings-reset-confirm"
               >
-                clear these keys and reload
+                {t("settings.data.confirm")}
               </KeycapButton>
               <KeycapButton mono onClick={() => setConfirmReset(false)}>
-                cancel
+                {t("settings.data.cancel")}
               </KeycapButton>
             </div>
           ) : (
             <div className="fd-row">
               <KeycapButton mono icon="close" onClick={() => setConfirmReset(true)} data-testid="settings-reset">
-                reset local data
+                {t("settings.data.reset")}
               </KeycapButton>
             </div>
           )}

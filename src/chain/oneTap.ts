@@ -19,6 +19,8 @@
  */
 import { CONTRACT_ID, GAS, parseNear, type ContractCall, type FunctionCallAction } from "./actions.ts";
 import { parseJsonBig } from "../data/nearView.ts";
+import { t, tEn, type MessageKey } from "../i18n/catalog.ts";
+import { getLocale } from "../i18n/locale.ts";
 import { humanizeTxError, readOutcome, type TxResult } from "./txResult.ts";
 
 // ---------------------------------------------------------------------------- the method list
@@ -537,27 +539,54 @@ export type FallbackReason =
   | "load-failed"
   | "outdated";
 
-/** One-line notices shown when a deposit-free action falls back to the wallet. */
+/** Dictionary key (`onetap.fallback.*`) of the notice for each fallback reason. */
+const FALLBACK_KEY = {
+  "key-missing": "onetap.fallback.keyMissing",
+  allowance: "onetap.fallback.allowance",
+  method: "onetap.fallback.method",
+  receiver: "onetap.fallback.receiver",
+  deposit: "onetap.fallback.deposit",
+  balance: "onetap.fallback.balance",
+  nonce: "onetap.fallback.nonce",
+  invalid: "onetap.fallback.invalid",
+  "rpc-unreachable": "onetap.fallback.rpcUnreachable",
+  "load-failed": "onetap.fallback.loadFailed",
+  outdated: "onetap.fallback.outdated",
+} as const satisfies Record<FallbackReason, MessageKey>;
+
+/**
+ * One-line notices shown when a deposit-free action falls back to the wallet, in English. Kept as
+ * data (tests, logs); the UI uses `fallbackNotice()`, which follows the language.
+ */
 export const FALLBACK_NOTICE: Record<FallbackReason, string> = {
-  "key-missing": "One-tap key not found on your account, so your wallet signs this one.",
-  allowance: "The one-tap allowance is used up, so your wallet signs this one. Turn one-tap play off and on in Settings for a fresh allowance.",
-  method: "The one-tap key cannot call this action, so your wallet signs it.",
-  receiver: "The one-tap key is not for this contract, so your wallet signs this one.",
-  deposit: "This action attaches NEAR, so your wallet signs it.",
-  balance: "Your account could not cover the gas for one-tap play, so your wallet signs this one.",
-  nonce: "One-tap play could not get a fresh nonce, so your wallet signs this one.",
-  invalid: "Testnet refused the one-tap transaction, so your wallet signs this one.",
-  "rpc-unreachable": "Could not reach NEAR testnet for one-tap play, so your wallet signs this one.",
-  "load-failed": "Could not load the one-tap key in this browser, so your wallet signs this one.",
-  outdated: "Your one-tap key is from an older version of the game, so your wallet signs this one. Replace it in Settings → One-tap play.",
+  "key-missing": tEn(FALLBACK_KEY["key-missing"]),
+  allowance: tEn(FALLBACK_KEY.allowance),
+  method: tEn(FALLBACK_KEY.method),
+  receiver: tEn(FALLBACK_KEY.receiver),
+  deposit: tEn(FALLBACK_KEY.deposit),
+  balance: tEn(FALLBACK_KEY.balance),
+  nonce: tEn(FALLBACK_KEY.nonce),
+  invalid: tEn(FALLBACK_KEY.invalid),
+  "rpc-unreachable": tEn(FALLBACK_KEY["rpc-unreachable"]),
+  "load-failed": tEn(FALLBACK_KEY["load-failed"]),
+  outdated: tEn(FALLBACK_KEY.outdated),
 };
+
+/** The fallback notice in the language the UI speaks now (English when it is not Indonesian). */
+export function fallbackNotice(reason: FallbackReason): string {
+  return t(getLocale(), FALLBACK_KEY[reason]);
+}
 
 export type SignlessOutcome =
   | { kind: "sent"; result: TxResult; nonce: bigint }
   | { kind: "fallback"; reason: FallbackReason; notice: string; broadcast: boolean };
 
-export const NOT_CONFIRMED_MESSAGE =
-  "One-tap play sent this transaction, but testnet did not confirm it in time. Check the explorer link before trying again.";
+/** English text of the "not confirmed" result (tests, logs); the result a player sees uses `notConfirmedMessage()`. */
+export const NOT_CONFIRMED_MESSAGE = tEn("onetap.notConfirmed");
+
+export function notConfirmedMessage(): string {
+  return t(getLocale(), "onetap.notConfirmed");
+}
 
 async function sha256(bytes: Uint8Array, subtle: SubtleCrypto): Promise<Uint8Array> {
   return new Uint8Array(await subtle.digest("SHA-256", bytes as BufferSource));
@@ -590,7 +619,7 @@ export interface SignlessInput {
 export async function sendSignless(input: SignlessInput): Promise<SignlessOutcome> {
   const { rpc, subtle, signer, accountId, call } = input;
   const method = call.methodName;
-  const fallback = (reason: FallbackReason, broadcast = false): SignlessOutcome => ({ kind: "fallback", reason, notice: FALLBACK_NOTICE[reason], broadcast });
+  const fallback = (reason: FallbackReason, broadcast = false): SignlessOutcome => ({ kind: "fallback", reason, notice: fallbackNotice(reason), broadcast });
   if (BigInt(call.deposit) !== 0n) return fallback("deposit");
 
   let key = await readAccessKey(rpc, accountId, signer.publicKey);
@@ -661,7 +690,7 @@ export async function sendSignless(input: SignlessInput): Promise<SignlessOutcom
 function notConfirmed(hash: string, raw: string, nonce: bigint): SignlessOutcome {
   return {
     kind: "sent",
-    result: { ok: false, txHash: hash || null, message: NOT_CONFIRMED_MESSAGE, raw, rejected: false, signless: true },
+    result: { ok: false, txHash: hash || null, message: notConfirmedMessage(), raw, rejected: false, signless: true },
     nonce,
   };
 }
