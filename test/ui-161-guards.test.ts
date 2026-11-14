@@ -157,12 +157,22 @@ function convertedFiles(): string[] {
     "src/help/OneTapSettings.tsx",
     "src/help/SettingsModal.tsx",
   ];
+  // Phase B5: the account sections of Settings, the push toggle, the sign popup, the public pages and the static pages.
+  const rest = [
+    "src/account/AccountSettings.tsx",
+    "src/account/AnnouncementBanner.tsx",
+    "src/push/PushToggle.tsx",
+    "src/sign/SignPage.tsx",
+    "src/public/PublicPage.tsx",
+    "src/legal/StaticPage.tsx",
+  ];
   return [
     ...landing,
     ...hud,
     ...actions,
     ...windows,
     ...help,
+    ...rest,
     "src/help/LanguageSettings.tsx",
     "src/i18n/LanguageToggle.tsx",
     "src/i18n/react.tsx",

@@ -59,27 +59,33 @@ if (rootEl) {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>
       {route === "app" ? (
-        // UI-161: the game HUD follows the language; screens not converted yet stay English.
+        // UI-161: the game follows the saved language.
         <I18nProvider>
           <Suspense fallback={<BootFallback label={t(getLocale(), "common.boot.game")} />}>
             <Game />
           </Suspense>
         </I18nProvider>
       ) : route === "sign" ? (
-        <Suspense fallback={<BootFallback label="opening the signer…" />}>
-          <SignPage />
-        </Suspense>
+        <I18nProvider>
+          <Suspense fallback={<BootFallback label={t(getLocale(), "public.boot.signer")} />}>
+            <SignPage />
+          </Suspense>
+        </I18nProvider>
       ) : route === "profile" || route === "snacc" ? (
-        <Suspense fallback={<BootFallback label="loading…" />}>
-          <PublicPage />
-        </Suspense>
+        <I18nProvider>
+          <Suspense fallback={<BootFallback label={t(getLocale(), "public.boot.loading")} />}>
+            <PublicPage />
+          </Suspense>
+        </I18nProvider>
       ) : route === "terms" || route === "privacy" || route === "notfound" ? (
-        <Suspense fallback={<BootFallback label="loading…" />}>
-          <StaticPage page={route} />
-        </Suspense>
+        // The legal text stays English; its frame and the 404 page follow the language (UI-161 phase B5).
+        <I18nProvider>
+          <Suspense fallback={<BootFallback label={t(getLocale(), "public.boot.loading")} />}>
+            <StaticPage page={route} />
+          </Suspense>
+        </I18nProvider>
       ) : (
-        // UI-161: only the landing page is translated so far. Wrap another route in `I18nProvider`
-        // (it keeps `<html lang>` in step) once its screens use `useT()`.
+        // UI-161: the landing page, the game and the other routes all follow the saved language.
         <I18nProvider>
           <Suspense fallback={<BootFallback label={t(getLocale(), "common.boot.landing")} />}>
             <Landing />

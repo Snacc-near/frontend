@@ -5,6 +5,7 @@
  */
 import type { Messages } from "../../types.ts";
 import type { en } from "../en/index.ts";
+import account from "./account.ts";
 import actions from "./actions.ts";
 import checks from "./checks.ts";
 import collection from "./collection.ts";
@@ -18,9 +19,34 @@ import market from "./market.ts";
 import npc from "./npc.ts";
 import onboarding from "./onboarding.ts";
 import onetap from "./onetap.ts";
+import publicPages from "./public.ts";
+import push from "./push.ts";
 import settings from "./settings.ts";
+import sign from "./sign.ts";
 import skin from "./skin.ts";
 import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const id = { actions, checks, collection, common, demo, demos, help, hud, landing, market, npc, onboarding, onetap, settings, skin, social, tx } satisfies Messages<typeof en>;
+export const id = {
+  account,
+  actions,
+  checks,
+  collection,
+  common,
+  demo,
+  demos,
+  help,
+  hud,
+  landing,
+  market,
+  npc,
+  onboarding,
+  onetap,
+  public: publicPages,
+  push,
+  settings,
+  sign,
+  skin,
+  social,
+  tx,
+} satisfies Messages<typeof en>;

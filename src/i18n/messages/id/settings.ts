@@ -7,8 +7,8 @@ const settings = {
     heading: "Language / Bahasa",
     group: "Bahasa",
     hint: "Hanya tersimpan di browser ini, dengan kunci {key}. Reset data lokal di bawah ikut menghapusnya.",
-    partial:
-      "Halaman depan, layar game, jendela aksi, dan jendela bantuan sudah diterjemahkan; jendela lainnya (profil, notifikasi, pasar, dan lain-lain) masih berbahasa Inggris dan menyusul.",
+    exceptions:
+      "Seluruh app tersedia dalam dua bahasa. Ketentuan dan Privasi tetap berbahasa Inggris, dan data dari kontrak atau server (judul misi, isi notifikasi, nama NPC) ditampilkan apa adanya.",
   },
 
   modal: {

@@ -16,6 +16,7 @@ import { privyConfigFromEnv } from "../chain/privy.ts";
 // Plain markup with the shared `fd-*` classes: importing the React primitives (`src/ui/fd.tsx`,
 // `controls.tsx`) would turn them into a chunk shared with the landing page.
 import "../ui/fd.css";
+import { useT } from "../i18n/react.tsx";
 import { describePayload, type PayloadLike } from "./payload.ts";
 
 type Step =
@@ -54,11 +55,15 @@ function Key({ primary = false, className = "", ...rest }: ButtonHTMLAttributes<
   return <button type="button" className={`fd-key${primary ? " fd-key--primary" : ""} ${className}`.trim()} {...rest} />;
 }
 
+/** The handshake failed because the page was opened on its own (`opener`), or with a message from the library (shown as it came). */
+type HandshakeError = { kind: "opener" } | { kind: "text"; text: string };
+
 export default function SignPage() {
+  const { t, rich } = useT();
   const config = privyConfigFromEnv(import.meta.env as Record<string, string | undefined>);
   const [step, setStep] = useState<Step>(config ? { kind: "starting" } : { kind: "off" });
   const [session, setSession] = useState<SignPageSession | null>(null);
-  const [handshakeError, setHandshakeError] = useState<string | null>(null);
+  const [handshakeError, setHandshakeError] = useState<HandshakeError | null>(null);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -80,7 +85,7 @@ export default function SignPage() {
             if (!ac.signal.aborted) setSession(s);
           })
           .catch((e) => {
-            if (!ac.signal.aborted) setHandshakeError(/opener/i.test(messageOf(e)) ? "This page opens from the wallet picker in the game. You can close it." : messageOf(e));
+            if (!ac.signal.aborted) setHandshakeError(/opener/i.test(messageOf(e)) ? { kind: "opener" } : { kind: "text", text: messageOf(e) });
           });
         const { user } = await privy.user.get().catch(() => ({ user: null }));
         if (ac.signal.aborted) return;
@@ -138,7 +143,8 @@ export default function SignPage() {
     }
   };
 
-  const lines = session ? describePayload(session.payload as unknown as PayloadLike) : [];
+  const lines = session ? describePayload(session.payload as unknown as PayloadLike, t) : [];
+  const handshakeText = handshakeError ? (handshakeError.kind === "opener" ? t("sign.openerHint") : handshakeError.text) : null;
 
   return (
     <main className="fd-ui" style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 16 }}>
@@ -152,29 +158,29 @@ export default function SignPage() {
         </div>
         <div className="fd-win__body fd-stack" data-testid="sign-page">
           <h1 id="sign-title" className="fd-h">
-            Snacc · email login
+            {t("sign.title")}
           </h1>
           {step.kind === "off" ? (
             <p className="fd-note" data-testid="sign-off">
-              <strong>Email login is not configured on this deployment.</strong> Close this window and pick a NEAR wallet instead.
+              <strong>{t("sign.offBold")}</strong> {t("sign.offRest")}
             </p>
           ) : null}
           {step.kind === "starting" ? (
             <p className="fd-field__hint" role="status">
-              Starting Privy…
+              {t("sign.starting")}
             </p>
           ) : null}
           {step.kind === "email" ? (
             <form className="fd-stack" onSubmit={(e) => void sendCode(e)}>
-              <p className="fd-field__hint">Privy sends a one-time code. A new NEAR testnet account is created for you on first login; it starts with 0 NEAR.</p>
+              <p className="fd-field__hint">{t("sign.codeHint")}</p>
               <div className="fd-field">
                 <label htmlFor="sign-email" className="fd-field__label">
-                  email
+                  {t("sign.email")}
                 </label>
                 <input id="sign-email" className="fd-input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={busy} required />
               </div>
               <Key type="submit" primary disabled={busy || !email.trim()}>
-                {busy ? "sending…" : "send code"}
+                {busy ? t("sign.sending") : t("sign.sendCode")}
               </Key>
             </form>
           ) : null}
@@ -182,16 +188,16 @@ export default function SignPage() {
             <form className="fd-stack" onSubmit={(e) => void verifyCode(e)}>
               <div className="fd-field">
                 <label htmlFor="sign-code" className="fd-field__label">
-                  {`code sent to ${step.email}`}
+                  {t("sign.codeSentTo", { email: step.email })}
                 </label>
                 <input id="sign-code" className="fd-input" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} disabled={busy} required />
               </div>
               <div className="fd-row">
                 <Key type="submit" primary disabled={busy || !code.trim()}>
-                  {busy ? "checking…" : "log in"}
+                  {busy ? t("sign.checking") : t("sign.logIn")}
                 </Key>
                 <Key onClick={() => setStep({ kind: "email" })} disabled={busy}>
-                  back
+                  {t("sign.back")}
                 </Key>
               </div>
             </form>
@@ -199,15 +205,11 @@ export default function SignPage() {
           {step.kind === "ready" || step.kind === "signing" ? (
             <div className="fd-stack">
               {step.kind === "ready" && step.account ? (
-                <p className="fd-field__hint">
-                  NEAR account: <code className="break-all">{step.account}</code>
-                </p>
+                <p className="fd-field__hint">{rich("sign.nearAccount", { account: <code className="break-all">{step.account}</code> })}</p>
               ) : null}
               {session ? (
                 <>
-                  <p className="fd-field__hint">
-                    Requested by <strong>{session.targetOrigin}</strong>:
-                  </p>
+                  <p className="fd-field__hint">{rich("sign.requestedBy", { origin: <strong>{session.targetOrigin}</strong> })}</p>
                   <ul className="fd-list" data-testid="sign-request">
                     {lines.map((l, i) => (
                       <li key={i}>{l}</li>
@@ -215,16 +217,16 @@ export default function SignPage() {
                   </ul>
                   <div className="fd-row">
                     <Key primary onClick={() => void sign()} disabled={step.kind === "signing"}>
-                      {step.kind === "signing" ? "signing…" : "approve"}
+                      {step.kind === "signing" ? t("sign.signing") : t("sign.approve")}
                     </Key>
                     <Key onClick={() => window.close()} disabled={step.kind === "signing"}>
-                      reject
+                      {t("sign.reject")}
                     </Key>
                   </div>
                 </>
               ) : (
                 <p className="fd-field__hint" role="status">
-                  {handshakeError ?? "Waiting for the request from the game…"}
+                  {handshakeText ?? t("sign.waiting")}
                 </p>
               )}
             </div>
@@ -234,9 +236,9 @@ export default function SignPage() {
               {step.message}
             </p>
           ) : null}
-          {handshakeError && step.kind !== "ready" ? <p className="fd-field__hint">{handshakeError}</p> : null}
+          {handshakeText && step.kind !== "ready" ? <p className="fd-field__hint">{handshakeText}</p> : null}
           <p className="fd-field__hint">
-            Keys stay with Privy; the game never sees them. <span className="fd-tag">testnet</span>
+            {t("sign.keysStay")} <span className="fd-tag">testnet</span>
           </p>
         </div>
       </section>

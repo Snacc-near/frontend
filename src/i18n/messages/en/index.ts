@@ -5,6 +5,7 @@
  * To add a namespace: create `<ns>.ts` here and in `../id/`, then add one line to this file and one
  * to the Indonesian index.
  */
+import account from "./account.ts";
 import actions from "./actions.ts";
 import checks from "./checks.ts";
 import collection from "./collection.ts";
@@ -18,9 +19,34 @@ import market from "./market.ts";
 import npc from "./npc.ts";
 import onboarding from "./onboarding.ts";
 import onetap from "./onetap.ts";
+import publicPages from "./public.ts";
+import push from "./push.ts";
 import settings from "./settings.ts";
+import sign from "./sign.ts";
 import skin from "./skin.ts";
 import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const en = { actions, checks, collection, common, demo, demos, help, hud, landing, market, npc, onboarding, onetap, settings, skin, social, tx };
+export const en = {
+  account,
+  actions,
+  checks,
+  collection,
+  common,
+  demo,
+  demos,
+  help,
+  hud,
+  landing,
+  market,
+  npc,
+  onboarding,
+  onetap,
+  public: publicPages,
+  push,
+  settings,
+  sign,
+  skin,
+  social,
+  tx,
+};

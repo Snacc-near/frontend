@@ -11,6 +11,7 @@ import { accountLabel, useAccount } from "../account/session.tsx";
 import { claimStarterPackWithCaptcha, type StarterOutcome } from "../account/model.ts";
 import { createCaptchaGate, turnstileSiteKey, type CaptchaGate } from "../account/turnstile.ts";
 import { explorerTx } from "../data/nearView.ts";
+import { accountMessageText } from "../i18n/accountText.ts";
 import { useT } from "../i18n/react.tsx";
 import { formatYocto } from "../chain/actions.ts";
 import { KeycapButton } from "../ui/controls.tsx";
@@ -47,7 +48,7 @@ export function AccountChip({ compact = false, onOpenProfile }: { compact?: bool
       </KeycapButton>
       {account.error ? (
         <span className="fd-field__hint fd-field__hint--bad acct-chip__err" role="alert" data-testid="account-error">
-          {account.error}
+          {accountMessageText(t, account.error)}
         </span>
       ) : compact ? null : (
         <span className="acct-chip__note">{t("hud.account.note")}</span>

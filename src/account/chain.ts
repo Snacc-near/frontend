@@ -8,6 +8,8 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatUnits } from "../data/nearView.ts";
+import { agoText } from "../i18n/ago.ts";
+import { tEn, type Translate } from "../i18n/catalog.ts";
 
 export type LineageRelation = "divided" | "spliced_into" | "hostile";
 
@@ -191,9 +193,10 @@ export function buildLineage(strainId: number, rows: readonly LineageRow[], sibl
 
 export const lineageIsEmpty = (l: Lineage): boolean => l.parent === null && l.children.length === 0 && l.absorbed.length === 0 && l.mergedInto === null;
 
+/** The English relation words, kept as data (tests compare against them). The strain window reads `account.chain.*` in the reader's language. */
 export const RELATION_WORDS: Record<"spliced_into" | "hostile", string> = {
-  spliced_into: "splice",
-  hostile: "hostile takeover",
+  spliced_into: tEn("account.chain.spliced_into"),
+  hostile: tEn("account.chain.hostile"),
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -214,83 +217,88 @@ const num = (v: unknown): string => (typeof v === "number" || typeof v === "stri
 const who = (v: unknown, fallback = "someone"): string => (typeof v === "string" && v !== "" ? v : fallback);
 const tag = (v: unknown): string => (typeof v === "string" && v !== "" ? `#${v}` : typeof v === "number" ? `#${v}` : "#?");
 
-const DELIST_REASONS: Record<string, string> = { seller: "by the seller", token_left_market: "the token left the market" };
+const DELIST_REASON_KEYS = { seller: "account.chain.history.reasonSeller", token_left_market: "account.chain.history.reasonLeft" } as const;
 
-/** One history row as a short sentence. `role` says which part this strain played in a two-strain event. */
-export function describeHistory(row: HistoryRow): string {
+/**
+ * One history row as a short sentence. `role` says which part this strain played in a two-strain event. The words
+ * come from `account.chain.history.*`; `t` defaults to English (not the saved language) so callers and tests that
+ * pass nothing get the same sentences as before, and the strain window passes its own. Ids, amounts, account names,
+ * token names and trait names are data and are never translated.
+ */
+export function describeHistory(row: HistoryRow, t: Translate = tEn): string {
   const d = row.data;
+  const someone = t("account.chain.someone");
+  const molecule = t("account.chain.molecule");
+  const whoT = (v: unknown, fallback = someone): string => who(v, fallback);
   switch (row.event) {
     case "strain_created":
-      return `hatched by ${who(d["owner_id"], who(row.actor))} with ${snacc(d["initial_snacc_stake"])} $SNACC`;
+      return t("account.chain.history.created", { who: whoT(d["owner_id"], whoT(row.actor)), stake: snacc(d["initial_snacc_stake"]) });
     case "fed":
-      return `fed (fee ${snacc(d["effective_fee"])} $SNACC)${d["dormant"] === true ? ", woke up from dormancy" : ""}`;
+      return t(d["dormant"] === true ? "account.chain.history.fedDormant" : "account.chain.history.fed", { fee: snacc(d["effective_fee"]) });
     case "extracted":
-      return `produced ${num(d["amount"])} ${who(d["token"], "molecule")}`;
+      return t("account.chain.history.extracted", { amount: num(d["amount"]), token: whoT(d["token"], molecule) });
     case "transmuted":
-      return `transmuted ${num(d["burned_spores"])} spores into ${num(d["minted"])} ${who(d["token_out"], "molecule")}`;
+      return t("account.chain.history.transmuted", { burned: num(d["burned_spores"]), minted: num(d["minted"]), token: whoT(d["token_out"], molecule) });
     case "synthesized":
-      return `synthesized ${num(d["minted"])} ${who(d["token_out"], "molecule")}`;
+      return t("account.chain.history.synthesized", { minted: num(d["minted"]), token: whoT(d["token_out"], molecule) });
     case "genome_committed":
-      return "genome experiment committed";
+      return t("account.chain.history.genomeCommitted");
     case "genome_mutated": {
       const bps = d["efficiency_shift_bps"];
-      return typeof bps === "number" ? `genome mutated (efficiency ${bps >= 0 ? "+" : ""}${(bps / 100).toFixed(2)}%)` : "genome mutated";
+      return typeof bps === "number"
+        ? t("account.chain.history.genomeMutatedBy", { shift: `${bps >= 0 ? "+" : ""}${(bps / 100).toFixed(2)}` })
+        : t("account.chain.history.genomeMutated");
     }
     case "atp_allocated":
-      return `allocated ATP: mitochondria ${num(d["mitokondria"])}, nucleus ${num(d["nukleus"])}, lysosome ${num(d["lisosom"])}`;
+      return t("account.chain.history.atpAllocated", { mito: num(d["mitokondria"]), nuc: num(d["nukleus"]), lys: num(d["lisosom"]) });
     case "aether_burned_for_dividend":
-      return `burned ${num(d["amount"])} aether into the industrial pool (epoch ${num(d["epoch"])})`;
+      return t("account.chain.history.aetherBurned", { amount: num(d["amount"]), epoch: num(d["epoch"]) });
     case "dividend_claimed":
-      return `claimed ${snacc(d["payout"])} $SNACC from the industrial pool (epoch ${num(d["epoch"])})`;
+      return t("account.chain.history.payoutClaimed", { payout: snacc(d["payout"]), epoch: num(d["epoch"]) });
     case "npc_spores_bought":
-      return `bought ${num(d["amount"])} spores from ${who(d["npc_id"], "an NPC")}`;
+      return t("account.chain.history.npcBought", { amount: num(d["amount"]), npc: whoT(d["npc_id"], t("account.chain.anNpc")) });
     case "strain_divided":
       return row.role === "child"
-        ? `born by division of ${tag(d["parent_id"])} (generation ${num(d["child_generation"])})`
-        : `divided: child ${tag(d["child_id"])} born (generation ${num(d["child_generation"])})`;
+        ? t("account.chain.history.dividedChild", { parent: tag(d["parent_id"]), gen: num(d["child_generation"]) })
+        : t("account.chain.history.dividedParent", { child: tag(d["child_id"]), gen: num(d["child_generation"]) });
     case "strains_spliced":
-      return row.role === "absorbed" ? `spliced into ${tag(d["dominant_id"])} and burned` : `spliced: absorbed ${tag(d["absorbed_id"])}`;
+      return row.role === "absorbed"
+        ? t("account.chain.history.splicedAbsorbed", { dominant: tag(d["dominant_id"]) })
+        : t("account.chain.history.splicedDominant", { absorbed: tag(d["absorbed_id"]) });
     case "hostile_takeover_spliced":
       return row.role === "target"
-        ? `taken over by ${tag(d["raider_id"])} in a hostile takeover`
-        : `hostile takeover: absorbed ${tag(d["target_id"])} (paid ${snacc(d["payment"])} $SNACC)`;
+        ? t("account.chain.history.takenOver", { raider: tag(d["raider_id"]) })
+        : t("account.chain.history.takeover", { target: tag(d["target_id"]), payment: snacc(d["payment"]) });
     case "strain_adopted":
-      return row.role === "payer" ? `paid ${snacc(d["book_value"])} $SNACC to adopt ${tag(d["target_id"])}` : `adopted by ${who(d["adopter"])}`;
+      return row.role === "payer"
+        ? t("account.chain.history.adoptPayer", { value: snacc(d["book_value"]), target: tag(d["target_id"]) })
+        : t("account.chain.history.adoptedBy", { who: whoT(d["adopter"]) });
     case "strain_liquidated":
-      return `starved and was harvested by ${who(d["liquidator"])}`;
+      return t("account.chain.history.liquidated", { who: whoT(d["liquidator"]) });
     case "trait_conjugated":
       return row.role === "source"
-        ? `shared trait “${who(d["phenotype_trait"], "?")}” with ${tag(d["to_strain_id"])}`
-        : `received trait “${who(d["phenotype_trait"], "?")}” from ${tag(d["from_strain_id"])}`;
+        ? t("account.chain.history.traitSource", { trait: whoT(d["phenotype_trait"], "?"), to: tag(d["to_strain_id"]) })
+        : t("account.chain.history.traitTarget", { trait: whoT(d["phenotype_trait"], "?"), from: tag(d["from_strain_id"]) });
     case "nft_transfer":
-      return `transferred from ${who(d["old_owner_id"])} to ${who(d["new_owner_id"])}`;
+      return t("account.chain.history.transfer", { from: whoT(d["old_owner_id"]), to: whoT(d["new_owner_id"]) });
     case "listed":
-      return `listed on the market for ${near(d["price"])} testnet NEAR`;
+      return t("account.chain.history.listed", { price: near(d["price"]) });
     case "sold":
-      return `sold to ${who(d["buyer_id"])} for ${near(d["price"])} testnet NEAR`;
-    case "delisted":
-      return `taken off the market (${DELIST_REASONS[String(d["reason"])] ?? "delisted"})`;
+      return t("account.chain.history.sold", { who: whoT(d["buyer_id"]), price: near(d["price"]) });
+    case "delisted": {
+      const reasonKey = DELIST_REASON_KEYS[String(d["reason"]) as keyof typeof DELIST_REASON_KEYS];
+      return t("account.chain.history.delisted", { reason: t(reasonKey ?? "account.chain.history.reasonDefault") });
+    }
     case "price_updated":
-      return `market price changed to ${near(d["new_price"])} testnet NEAR (was ${near(d["old_price"])})`;
+      return t("account.chain.history.priceUpdated", { price: near(d["new_price"]), old: near(d["old_price"]) });
     default:
       return row.event.replace(/_/g, " ");
   }
 }
 
-/** "just now", "5 min ago", "3 h ago", "2 days ago", then the date. */
+/** "just now", "5 min ago", "3 h ago", "2 days ago", then the date (English; the strain window uses `agoText` with its own `t`). */
 export function relativeTime(iso: string, nowMs: number = Date.now()): string {
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "—";
-  const s = Math.floor((nowMs - t) / 1000);
-  if (s < 45) return "just now";
-  if (s < 90) return "1 min ago";
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m} min ago`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h} h ago`;
-  const days = Math.round(h / 24);
-  if (days < 14) return `${days} day${days === 1 ? "" : "s"} ago`;
-  return new Date(t).toISOString().slice(0, 10);
+  return agoText(tEn, iso, nowMs);
 }
 
 // ---------------------------------------------------------------------------------------------

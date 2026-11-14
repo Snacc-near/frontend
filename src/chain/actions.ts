@@ -14,7 +14,7 @@
  * No keys and no signing here: the wallet signs. Every amount is an integer string in yocto.
  */
 import { CONTRACT_ID } from "../data/nearView.ts";
-import { t as translate, type MessageKey } from "../i18n/catalog.ts";
+import { t as translate, tEn, type MessageKey, type Translate } from "../i18n/catalog.ts";
 import { getLocale } from "../i18n/locale.ts";
 import type { Vars } from "../i18n/types.ts";
 
@@ -538,13 +538,16 @@ export function claimableEpochs(currentEpoch: number, lastClosedEpoch: number): 
   return out;
 }
 
-/** "3h 12m" style countdown from contract seconds. */
-export function formatCountdown(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "now";
+/**
+ * "3h 12m" style countdown from contract seconds. Only the words change with the language (`social.countdown.*`);
+ * the thresholds do not. `t` defaults to English, so callers that pass nothing get the same text as before.
+ */
+export function formatCountdown(seconds: number, t: Translate = tEn): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return t("social.countdown.now");
   const d = Math.floor(seconds / 86400);
   const h = Math.floor((seconds % 86400) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${Math.max(1, m)}m`;
+  if (d > 0) return t("social.countdown.dh", { d, h });
+  if (h > 0) return t("social.countdown.hm", { h, m });
+  return t("social.countdown.m", { m: Math.max(1, m) });
 }

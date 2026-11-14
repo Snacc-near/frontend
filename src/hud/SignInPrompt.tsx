@@ -5,6 +5,7 @@
 import type { ReactNode } from "react";
 import { useWallet } from "../chain/wallet.tsx";
 import { useAccount } from "../account/session.tsx";
+import { accountMessageText } from "../i18n/accountText.ts";
 import { useT } from "../i18n/react.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
 import type { IconName } from "../ui/fd.tsx";
@@ -27,7 +28,7 @@ export function SignInPrompt({ icon = "user", children, testId = "signin-prompt"
       )}
       {account.error ? (
         <p className="fd-field__hint fd-field__hint--bad" role="alert">
-          {account.error}
+          {accountMessageText(t, account.error)}
         </p>
       ) : null}
     </div>

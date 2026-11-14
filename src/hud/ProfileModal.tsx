@@ -26,6 +26,7 @@ import { profilePath, profileUrl } from "../account/config.ts";
 import { inviteShare, referralCountsOf, type RecruitCounts } from "../account/referral.ts";
 import { fetchCollection, type CollectionItem } from "../data/collection.ts";
 import { explorerTx } from "../data/nearView.ts";
+import { accountMessageText } from "../i18n/accountText.ts";
 import { achievementText, usernameProblemText } from "../i18n/achievements.ts";
 import { useT } from "../i18n/react.tsx";
 import { ISSUES_URL } from "../legal/content.ts";
@@ -115,7 +116,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
     const problem = await deleteMyAccount(client);
     setConfirmDelete(false);
     if (problem) {
-      setDeleteMsg(t("social.profile.deleteProblem", { problem }));
+      setDeleteMsg(t("social.profile.deleteProblem", { problem: accountMessageText(t, problem) }));
       return;
     }
     setDeleteMsg(t("social.profile.deleted"));
@@ -154,7 +155,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
           )}
           {account.error ? (
             <p className="fd-field__hint fd-field__hint--bad" role="alert">
-              {account.error}
+              {accountMessageText(t, account.error)}
             </p>
           ) : null}
         </div>
@@ -253,7 +254,7 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
               </KeycapButton>
               {saveMsg ? (
                 <span className={saveMsg.ok ? "fd-field__hint" : "fd-field__hint fd-field__hint--bad"} role="status" data-testid="profile-save-msg">
-                  {saveMsg.text}
+                  {accountMessageText(t, saveMsg.text)}
                 </span>
               ) : null}
             </div>
