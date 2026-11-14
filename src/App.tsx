@@ -46,6 +46,8 @@ import { readSkinPref } from "./prefs/prefs.ts";
 import { GuideLayer } from "./help/GuideLayer.tsx";
 import { AppLegalLinks } from "./help/AppLegalLinks.tsx";
 import { bioSound } from "./sound.ts";
+import { useT } from "./i18n/react.tsx";
+import type { MessageKey } from "./i18n/catalog.ts";
 
 import { ColonyPlate } from "./plate/ColonyPlate.tsx";
 import { IrisOverlay } from "./hud/IrisOverlay.tsx";
@@ -94,6 +96,18 @@ export function strainFromSearch(search: string): number | null {
 const HATCH_DOCK = { key: "hatch", label: "Hatch", hint: "incubate_strain" } as const;
 /** Live-mode dock key that opens the list of every signed action (UI-150), with or without a wallet. */
 const MORE_DOCK = { key: "more", label: "Actions", hint: "every game action" } as const;
+/** UI-161: dictionary key of each dock label (the `label` fields above stay English as data). */
+const DOCK_LABEL_KEYS = {
+  hatch: "actions.app.dock.hatch",
+  feed: "actions.app.dock.feed",
+  atp: "actions.app.dock.atp",
+  extract: "actions.app.dock.extract",
+  transmute: "actions.app.dock.transmute",
+  synthesize: "actions.app.dock.synthesize",
+  divide: "actions.app.dock.divide",
+  harvest: "actions.app.dock.harvest",
+  more: "actions.app.dock.more",
+} as const satisfies Record<string, MessageKey>;
 /** Dock keys that send a real transaction when a wallet is connected in live mode. */
 const SIGNED_DOCK_KEYS = new Set(["hatch", "feed", "atp", "extract", "transmute", "synthesize", "divide", "harvest"]);
 /** Live dock key → UI-150 window. */
@@ -148,6 +162,7 @@ function formatSimNumber(value: number): string {
 }
 
 export const App: React.FC = () => {
+  const { t } = useT();
   const [mode, setMode] = useState<GameMode>("demo");
   const [skin, setSkin] = useState<SkinMode>(() => readSkinPref());
   const [isBackendConnected, setIsBackendConnected] = useState(false);
@@ -532,7 +547,7 @@ export const App: React.FC = () => {
     const result = applySimAction(simRef.current, action as LabAction);
     if (!result.ok) {
       bioSound.playDenied();
-      showToast(result.error ?? "action unavailable");
+      showToast(result.error ?? t("actions.app.unavailable"));
       return false;
     }
     setSim(result.state);
@@ -542,24 +557,24 @@ export const App: React.FC = () => {
       window.setTimeout(() => optimisticManagerRef.current.confirm(), 1200);
     } else if (action === "atp" || action === "extract" || action === "transmute" || action === "synthesize") {
       bioSound.playFeed();
-      showToast("production started (demo · simulated)");
+      showToast(t("actions.app.productionStarted"));
     }
     if (action === "feed" || action === "harvest") {
-      showToast(result.state.log[0] ?? "done");
+      showToast(result.state.log[0] ?? t("actions.app.done"));
     }
     return true;
-  }, []);
+  }, [t]);
 
   const handleLabAction = useCallback(
     (action: LabAction): boolean => {
       if (mode === "live") {
         // Preview only: the animation is played by CellLab; live numbers never change.
-        showToast("preview only — on-chain transactions need a wallet");
+        showToast(t("actions.app.previewOnly"));
         return true;
       }
       return doSimAction(action);
     },
-    [mode, doSimAction],
+    [mode, doSimAction, t],
   );
 
   const handleDock = useCallback(
@@ -580,14 +595,14 @@ export const App: React.FC = () => {
           setChainAction(LIVE_DOCK_WINDOW[key]);
           return;
         }
-        showToast("connect a wallet to sign game actions on testnet");
+        showToast(t("actions.app.connectToSign"));
         return;
       }
       const def = DOCK_DEFS.find((d) => d.key === key);
       if (!def) return;
       doSimAction(def.action);
     },
-    [mode, doSimAction, signedActions, walletConnected],
+    [mode, doSimAction, signedActions, walletConnected, t],
   );
 
   const handleCollect = useCallback(
@@ -595,46 +610,49 @@ export const App: React.FC = () => {
       const item = simRef.current.queue.find((entry) => entry.id === id);
       const result = collectProduction(simRef.current, id);
       if (!result.ok) {
-        showToast(result.error ?? "not ready");
+        showToast(result.error ?? t("actions.app.notReady"));
         return;
       }
       setSim(result.state);
       bioSound.playCollect();
-      showToast(result.state.log[0] ?? "collected");
+      showToast(result.state.log[0] ?? t("actions.app.collected"));
       if (item) {
         setCoinKind(item.kind);
         setCoinBurst((n) => n + 1);
         window.setTimeout(() => setCoinBurst(0), 950);
+        // The English name is only the identity in the set; the plate shows it in the reader's language.
         const milestone =
           item.kind === "atp" ? "First ATP" : item.kind === "spores" ? "First spore" : item.kind === "elixir" ? "First elixir" : null;
         if (milestone && !milestones.has(milestone)) {
           setMilestones((prev) => new Set(prev).add(milestone));
-          setMilestoneToast(milestone);
+          setMilestoneToast(
+            t(item.kind === "atp" ? "actions.app.milestone.atp" : item.kind === "spores" ? "actions.app.milestone.spores" : "actions.app.milestone.elixir"),
+          );
           window.setTimeout(() => setMilestoneToast(null), 4200);
         }
       }
     },
-    [milestones],
+    [milestones, t],
   );
 
   const handleUpgrade = useCallback(
     (slot: "mitokondria" | "nucleus" | "lysosome") => {
       if (mode === "live") {
-        showToast("on-chain transactions need a wallet — outside this demo");
+        showToast(t("actions.app.needsWallet"));
         return;
       }
       const directResult = ((): { state: SimulationState; ok: boolean; error: string | null } => {
         if (slot === "mitokondria") {
           const current = simRef.current;
-          if (current.organel.mitokondria >= 5) return { state: current, ok: false, error: "mitokondria already at max level 5" };
+          if (current.organel.mitokondria >= 5) return { state: current, ok: false, error: t("actions.app.mitoMax") };
           const cost = 40 * (current.organel.mitokondria + 1);
-          if (current.atp < cost) return { state: current, ok: false, error: `need ${cost} atp, have ${current.atp}` };
+          if (current.atp < cost) return { state: current, ok: false, error: t("actions.app.needAtp", { cost, have: current.atp }) };
           return {
             state: {
               ...current,
               atp: current.atp - cost,
               organel: { ...current.organel, mitokondria: current.organel.mitokondria + 1 },
-              log: [`mitokondria upgraded to ${current.organel.mitokondria + 1}: +10% atp output`, ...current.log.slice(0, 7)],
+              log: [t("actions.app.mitoUpgraded", { level: current.organel.mitokondria + 1 }), ...current.log.slice(0, 7)],
             },
             ok: true,
             error: null,
@@ -644,13 +662,13 @@ export const App: React.FC = () => {
       })();
       if (!directResult.ok) {
         bioSound.playDenied();
-        showToast(directResult.error ?? "upgrade unavailable");
+        showToast(directResult.error ?? t("actions.app.upgradeUnavailable"));
         return;
       }
       setSim(directResult.state);
-      showToast(directResult.state.log[0] ?? "upgraded");
+      showToast(directResult.state.log[0] ?? t("actions.app.upgraded"));
     },
-    [mode],
+    [mode, t],
   );
 
   const plateCells = useMemo(() => {
@@ -697,11 +715,12 @@ export const App: React.FC = () => {
     () =>
       [...(signedActions ? [HATCH_DOCK] : []), ...DOCK_DEFS, ...(mode === "live" ? [MORE_DOCK] : [])].map((d) => ({
         key: d.key,
-        label: d.label,
-        hint: d.hint,
+        label: t(DOCK_LABEL_KEYS[d.key as keyof typeof DOCK_LABEL_KEYS]),
+        // The hints are contract method names, the same in every language; only the menu's hint is a phrase.
+        hint: d.key === MORE_DOCK.key ? t("actions.app.dock.moreHint") : d.hint,
         disabled: mode === "live" && d.key !== MORE_DOCK.key && !(signedActions && SIGNED_DOCK_KEYS.has(d.key)),
       })),
-    [mode, signedActions],
+    [mode, signedActions, t],
   );
 
   const governedLogs = useMemo(() => filterLogsForMode(logs, mode), [logs, mode]);
@@ -740,8 +759,8 @@ export const App: React.FC = () => {
                 <AccountFilter account={userAccount} onChange={setUserAccount} matchedCount={matchedStrainsCount} />
               )}
               <span className="label-plate">
-                vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
-                <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
+                {t("actions.app.vitality")} <span className="lp-value font-mono">{vitalityLabel}</span>
+                <span className="lp-label normal-case">{mode === "live" ? t("actions.app.selectCell") : t("actions.app.tapCell")}</span>
               </span>
             </div>
             <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
@@ -769,7 +788,7 @@ export const App: React.FC = () => {
                   type="button"
                   onClick={() => setMoreOpen((v) => !v)}
                   aria-expanded={moreOpen}
-                  aria-label="more options"
+                  aria-label={t("actions.app.moreOptions")}
                   className="keycap inline-flex min-h-[40px] min-w-[40px] items-center justify-center px-2 focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
                 >
                   <Icon name="more" />
@@ -795,8 +814,8 @@ export const App: React.FC = () => {
                 )}
                 <SkinSwitch skin={skin} onChange={setSkin} />
                 <span className="label-plate">
-                  vitality: <span className="lp-value font-mono">{vitalityLabel}</span>
-                  <span className="lp-label normal-case">{mode === "live" ? "select a cell for lab" : "tap a cell to open the lab"}</span>
+                  {t("actions.app.vitality")} <span className="lp-value font-mono">{vitalityLabel}</span>
+                  <span className="lp-label normal-case">{mode === "live" ? t("actions.app.selectCell") : t("actions.app.tapCell")}</span>
                 </span>
               </div>
             ) : null}
@@ -809,7 +828,7 @@ export const App: React.FC = () => {
             role="status"
             data-testid="milestone-plate"
           >
-            <span className="block font-mono text-[9px] tracking-[0.18em] text-[var(--ink)] uppercase">engraved</span>
+            <span className="block font-mono text-[9px] tracking-[0.18em] text-[var(--ink)] uppercase">{t("actions.app.engraved")}</span>
             <span className="block text-sm font-bold lowercase text-[var(--ink-hi)]">{milestoneToast}</span>
           </div>
         ) : null}
@@ -836,7 +855,7 @@ export const App: React.FC = () => {
             />
             <span className="label-plate pointer-events-auto hidden lowercase sm:inline-flex">
               <span className="lp-label">
-                {mode === "demo" ? "demo · simulated" : signedActions ? "live · testnet · wallet connected" : "live · testnet reads only"}
+                {mode === "demo" ? t("actions.app.status.demo") : signedActions ? t("actions.app.status.liveWallet") : t("actions.app.status.liveReads")}
               </span>
             </span>
           </div>
@@ -855,7 +874,7 @@ export const App: React.FC = () => {
                   queue={mode === "demo" ? sim.queue : []}
                   onCollect={handleCollect}
                   queueEmptyText={
-                    mode === "demo" ? "queue empty — press produce atp below" : "production runs on-chain; nothing local"
+                    mode === "demo" ? t("actions.app.queueEmptyDemo") : t("actions.app.queueEmptyLive")
                   }
                 />
               </div>
@@ -866,7 +885,7 @@ export const App: React.FC = () => {
                 mode={mode}
                 queue={sim.queue}
                 onCollect={handleCollect}
-                queueEmptyText="queue empty"
+                queueEmptyText={t("actions.app.queueEmpty")}
               />
             </div>
           ) : null}
@@ -877,23 +896,23 @@ export const App: React.FC = () => {
               data-testid="receipt-tape"
               role="status"
             >
-              demo · simulated — {receiptLine(sim.totalIn, sim.totalOut)}
+              {t("actions.app.receipt", { line: receiptLine(sim.totalIn, sim.totalOut) })}
             </span>
           ) : (
             <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]" data-testid="live-tx-note">
               {signedActions
-                ? "game actions are signed in your wallet on testnet · $SNACC on testnet has no monetary value"
-                : "connect a wallet to sign game actions on testnet · reads work without one"}
+                ? t("actions.app.liveNoteSigned")
+                : t("actions.app.liveNoteReads")}
             </span>
           )}
           {mode === "demo" && walletConnected ? (
             <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
-              wallet connected · switch to live to send real testnet transactions
+              {t("actions.app.walletConnectedDemo")}
             </span>
           ) : null}
           {mode === "demo" ? (
             <span className="pointer-events-auto text-center font-mono text-[10px] lowercase text-[var(--ink)]">
-              demo · simulated — numbers come from local constants, not the chain
+              {t("actions.app.demoNote")}
             </span>
           ) : null}
           <AppLegalLinks />
@@ -934,7 +953,7 @@ export const App: React.FC = () => {
         />
       ) : null}
 
-      <React.Suspense fallback={<div className="fd-modal fd-ui" role="status" aria-label="loading tool" />}>
+      <React.Suspense fallback={<div className="fd-modal fd-ui" role="status" aria-label={t("actions.app.loadingTool")} />}>
         {tool === "collection" ? (
           <MyCollection
             accountId={effectiveAccount || null}
@@ -986,8 +1005,8 @@ export const App: React.FC = () => {
                 snacc: Math.max(0, prev.snacc - totalCost),
                 spores: prev.spores + amount,
               }));
-              setMilestoneToast(`+${amount} spores from ${npcName(npcId, skin)}`);
-              showToast(`simulation: bought ${amount} spores for ${totalCost} $SNACC`);
+              setMilestoneToast(t("actions.app.sporesFrom", { amount, name: npcName(npcId, skin) }));
+              showToast(t("actions.app.simBought", { amount, cost: totalCost }));
             }}
           />
         ) : null}
@@ -1001,14 +1020,14 @@ export const App: React.FC = () => {
               setGuest(saved);
               if (saved.account) setUserAccount(saved.account);
               setTool(null);
-              showToast(saved.label ? `guest label set: ${saved.label} (local only)` : "guest label saved (local only)");
+              showToast(saved.label ? t("actions.app.guestSet", { label: saved.label }) : t("actions.app.guestSaved"));
             }}
             onClear={() => {
               clearGuestLabel();
               if (guest?.account && userAccount === guest.account) setUserAccount("");
               setGuest(null);
               setTool(null);
-              showToast("guest label cleared");
+              showToast(t("actions.app.guestCleared"));
             }}
           />
         ) : null}

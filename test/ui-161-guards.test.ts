@@ -125,7 +125,9 @@ function convertedFiles(): string[] {
     "NotificationsBell", "NutrientBurstBadge", "SignInPrompt", "SkinSwitch", "ThermalGauge", "ToolsToolbar", "VitalsPill",
     "WalletControl", "XpWidgets", "ZoneBanner",
   ].map((f) => `src/hud/${f}.tsx`);
-  return [...landing, ...hud, "src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
+  // Phase B2: the game action windows, the transaction status lines, the game screen and the shared Modal.
+  const actions = ["src/hud/GameActions.tsx", "src/hud/ChainActions.tsx", "src/hud/ChainSections.tsx", "src/hud/ZoneBanner.tsx", "src/App.tsx", "src/ui/Modal.tsx"];
+  return [...landing, ...hud, ...actions, "src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
 }
 
 /** JSX attributes that carry text a reader sees or hears. */
