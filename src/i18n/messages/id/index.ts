@@ -9,6 +9,7 @@ import actions from "./actions.ts";
 import checks from "./checks.ts";
 import collection from "./collection.ts";
 import common from "./common.ts";
+import demo from "./demo.ts";
 import demos from "./demos.ts";
 import hud from "./hud.ts";
 import landing from "./landing.ts";
@@ -19,4 +20,4 @@ import skin from "./skin.ts";
 import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const id = { actions, checks, collection, common, demos, hud, landing, market, npc, settings, skin, social, tx } satisfies Messages<typeof en>;
+export const id = { actions, checks, collection, common, demo, demos, hud, landing, market, npc, settings, skin, social, tx } satisfies Messages<typeof en>;
