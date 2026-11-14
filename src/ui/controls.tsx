@@ -181,7 +181,17 @@ export async function copyText(text: string, clip: Pick<Clipboard, "writeText"> 
   }
 }
 
-export function CopyButton({ text, label, copiedLabel = "copied" }: { text: string; label: string; copiedLabel?: string }) {
+export function CopyButton({
+  text,
+  label,
+  copiedLabel = "copied",
+  failedLabel = "copy failed, select the text",
+}: {
+  text: string;
+  label: string;
+  copiedLabel?: string;
+  failedLabel?: string;
+}) {
   const [state, setState] = useState<"idle" | "ok" | "fail">("idle");
   return (
     <KeycapButton
@@ -194,7 +204,7 @@ export function CopyButton({ text, label, copiedLabel = "copied" }: { text: stri
         });
       }}
     >
-      <span aria-live="polite">{state === "ok" ? copiedLabel : state === "fail" ? "copy failed, select the text" : label}</span>
+      <span aria-live="polite">{state === "ok" ? copiedLabel : state === "fail" ? failedLabel : label}</span>
     </KeycapButton>
   );
 }

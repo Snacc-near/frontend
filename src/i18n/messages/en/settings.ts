@@ -11,9 +11,9 @@ const settings = {
     group: "Language",
     /** `{key}` is the localStorage key, shown in code font. */
     hint: "Saved in this browser only, as {key}. Reset local data below clears it too.",
-    /** Remove this line once every screen is translated. */
-    partial:
-      "The landing page, the game screen, the action windows and the help windows are translated; the remaining windows (profile, notifications, market and others) are still English and follow soon.",
+    /** What the language switch does not cover (UI-161 phase B5: every screen is translated). */
+    exceptions:
+      "The whole app is available in two languages. Terms and Privacy stay in English, and data from the contract or the server (quest titles, notification texts, NPC names) is shown as it comes.",
   },
 
   modal: {

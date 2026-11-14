@@ -23,7 +23,9 @@ import type { StrainDetail } from "../data/types.ts";
 import { VITALITY_MAX } from "../config/constants.ts";
 import { CopyButton } from "../ui/controls.tsx";
 import { Chip, Icon, Win } from "../ui/fd.tsx";
-import { DISCLAIMER } from "../legal/content.ts";
+import { accountMessageText } from "../i18n/accountText.ts";
+import { achievementText } from "../i18n/achievements.ts";
+import { useT } from "../i18n/react.tsx";
 import "../ui/fd.css";
 import "../legal/legal.css";
 import "../account/account.css";
@@ -44,18 +46,19 @@ export function setPageMeta(title: string, description: string): void {
 const pct = (units: number) => `${Math.round((Math.max(0, units) / VITALITY_MAX) * 100)}%`;
 
 function Header() {
+  const { t } = useT();
   return (
     <header className="lg-header">
       <div className="lg-header__inner">
-        <a className="lg-brand" href="/" aria-label="Snacc, home">
+        <a className="lg-brand" href="/" aria-label={t("public.nav.homeAria")}>
           <img src="/brand/snacc-logo.webp" alt="Snacc" width={1200} height={403} decoding="async" />
         </a>
-        <nav className="lg-nav" aria-label="Primary">
+        <nav className="lg-nav" aria-label={t("public.nav.primary")}>
           <a className="lg-nav__link" href="/">
-            Home
+            {t("public.nav.home")}
           </a>
           <a className="fd-btn fd-btn--primary fd-btn--sm" href="/app">
-            Launch app
+            {t("public.nav.launch")}
           </a>
         </nav>
       </div>
@@ -64,15 +67,16 @@ function Header() {
 }
 
 function Footer() {
+  const { t } = useT();
   return (
     <footer className="lg-foot">
-      <nav className="lg-foot__nav" aria-label="Legal">
-        <a href="/">Home</a>
-        <a href="/app">Game</a>
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
+      <nav className="lg-foot__nav" aria-label={t("public.nav.legal")}>
+        <a href="/">{t("public.nav.home")}</a>
+        <a href="/app">{t("public.nav.game")}</a>
+        <a href="/terms">{t("public.nav.terms")}</a>
+        <a href="/privacy">{t("public.nav.privacy")}</a>
       </nav>
-      <p className="lg-foot__note">{DISCLAIMER}</p>
+      <p className="lg-foot__note">{t("public.disclaimer")}</p>
     </footer>
   );
 }
@@ -80,6 +84,7 @@ function Footer() {
 // ------------------------------------------------------------------ /p/<account>
 
 function FollowButton({ target }: { target: ProfileRow }) {
+  const { t } = useT();
   const account = useAccount();
   const [on, setOn] = useState<boolean | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -95,13 +100,13 @@ function FollowButton({ target }: { target: ProfileRow }) {
   }, [client, me, target.user_id]);
   if (!account.enabled) return null;
   if (!me || !client) {
-    return <p className="pub-note">Sign in to the profile from the game to follow this player.</p>;
+    return <p className="pub-note">{t("public.profile.signInToFollow")}</p>;
   }
-  if (me === target.user_id) return <p className="pub-note">This is your profile.</p>;
+  if (me === target.user_id) return <p className="pub-note">{t("public.profile.yours")}</p>;
   const toggle = async () => {
     const next = !on;
     const err = await setFollow(client, me, target.user_id, next);
-    if (err) setMsg(`Not saved: ${err}`);
+    if (err) setMsg(t("public.profile.notSaved", { error: accountMessageText(t, err) }));
     else {
       setOn(next);
       setMsg(null);
@@ -110,7 +115,7 @@ function FollowButton({ target }: { target: ProfileRow }) {
   return (
     <span className="pub-row">
       <button type="button" className={on ? "fd-btn fd-btn--sm" : "fd-btn fd-btn--primary fd-btn--sm"} onClick={() => void toggle()} disabled={on === null} data-testid="follow-toggle">
-        {on ? "Unfollow" : "Follow"}
+        {on ? t("public.profile.unfollow") : t("public.profile.follow")}
       </button>
       {msg ? <span className="pub-note pub-note--bad">{msg}</span> : null}
     </span>
@@ -118,6 +123,7 @@ function FollowButton({ target }: { target: ProfileRow }) {
 }
 
 function ProfileView({ accountId }: { accountId: string }) {
+  const { t, rich, locale } = useT();
   const account = useAccount();
   const client = usePublicClient(true);
   const [profile, setProfile] = useState<ProfileRow | null | "loading">(account.enabled ? "loading" : null);
@@ -161,25 +167,26 @@ function ProfileView({ accountId }: { accountId: string }) {
   const count = Array.isArray(items) ? items.length : null;
   useEffect(() => {
     setPageMeta(
-      `${name} · Snacc player profile`,
-      `${name} on Snacc, the on-chain economic game on NEAR testnet${count !== null ? `: ${count} Snacc${count === 1 ? "" : "s"} on chain` : ""}.`,
+      t("public.profile.metaTitle", { name }),
+      count === null ? t("public.profile.metaDesc", { name }) : t(count === 1 ? "public.profile.metaDescOne" : "public.profile.metaDescMany", { name, n: count }),
     );
-  }, [name, count]);
+  }, [name, count, t]);
 
   const p = profile === "loading" ? null : profile;
   const avatar = p && Array.isArray(items) ? items.find((i) => i.strainId === p.avatar_strain_id) : undefined;
   const earned = ACHIEVEMENTS.filter((a) => badges.some((b) => b.code === a.code));
+  const fileName = `p/${accountId}`;
 
   return (
     <div className="lg-stack">
-      <Win title={`p/${accountId}`} className="lg-doc">
+      <Win title={fileName} className="lg-doc">
         <div className="lg-stack" data-testid="public-profile">
           <div className="pub-head">
             {avatar?.mediaSrc ? (
-              <img className="acct-avatar" src={avatar.mediaSrc} alt={`avatar: on-chain svg of strain ${avatar.strainId}`} />
+              <img className="acct-avatar" src={avatar.mediaSrc} alt={t("social.profile.avatarAlt", { id: avatar.strainId })} />
             ) : (
-              <span className="acct-avatar acct-avatar--none" role="img" aria-label="no avatar">
-                no avatar
+              <span className="acct-avatar acct-avatar--none" role="img" aria-label={t("social.profile.noAvatar")}>
+                {t("social.profile.noAvatar")}
               </span>
             )}
             <div className="lg-stack pub-head__text">
@@ -191,39 +198,41 @@ function ProfileView({ accountId }: { accountId: string }) {
               </p>
               {p?.bio ? <p className="pub-bio">{p.bio}</p> : null}
               <span className="pub-row">
-                <CopyButton label="Copy profile link" text={profileUrl(accountId)} />
+                <CopyButton label={t("social.profile.copyLink")} copiedLabel={t("public.copied")} failedLabel={t("public.copyFailed")} text={profileUrl(accountId)} />
                 {p ? <FollowButton target={p} /> : null}
               </span>
             </div>
           </div>
 
           {!account.enabled ? (
-            <p className="pub-note">Player profiles are not switched on for this site. The Snaccs below come straight from the contract.</p>
+            <p className="pub-note">{t("public.profile.off")}</p>
           ) : profile === "loading" ? (
-            <p className="pub-note">reading the profile…</p>
+            <p className="pub-note">{t("public.profile.reading")}</p>
           ) : !p ? (
-            <p className="pub-note">This account has no Snacc profile yet. The Snaccs below come straight from the contract.</p>
+            <p className="pub-note">{t("public.profile.none")}</p>
           ) : null}
 
           {account.enabled && p ? (
             <section className="lg-stack" aria-labelledby="pub-ach">
               <h2 id="pub-ach" className="lg-h2">
-                Streak and achievements
+                {t("public.profile.achTitle")}
               </h2>
               <p data-testid="public-level">
-                <LevelBadge level={xp?.level ?? 1} /> <strong>{(xp?.total_xp ?? 0).toLocaleString("en-US")}</strong> XP (cosmetic, off-chain)
+                <LevelBadge level={xp?.level ?? 1} /> {rich("public.profile.xp", { xp: <strong>{(xp?.total_xp ?? 0).toLocaleString(locale === "id" ? "id-ID" : "en-US")}</strong> })}
               </p>
               <p data-testid="public-streak">
-                Feed streak: <strong>{streak?.current_streak_days ?? 0}</strong> day{(streak?.current_streak_days ?? 0) === 1 ? "" : "s"} in a row
+                {rich((streak?.current_streak_days ?? 0) === 1 ? "public.profile.streakOne" : "public.profile.streakMany", {
+                  n: <strong>{streak?.current_streak_days ?? 0}</strong>,
+                })}
               </p>
               {earned.length === 0 ? (
-                <p className="pub-note">No achievements yet.</p>
+                <p className="pub-note">{t("public.profile.noAch")}</p>
               ) : (
                 <ul className="acct-badges" data-testid="public-achievements">
                   {earned.map((a) => (
                     <li key={a.code} className="acct-badge" data-earned="">
-                      <span className="acct-badge__name">{a.name}</span>
-                      <span className="acct-badge__how">{a.how}</span>
+                      <span className="acct-badge__name">{achievementText(t, a.code, "name", a.name)}</span>
+                      <span className="acct-badge__how">{achievementText(t, a.code, "how", a.how)}</span>
                     </li>
                   ))}
                 </ul>
@@ -233,30 +242,34 @@ function ProfileView({ accountId }: { accountId: string }) {
 
           <section className="lg-stack" aria-labelledby="pub-coll">
             <h2 id="pub-coll" className="lg-h2">
-              Snaccs{count !== null ? ` · ${count}` : ""}
+              {count !== null ? t("public.profile.snaccsCount", { n: count }) : t("public.profile.snaccs")}
             </h2>
             {items === "loading" ? (
-              <p className="pub-note">reading nft_tokens_for_owner and get_colony on {CONTRACT_ID}…</p>
+              <p className="pub-note">{t("public.profile.readingCollection", { contract: CONTRACT_ID })}</p>
             ) : typeof items === "string" ? (
               <p className="pub-note pub-note--bad">{items}</p>
             ) : items.length === 0 ? (
-              <p className="pub-note">This account owns no Snaccs.</p>
+              <p className="pub-note">{t("public.profile.noSnaccs")}</p>
             ) : (
               <ul className="pub-grid" data-testid="public-collection">
                 {items.map((i) => (
                   <li key={i.strainId}>
                     <a className="pub-card" href={snaccPath(i.strainId)}>
-                      {i.mediaSrc ? <img src={i.mediaSrc} alt={`on-chain svg of strain ${i.strainId}`} loading="lazy" /> : <span className="pub-card__none">no svg</span>}
+                      {i.mediaSrc ? (
+                        <img src={i.mediaSrc} alt={t("public.profile.svgAlt", { id: i.strainId })} loading="lazy" />
+                      ) : (
+                        <span className="pub-card__none">{t("public.profile.noSvg")}</span>
+                      )}
                       <span className="pub-card__id">#{i.strainId}</span>
                       <span className="pub-card__meta">
-                        {i.health} · {pct(i.effectiveVitality)}
+                        {t(`public.health.${i.health}`)} · {pct(i.effectiveVitality)}
                       </span>
                     </a>
                   </li>
                 ))}
               </ul>
             )}
-            <p className="pub-note">Read-only, from contract views on {CONTRACT_ID} (NEAR testnet).</p>
+            <p className="pub-note">{t("public.profile.readOnly", { contract: CONTRACT_ID })}</p>
           </section>
         </div>
       </Win>
@@ -273,6 +286,7 @@ interface SnaccData {
 }
 
 function SnaccView({ strainId }: { strainId: number }) {
+  const { t } = useT();
   const [data, setData] = useState<SnaccData | "loading" | "missing">("loading");
   useEffect(() => {
     const ac = new AbortController();
@@ -291,44 +305,48 @@ function SnaccView({ strainId }: { strainId: number }) {
 
   useEffect(() => {
     if (data === "loading") return;
-    const status = data === "missing" ? "not found" : (data.vessel?.status ?? "unknown status");
+    if (data === "missing") {
+      setPageMeta(t("public.snacc.metaTitle", { id: strainId }), t("public.snacc.metaMissing", { id: strainId, contract: CONTRACT_ID }));
+      return;
+    }
+    const status = data.vessel?.status ?? t("public.snacc.unknownStatus");
     setPageMeta(
-      `Snacc #${strainId} · Snacc`,
-      data === "missing"
-        ? `Snacc #${strainId} was not found on ${CONTRACT_ID} (NEAR testnet).`
-        : `Snacc #${strainId} on NEAR testnet: ${status}${data.owner ? `, owned by ${data.owner}` : ""}.`,
+      t("public.snacc.metaTitle", { id: strainId }),
+      data.owner ? t("public.snacc.metaStateOwned", { id: strainId, status, owner: data.owner }) : t("public.snacc.metaState", { id: strainId, status }),
     );
-  }, [data, strainId]);
+  }, [data, strainId, t]);
 
   const v = data !== "loading" && data !== "missing" ? data.vessel : null;
+  const fileName = `snacc/${strainId}`;
+  const health = v ? healthOf(v.status, v.effective_vitality) : null;
   return (
-    <Win title={`snacc/${strainId}`} className="lg-doc">
+    <Win title={fileName} className="lg-doc">
       <div className="lg-stack" data-testid="public-snacc">
-        <h1 className="lg-title">Snacc #{strainId}</h1>
+        <h1 className="lg-title">{t("public.snacc.title", { id: strainId })}</h1>
         {data === "loading" ? (
-          <p className="pub-note">reading nft_token and get_strain on {CONTRACT_ID}…</p>
+          <p className="pub-note">{t("public.snacc.reading", { contract: CONTRACT_ID })}</p>
         ) : data === "missing" ? (
-          <p className="pub-note pub-note--bad">No Snacc #{strainId} on {CONTRACT_ID}, or the testnet RPC did not answer.</p>
+          <p className="pub-note pub-note--bad">{t("public.snacc.missing", { id: strainId, contract: CONTRACT_ID })}</p>
         ) : (
           <div className="pub-head">
             {data.media ? (
-              <img className="pub-svg" src={data.media} alt={`on-chain svg of strain ${strainId}`} />
+              <img className="pub-svg" src={data.media} alt={t("public.profile.svgAlt", { id: strainId })} />
             ) : (
-              <span className="pub-svg acct-avatar--none" role="img" aria-label="no valid on-chain svg">
-                no svg
+              <span className="pub-svg acct-avatar--none" role="img" aria-label={t("public.snacc.noValidSvg")}>
+                {t("public.profile.noSvg")}
               </span>
             )}
             <dl className="fd-kv pub-kv">
               <div className="fd-kv__row">
-                <dt>owner</dt>
+                <dt>{t("public.snacc.owner")}</dt>
                 <dd>{data.owner ? <a className="fd-a" href={profilePath(data.owner)}>{data.owner}</a> : "—"}</dd>
               </div>
               <div className="fd-kv__row">
-                <dt>status</dt>
+                <dt>{t("public.snacc.status")}</dt>
                 <dd>
-                  {v ? (
+                  {v && health ? (
                     <>
-                      {v.status} <Chip dot={healthOf(v.status, v.effective_vitality) === "healthy" ? "live" : "off"}>{healthOf(v.status, v.effective_vitality)}</Chip>
+                      {v.status} <Chip dot={health === "healthy" ? "live" : "off"}>{t(`public.health.${health}`)}</Chip>
                     </>
                   ) : (
                     "—"
@@ -336,11 +354,11 @@ function SnaccView({ strainId }: { strainId: number }) {
                 </dd>
               </div>
               <div className="fd-kv__row">
-                <dt>vitality</dt>
-                <dd className="fd-kv__num">{v ? `${pct(v.effective_vitality)} effective · ${pct(v.vitality)} stored` : "—"}</dd>
+                <dt>{t("public.snacc.vitality")}</dt>
+                <dd className="fd-kv__num">{v ? t("public.snacc.vitalityValue", { effective: pct(v.effective_vitality), stored: pct(v.vitality) }) : "—"}</dd>
               </div>
               <div className="fd-kv__row">
-                <dt>generation</dt>
+                <dt>{t("public.snacc.generation")}</dt>
                 <dd className="fd-kv__num">{v ? v.generation : "—"}</dd>
               </div>
             </dl>
@@ -348,11 +366,11 @@ function SnaccView({ strainId }: { strainId: number }) {
         )}
         <span className="pub-row">
           <a className="fd-btn fd-btn--primary fd-btn--sm" href={`/app?strain=${strainId}`} data-testid="open-in-game">
-            Open in game
+            {t("public.snacc.openInGame")}
           </a>
-          <CopyButton label="Copy link" text={`${window.location.origin}${snaccPath(strainId)}`} />
+          <CopyButton label={t("public.snacc.copyLink")} copiedLabel={t("public.copied")} failedLabel={t("public.copyFailed")} text={`${typeof window !== "undefined" ? window.location.origin : "https://snacc-nu.vercel.app"}${snaccPath(strainId)}`} />
         </span>
-        <p className="pub-note">Read-only, from contract views on {CONTRACT_ID} (NEAR testnet). $SNACC on testnet has no monetary value.</p>
+        <p className="pub-note">{t("public.snacc.readOnly", { contract: CONTRACT_ID })}</p>
       </div>
     </Win>
   );
@@ -363,12 +381,13 @@ export function PublicBody({ target }: { target: PublicTarget }) {
 }
 
 export default function PublicPage() {
+  const { t } = useT();
   const target = parsePublicPath(window.location.pathname);
   return (
     <SessionProvider>
       <div className="lg-page fd-ui">
         <Header />
-        <main className="lg-main">{target ? <PublicBody target={target} /> : <p className="pub-note">Page not found.</p>}</main>
+        <main className="lg-main">{target ? <PublicBody target={target} /> : <p className="pub-note">{t("public.pageNotFound")}</p>}</main>
         <Footer />
       </div>
     </SessionProvider>

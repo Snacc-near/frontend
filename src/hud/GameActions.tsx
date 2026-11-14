@@ -11,7 +11,7 @@
  * UI-161 phase B2: every sentence a player reads comes from the `actions` dictionary (`useT()`), in
  * English or Indonesian. `GAME_ACTIONS` keeps the English label and blurb as data (tests, search); the
  * menu renders them from `actions.menu.<key>`. The reasons returned by the `check*` helpers in
- * `chain/actions.ts` are still English.
+ * `chain/actions.ts` follow the saved language; `formatCountdown(seconds, t)` takes the screen's translator (phase B5).
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -432,7 +432,7 @@ export function AllocateAtpModal({ wallet, info, onClose, onDone, preferredStrai
             [t("actions.allocate.epoch"), dash(macro.data?.currentEpoch)],
             [
               t("actions.allocate.closes"),
-              left === null ? "—" : left > 0 ? t("actions.allocate.closesIn", { time: formatCountdown(left) }) : t("actions.allocate.ended"),
+              left === null ? "—" : left > 0 ? t("actions.allocate.closesIn", { time: formatCountdown(left, t) }) : t("actions.allocate.ended"),
             ],
             [
               t("actions.allocate.last"),

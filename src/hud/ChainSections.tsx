@@ -7,22 +7,14 @@
  *
  * UI-161 phase B2: the section text comes from `actions.chain.*`. `INDEX_PENDING` and `NOT_CONFIGURED` keep the
  * English sentence as data (tests compare against it); the screen shows `actions.chain.indexPending` and
- * `actions.chain.notConfigured`. The relation words and the event lines come from `account/chain.ts` and are still English.
+ * `actions.chain.notConfigured`. Phase B5: the relation words and the event lines read `account.chain.*` and the time
+ * ago reads `collection.ago.*`; `RELATION_WORDS`, `describeHistory(row)` and `relativeTime` keep their English as data.
  */
 import { useEffect, useState } from "react";
 import { useAccount } from "../account/session.tsx";
-import {
-  RELATION_WORDS,
-  buildLineage,
-  describeHistory,
-  historyOf,
-  lineageIsEmpty,
-  lineageOf,
-  relativeTime,
-  type HistoryRow,
-  type Lineage,
-} from "../account/chain.ts";
+import { buildLineage, describeHistory, historyOf, lineageIsEmpty, lineageOf, type HistoryRow, type Lineage } from "../account/chain.ts";
 import { explorerTx } from "../data/nearView.ts";
+import { agoText } from "../i18n/ago.ts";
 import { useT } from "../i18n/react.tsx";
 import { ExtLink } from "../ui/controls.tsx";
 import { usePublicClient } from "./PlayerBoards.tsx";
@@ -101,7 +93,7 @@ export function LineageView({ state, generation, onOpen }: { state: ChainState<L
                 <span className="chain-ids">
                   {state.value.absorbed.map((a) => (
                     <span key={`${a.id}-${a.relation}`}>
-                      <StrainLink id={a.id} onOpen={onOpen} /> <span className="fd-field__hint">({RELATION_WORDS[a.relation]})</span>
+                      <StrainLink id={a.id} onOpen={onOpen} /> <span className="fd-field__hint">({t(`account.chain.${a.relation}`)})</span>
                     </span>
                   ))}
                 </span>
@@ -112,7 +104,7 @@ export function LineageView({ state, generation, onOpen }: { state: ChainState<L
             <div className="fd-kv__row">
               <dt>{t("actions.chain.absorbedInto")}</dt>
               <dd className="fd-kv__num">
-                <StrainLink id={state.value.mergedInto.id} onOpen={onOpen} /> <span className="fd-field__hint">({RELATION_WORDS[state.value.mergedInto.relation]})</span>
+                <StrainLink id={state.value.mergedInto.id} onOpen={onOpen} /> <span className="fd-field__hint">({t(`account.chain.${state.value.mergedInto.relation}`)})</span>
               </dd>
             </div>
           ) : null}
@@ -150,10 +142,10 @@ export function HistoryView({ state, nowMs }: { state: ChainState<HistoryRow[]>;
         <ol className="fd-list chain-history" aria-label={t("actions.chain.latestEvents")} data-testid="history-list">
           {state.value.map((row, i) => (
             <li key={`${row.tx_hash}-${row.event}-${row.role ?? ""}-${i}`} className="chain-event">
-              <span className="chain-event__text">{describeHistory(row)}</span>
+              <span className="chain-event__text">{describeHistory(row, t)}</span>
               <span className="chain-event__meta">
                 <time dateTime={row.block_time} title={row.block_time}>
-                  {relativeTime(row.block_time, nowMs)}
+                  {agoText(t, row.block_time, nowMs)}
                 </time>
                 <ExtLink href={explorerTx(row.tx_hash)}>{t("actions.chain.tx")}</ExtLink>
               </span>

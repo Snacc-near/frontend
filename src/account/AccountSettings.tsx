@@ -16,6 +16,8 @@ import {
   exportMyData,
   type AdminMetrics,
 } from "./api.ts";
+import { accountMessageText } from "../i18n/accountText.ts";
+import { useT } from "../i18n/react.tsx";
 import { browserOptedOut, readTelemetryChoice, setTelemetryChoice } from "../telemetry.ts";
 import { Field, Input, KeycapButton, Select } from "../ui/controls.tsx";
 
@@ -38,6 +40,7 @@ function download(name: string, json: unknown): void {
 }
 
 export function UsageStatsSettings() {
+  const { t, rich } = useT();
   const [on, setOn] = useState(() => {
     const choice = readTelemetryChoice();
     return choice === "on" || (choice === null && !browserOptedOut());
@@ -48,12 +51,17 @@ export function UsageStatsSettings() {
   return (
     <section className="guide-section" aria-labelledby="settings-stats-h" data-testid="settings-stats">
       <h4 id="settings-stats-h" className="fd-h">
-        Anonymous usage stats
+        {t("account.usage.title")}
       </h4>
       <p className="fd-field__hint">
-        Counts of steps like &quot;intro finished&quot; or &quot;transaction succeeded&quot;, plus error reports, sent to Snacc&apos;s own backend with a random
-        device id. Never your account id, wallet, keys or IP address. Details on the <a className="fd-a" href="/privacy#usage-stats">privacy page</a>.
-        {dnt ? " Your browser asks sites not to track, so this starts off." : ""}
+        {rich("account.usage.hint", {
+          privacy: (
+            <a className="fd-a" href="/privacy#usage-stats">
+              {t("account.usage.privacyPage")}
+            </a>
+          ),
+        })}
+        {dnt ? ` ${t("account.usage.dnt")}` : ""}
       </p>
       <KeycapButton
         mono
@@ -66,13 +74,14 @@ export function UsageStatsSettings() {
         }}
         data-testid="settings-stats-toggle"
       >
-        share anonymous usage stats
+        {t("account.usage.toggle")}
       </KeycapButton>
     </section>
   );
 }
 
 export function MyDataSettings() {
+  const { t } = useT();
   const account = useAccount();
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -81,14 +90,11 @@ export function MyDataSettings() {
   return (
     <section className="guide-section" aria-labelledby="settings-mydata-h" data-testid="settings-mydata">
       <h4 id="settings-mydata-h" className="fd-h">
-        Your profile data
+        {t("account.data.title")}
       </h4>
       {signedIn ? (
         <>
-          <p className="fd-field__hint">
-            Download everything the Snacc profile database stores about you as one JSON file: profile, recorded activity, achievements, notifications,
-            settings, follows and the starter-pack claim. On-chain data stays on NEAR testnet.
-          </p>
+          <p className="fd-field__hint">{t("account.data.hint")}</p>
           <div className="fd-row">
             <KeycapButton
               mono
@@ -102,19 +108,19 @@ export function MyDataSettings() {
                 setBusy(false);
                 if (error) return setMsg(error);
                 download(exportFileName(account.nearAccountId), data);
-                setMsg("Downloaded.");
+                setMsg(t("account.data.downloaded"));
               }}
             >
-              {busy ? "preparing…" : "download my data"}
+              {busy ? t("account.data.preparing") : t("account.data.download")}
             </KeycapButton>
           </div>
         </>
       ) : (
-        <p className="fd-field__hint">Sign in to the profile (the key next to your wallet) to download your data.</p>
+        <p className="fd-field__hint">{t("account.data.signIn")}</p>
       )}
       {msg ? (
         <p className="fd-field__hint" role="status">
-          {msg}
+          {accountMessageText(t, msg)}
         </p>
       ) : null}
     </section>
@@ -122,20 +128,21 @@ export function MyDataSettings() {
 }
 
 function MetricsTable({ m }: { m: AdminMetrics }) {
+  const { t } = useT();
   return (
     <div className="fd-stack" data-testid="admin-metrics">
       <table className="guide-table">
-        <caption className="fd-sub">funnel · distinct devices per UTC day</caption>
+        <caption className="fd-sub">{t("account.metrics.funnel")}</caption>
         <thead>
           <tr>
-            <th>day</th>
-            <th>landing</th>
-            <th>app</th>
-            <th>intro done</th>
-            <th>wallet</th>
-            <th>signed in</th>
-            <th>tx ok</th>
-            <th>errors</th>
+            <th>{t("account.metrics.day")}</th>
+            <th>{t("account.metrics.landing")}</th>
+            <th>{t("account.metrics.app")}</th>
+            <th>{t("account.metrics.introDone")}</th>
+            <th>{t("account.metrics.wallet")}</th>
+            <th>{t("account.metrics.signedIn")}</th>
+            <th>{t("account.metrics.txOk")}</th>
+            <th>{t("account.metrics.errors")}</th>
           </tr>
         </thead>
         <tbody>
@@ -154,13 +161,13 @@ function MetricsTable({ m }: { m: AdminMetrics }) {
         </tbody>
       </table>
       <table className="guide-table">
-        <caption className="fd-sub">retention · devices first seen that day, back on day 1 / day 7</caption>
+        <caption className="fd-sub">{t("account.metrics.retention")}</caption>
         <thead>
           <tr>
-            <th>cohort</th>
-            <th>devices</th>
-            <th>D1</th>
-            <th>D7</th>
+            <th>{t("account.metrics.cohort")}</th>
+            <th>{t("account.metrics.devices")}</th>
+            <th>{t("account.metrics.d1")}</th>
+            <th>{t("account.metrics.d7")}</th>
           </tr>
         </thead>
         <tbody>
@@ -175,7 +182,7 @@ function MetricsTable({ m }: { m: AdminMetrics }) {
         </tbody>
       </table>
       <ul className="guide-keys">
-        {m.top_errors.length === 0 ? <li>no client errors in the last 7 days</li> : null}
+        {m.top_errors.length === 0 ? <li>{t("account.metrics.noErrors")}</li> : null}
         {m.top_errors.map((e, i) => (
           <li key={i}>
             <code>{e.name}</code> ×{e.n} · {e.route} · {e.message}
@@ -187,6 +194,7 @@ function MetricsTable({ m }: { m: AdminMetrics }) {
 }
 
 export function AdminTools() {
+  const { t } = useT();
   const account = useAccount();
   const uid = useId();
   const [admin, setAdmin] = useState(false);
@@ -215,17 +223,17 @@ export function AdminTools() {
   return (
     <section className="guide-section" aria-labelledby="settings-admin-h" data-testid="settings-admin">
       <h4 id="settings-admin-h" className="fd-h">
-        Admin
+        {t("account.admin.title")}
       </h4>
-      <p className="fd-field__hint">You are listed in admins_snacc. Every action here is checked again by the database.</p>
+      <p className="fd-field__hint">{t("account.admin.hint")}</p>
       <div className="fd-stack">
-        <Field id={`${uid}-t`} label="announcement title" hint="3 to 120 characters">
+        <Field id={`${uid}-t`} label={t("account.admin.announceTitle")} hint={t("account.admin.announceTitleHint")}>
           <Input id={`${uid}-t`} value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} />
         </Field>
-        <Field id={`${uid}-b`} label="announcement text" hint="up to 1000 characters">
+        <Field id={`${uid}-b`} label={t("account.admin.announceText")} hint={t("account.admin.announceTextHint")}>
           <Input id={`${uid}-b`} value={body} maxLength={1000} onChange={(e) => setBody(e.target.value)} />
         </Field>
-        <Field id={`${uid}-d`} label="show for (days)">
+        <Field id={`${uid}-d`} label={t("account.admin.days")}>
           <Input id={`${uid}-d`} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
         </Field>
         <div className="fd-row">
@@ -236,17 +244,17 @@ export function AdminTools() {
             data-testid="admin-broadcast"
             onClick={async () => {
               const r = await adminBroadcast(client, title.trim(), body.trim(), days);
-              say(r, `Announcement sent to ${r.data ?? 0} profiles.`);
+              say(r, t("account.admin.sent", { n: r.data ?? 0 }));
               if (!r.error) {
                 setTitle("");
                 setBody("");
               }
             }}
           >
-            broadcast
+            {t("account.admin.broadcast")}
           </KeycapButton>
         </div>
-        <Field id={`${uid}-a`} label="reset username + bio of account">
+        <Field id={`${uid}-a`} label={t("account.admin.resetLabel")}>
           <Input id={`${uid}-a`} value={target} placeholder="someone.testnet" onChange={(e) => setTarget(e.target.value.trim().toLowerCase())} />
         </Field>
         <div className="fd-row">
@@ -256,22 +264,27 @@ export function AdminTools() {
             disabled={target.length < 2}
             onClick={async () => {
               const r = await adminResetProfileText(client, target);
-              say(r, r.data ? `Reset ${target}.` : `No profile for ${target}.`);
+              say(r, r.data ? t("account.admin.resetDone", { account: target }) : t("account.admin.resetNone", { account: target }));
             }}
           >
-            reset profile text
+            {t("account.admin.reset")}
           </KeycapButton>
         </div>
-        <Field id={`${uid}-w`} label="block a word" hint="letters only after normalising; reserved = whole username, abusive = anywhere">
+        <Field id={`${uid}-w`} label={t("account.admin.blockLabel")} hint={t("account.admin.blockHint")}>
           <Input id={`${uid}-w`} value={term} onChange={(e) => setTerm(e.target.value)} />
         </Field>
         <div className="fd-row">
-          <Select aria-label="word kind" value={termKind} onChange={(e) => setTermKind(e.target.value as "abusive" | "reserved")}>
-            <option value="abusive">abusive</option>
-            <option value="reserved">reserved</option>
+          <Select aria-label={t("account.admin.wordKind")} value={termKind} onChange={(e) => setTermKind(e.target.value as "abusive" | "reserved")}>
+            <option value="abusive">{t("account.admin.abusive")}</option>
+            <option value="reserved">{t("account.admin.reserved")}</option>
           </Select>
-          <KeycapButton mono icon="close" disabled={term.trim().length < 3} onClick={async () => say(await adminBlockTerm(client, term.trim(), termKind), "Word blocked.")}>
-            block word
+          <KeycapButton
+            mono
+            icon="close"
+            disabled={term.trim().length < 3}
+            onClick={async () => say(await adminBlockTerm(client, term.trim(), termKind), t("account.admin.blocked"))}
+          >
+            {t("account.admin.blockButton")}
           </KeycapButton>
         </div>
         <div className="fd-row">
@@ -285,13 +298,13 @@ export function AdminTools() {
               else setMetrics(r.data);
             }}
           >
-            load usage funnel (14 days)
+            {t("account.admin.loadMetrics")}
           </KeycapButton>
         </div>
         {metrics ? <MetricsTable m={metrics} /> : null}
         {msg ? (
           <p className="fd-field__hint" role="status">
-            {msg}
+            {accountMessageText(t, msg)}
           </p>
         ) : null}
       </div>

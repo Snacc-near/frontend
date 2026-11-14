@@ -1,0 +1,52 @@
+import type { Messages } from "../../types.ts";
+import type en from "../en/sign.ts";
+
+/** Indonesian copy for the `/sign` popup of the email login (UI-161 phase B5). The signed payload itself is never rewritten. */
+const sign = {
+  title: "Snacc · masuk dengan email",
+  offBold: "Masuk dengan email belum diatur di deployment ini.",
+  offRest: "Tutup jendela ini dan pilih dompet NEAR sebagai gantinya.",
+  starting: "Memulai Privy…",
+  codeHint: "Privy mengirim kode sekali pakai. Akun NEAR testnet baru dibuat untukmu saat masuk pertama kali; saldonya 0 NEAR.",
+  email: "email",
+  sendCode: "kirim kode",
+  sending: "mengirim…",
+  codeSentTo: "kode dikirim ke {email}",
+  logIn: "masuk",
+  checking: "memeriksa…",
+  back: "kembali",
+  nearAccount: "Akun NEAR: {account}",
+  requestedBy: "Diminta oleh {origin}:",
+  approve: "setujui",
+  signing: "menandatangani…",
+  reject: "tolak",
+  waiting: "Menunggu permintaan dari game…",
+  openerHint: "Halaman ini dibuka dari pemilih dompet di game. Kamu bisa menutupnya.",
+  keysStay: "Kunci tetap di Privy; game tidak pernah melihatnya.",
+  request: {
+    unknown: "permintaan tidak dikenal",
+    unknownKind: "tidak dikenal",
+    thisApp: "app ini",
+    network: " ({network})",
+    signIn: "masuk dan bagikan id akun NEAR-mu{net}",
+    signInMessage: "masuk{net} dan tanda tangani pesan untuk {recipient}",
+    signMessage: "tanda tangani pesan \"{message}\" untuk {recipient}",
+    delegate: "tanda tangani aksi delegasi (meta-transaksi)",
+    kindRequest: "permintaan {kind}",
+    call: "panggil {method}",
+    callDeposit: "panggil {method}, menyertakan {amount} NEAR",
+    addFull: "tambah kunci AKSES PENUH",
+    addLimited: "tambah kunci terbatas untuk {receiver} ({scope}, {allowance})",
+    methods: "{n} method",
+    anyMethod: "method apa saja",
+    allowance: "jatah gas {amount} NEAR",
+    noAllowance: "tanpa batas jatah",
+    deleteKey: "hapus kunci {key}",
+    send: "kirim {amount} NEAR",
+    actionType: "aksi {type}",
+    unknownAction: "aksi tidak dikenal",
+    on: "{action} di {receiver}",
+  },
+} satisfies Messages<typeof en>;
+
+export default sign;

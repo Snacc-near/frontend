@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "./session.tsx";
 import { loadAnnouncements, type AnnouncementRow } from "./api.ts";
 import { safeLocalStorage } from "./config.ts";
+import { useT } from "../i18n/react.tsx";
 import "./account.css";
 
 export const DISMISSED_ANNOUNCEMENTS_KEY = "snacc_dismissed_announcements";
@@ -27,6 +28,7 @@ export function pickAnnouncement(rows: readonly AnnouncementRow[], dismissed: re
 }
 
 export function AnnouncementBanner() {
+  const { t } = useT();
   const account = useAccount();
   const [rows, setRows] = useState<AnnouncementRow[]>([]);
   const [dismissed, setDismissed] = useState<number[]>(() => readDismissed());
@@ -60,7 +62,7 @@ export function AnnouncementBanner() {
     <div className="acct-announce" role="status" data-testid="announcement">
       <strong className="acct-announce__title">{current.title}</strong>
       {current.body ? <span className="acct-announce__body">{current.body}</span> : null}
-      <button type="button" className="acct-announce__close" onClick={dismiss} aria-label="dismiss announcement">
+      <button type="button" className="acct-announce__close" onClick={dismiss} aria-label={t("account.announce.dismiss")}>
         ×
       </button>
     </div>

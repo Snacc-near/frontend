@@ -32,7 +32,7 @@ export function LanguageSettings() {
         ))}
       </div>
       <p className="fd-field__hint">{rich("settings.language.hint", { key: <code>{LOCALE_KEY}</code> })}</p>
-      <p className="fd-field__hint">{t("settings.language.partial")}</p>
+      <p className="fd-field__hint">{t("settings.language.exceptions")}</p>
     </section>
   );
 }

@@ -35,9 +35,11 @@ the game is at `/app`). Testnet only; `$SNACC` has no monetary value.
   payloads of the other actions have not been checked against the chain by this UI
   (the contract methods themselves are covered by the umbrella's gladi evidence,
   signed outside the UI).
-- The profile features (Supabase) are built and merged but **not deployed yet**: the
-  production build has no Supabase configuration, so they stay hidden. See
-  [Player profiles](#player-profiles-optional-ui-148ui-149).
+- The profile features (Supabase) are **deployed**: the production build carries the
+  Supabase configuration, so profiles, sign-in with NEAR, notifications and the public
+  pages are live. Two features are still **not active**: the starter pack (the faucet
+  secret is not set on the backend) and account deletion (its migration is not applied).
+  See [Player profiles](#player-profiles-optional-ui-148ui-149).
 
 ## Routes
 
@@ -246,11 +248,12 @@ window is in [Environment variables](#environment-variables).
 
 ## Player profiles (optional, UI-148/UI-149)
 
-**Status: built and merged, not deployed yet.** These features need a Supabase project with the
-schema and Edge Functions from the backend repo (`supabase/`, see its README). That database setup
-has not been deployed, and the production build has no `VITE_SUPABASE_URL` /
-`VITE_SUPABASE_PUBLISHABLE_KEY`, so everything in this section is hidden there today. It is enabled
-by setting both variables once the database is deployed; until then nothing here is live.
+**Status: deployed.** These features need a Supabase project with the schema and Edge Functions from
+the backend repo (`supabase/`, see its README). The production build carries `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY`, so everything in this section is on there. Two parts are **not active**
+yet: the **starter pack** (the backend's faucet secret is not set, so the claim cannot pay out) and
+**account deletion** ("Delete my profile": its backend migration is not applied). A build without both
+variables shows none of this and the game is unchanged.
 
 With both variables set, the game shows "Save progress — sign in" next to the wallet, the Profile
 window, the notifications bell, usernames and extra leaderboard tabs ("Most active (7 days)",
@@ -271,8 +274,8 @@ owner, status, vitality, "Open in game" = `/app?strain=<id>`).
 
 ### Daily quests, XP and seasons (UI-153, UI-154)
 
-**Status: built, not deployed, and it needs the backend migration `0004` (quests, XP, seasons) applied to the
-profile database**, which has not happened yet; the profile features themselves are still hidden in production.
+**Status: deployed.** The backend migration `0004` (`snacc_quests_seasons`: quests, XP, seasons) is applied
+to the profile database (2026-11-13), and the production build carries the two Supabase variables.
 Behind the same two variables the toolbar gets a "quests" key. The Quests window shows today's three
 quests with progress bars, the countdown to the 00:00 UTC reset, the player's level and XP and a
 "How XP works" list; signed out, it explains that quests need a sign-in. Level shows on the Profile window,
@@ -304,7 +307,7 @@ signs for the Snacc contract by default and for the market only (any other recei
 ### Invite friends (UI-158)
 
 **Status: live since 2026-11-13** (backend migration `0007` applied to the profile database); like the rest of
-this section it stays hidden while the two Supabase variables are empty. Any page
+this section it stays hidden in a build where the two Supabase variables are empty. Any page
 that is opened with `?ref=<account>` (for example `https://snacc-nu.vercel.app/app?ref=alice.testnet`) stores that
 NEAR account in `localStorage` for seven days (`src/main.tsx` -> `captureReferral`; a malformed account is ignored,
 the newest link wins). After the player signs in and has a profile, `SessionProvider` calls the database function
@@ -470,9 +473,12 @@ services.
 
 ## Languages (UI-161)
 
-The UI speaks English and Indonesian (`en`, `id`). English is the source of truth. The landing page
-(`/`) is translated; the game, help, account and public pages are being converted one namespace at a
-time, and the Settings window says so.
+The whole app speaks English and Indonesian (`en`, `id`): the landing page, the game and its windows,
+help, Settings, the account sections, push, the email-login popup and the public pages (`/p/<account>`,
+`/snacc/<id>`). English is the source of truth. **Terms and Privacy stay English**: with the UI in
+Indonesian they show a one-line note saying so (the legal text is marked `lang="en"`), while their header,
+footer and the 404 page follow the language. Data that comes from the contract or the server (quest titles,
+notification bodies, NPC and recipe names, usernames, bios) is shown as it arrives and is not translated.
 
 **Which language.** The saved choice (`snacc_locale` in localStorage, set by the `EN | ID` switch in the
 landing header or the *Language / Bahasa* section of Settings, and cleared by *Reset local data*), else
@@ -481,7 +487,9 @@ server rendering) it is always English. `<html lang>` follows the choice. Outsid
 `getLocale()` from `src/i18n/locale.ts` returns the current language.
 
 **Where the words live.** One file per namespace and language: `src/i18n/messages/en/<ns>.ts` and
-`src/i18n/messages/id/<ns>.ts` (today `common`, `landing`, `demos`, `settings`). A file is a plain nested
+`src/i18n/messages/id/<ns>.ts` (`account`, `actions`, `checks`, `collection`, `common`, `demo`, `demos`, `help`,
+`hud`, `landing`, `market`, `npc`, `onboarding`, `onetap`, `public`, `push`, `settings`, `sign`, `skin`, `social`,
+`tx`). A file is a plain nested
 object of strings; `{name}` marks a value filled in at run time. There is no plural engine: write one key
 per case.
 
@@ -517,8 +525,12 @@ that no user-visible string is written straight into the JSX of the converted fi
 and use it with `t()`. **Add a namespace.** Create `<ns>.ts` in both language folders, then add one line
 to `src/i18n/messages/en/index.ts` and one to `src/i18n/messages/id/index.ts`. **Convert a screen.**
 Replace its literal text with `t()` / `rich()`, add the file to `convertedFiles()` in the guard test, and
-wrap its route in `<I18nProvider>` in `src/main.tsx` (that is what keeps `<html lang>` in step; only the
-landing route is wrapped so far). Names stay as they are in both languages: Snacc, `$SNACC`, ATP, NEAR,
+wrap its route in `<I18nProvider>` in `src/main.tsx` (that is what keeps `<html lang>` in step; every route is
+wrapped now). Helpers that return text for other code keep their English as the default and take an optional
+translator: `describeHistory(row, t?)`, `describePayload(payload, t?)`, `formatCountdown(seconds, t?)`; the
+profile-service messages (`AccountError`, push client) stay English where they are produced and
+`accountMessageText(t, message)` (`src/i18n/accountText.ts`) translates the known ones when a screen shows
+them. The signed payload of the email-login popup is never rewritten, in either language. Names stay as they are in both languages: Snacc, `$SNACC`, ATP, NEAR,
 TEE, contract method names and account ids. The Indonesian glossary is at the top of
 `src/i18n/messages/id/common.ts`.
 
