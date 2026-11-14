@@ -147,6 +147,7 @@ function convertedFiles(): string[] {
     "src/hud/SwapPanel.tsx",
     "src/hud/RecipeSearchModal.tsx",
     "src/hud/ThesisDashboardModal.tsx",
+    "src/hud/CellLab.tsx",
   ];
   return [...landing, ...hud, ...actions, ...windows,"src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
 }
