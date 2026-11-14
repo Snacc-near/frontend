@@ -1,12 +1,16 @@
 /**
  * How to play (UI-151): rules, a glossary and a "what things cost" list in which every value names the
  * constant or function it comes from. "Replay intro" reopens the first-run steps.
+ *
+ * UI-161 phase B4: the words come from the `help` dictionary (English or Indonesian); the figures are
+ * computed in `content.ts`. The `source:` line of a cost row (file and constant names) is code.
  */
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { KeycapButton, TabPanel, Tabs } from "../ui/controls.tsx";
 import { Cap, Tag } from "../ui/fd.tsx";
-import { COSTS, GLOSSARY, RULES } from "./content.ts";
+import { costs, glossary, rules } from "./content.ts";
 import "../ui/fd.css";
 import "./guide.css";
 
@@ -19,43 +23,47 @@ export interface HelpModalProps {
 type HelpTab = "rules" | "glossary" | "costs";
 
 export function HelpModal({ onClose, onReplay }: HelpModalProps) {
+  const { t, locale } = useT();
   const idBase = useId();
   const [tab, setTab] = useState<HelpTab>("rules");
+  const ruleList = useMemo(() => rules(locale), [locale]);
+  const glossaryList = useMemo(() => glossary(locale), [locale]);
+  const costList = useMemo(() => costs(locale), [locale]);
   return (
     <Modal
       title="help.md"
-      heading="How to play"
+      heading={t("help.modal.heading")}
       size="lg"
       onClose={onClose}
       testId="help-modal"
       footer={
         <>
-          <span>numbers come from code constants or the contract source, each with its source</span>
+          <span>{t("help.modal.footer")}</span>
           <Tag>testnet</Tag>
         </>
       }
     >
       <div className="fd-stack">
         <div className="fd-row fd-row--between">
-          <Cap icon="doc">rules, glossary and costs</Cap>
+          <Cap icon="doc">{t("help.modal.cap")}</Cap>
           <KeycapButton mono icon="spark" onClick={onReplay} data-testid="help-replay">
-            replay intro
+            {t("help.modal.replay")}
           </KeycapButton>
         </div>
         <Tabs
-          label="help sections"
+          label={t("help.modal.tabsLabel")}
           idBase={idBase}
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "rules", label: "rules", icon: "doc" },
-            { id: "glossary", label: "glossary", icon: "search" },
-            { id: "costs", label: "what things cost", icon: "scale" },
+            { id: "rules", label: t("help.modal.tabRules"), icon: "doc" },
+            { id: "glossary", label: t("help.modal.tabGlossary"), icon: "search" },
+            { id: "costs", label: t("help.modal.tabCosts"), icon: "scale" },
           ]}
         />
         {tab === "rules" ? (
           <TabPanel idBase={idBase} id="rules">
-            {RULES.map((r) => (
+            {ruleList.map((r) => (
               <section key={r.id} className="guide-rule" aria-labelledby={`${idBase}-rule-${r.id}`}>
                 <h4 id={`${idBase}-rule-${r.id}`} className="fd-h">
                   {r.title}
@@ -68,7 +76,7 @@ export function HelpModal({ onClose, onReplay }: HelpModalProps) {
         {tab === "glossary" ? (
           <TabPanel idBase={idBase} id="glossary">
             <dl className="guide-gloss" data-testid="help-glossary">
-              {GLOSSARY.map((g) => (
+              {glossaryList.map((g) => (
                 <div key={g.id}>
                   <dt>{g.term}</dt>
                   <dd>{g.body}</dd>
@@ -80,17 +88,16 @@ export function HelpModal({ onClose, onReplay }: HelpModalProps) {
         {tab === "costs" ? (
           <TabPanel idBase={idBase} id="costs">
             <p className="fd-note">
-              <strong>What things cost.</strong> Testnet figures. $SNACC on testnet has no monetary value, and none of this is a promise
-              of any return.
+              <strong>{t("help.costs.lead")}</strong> {t("help.costs.note")}
             </p>
             <ul className="fd-list" data-testid="help-costs">
-              {COSTS.map((c) => (
+              {costList.map((c) => (
                 <li key={c.id} className="guide-cost">
                   <span className="fd-sub">{c.item}</span>
                   <span className="guide-cost__value">{c.value}</span>
                   <p>{c.note}</p>
                   <p className="guide-source">
-                    source: <code>{c.source}</code>
+                    {t("help.costs.source")} <code>{c.source}</code>
                   </p>
                 </li>
               ))}

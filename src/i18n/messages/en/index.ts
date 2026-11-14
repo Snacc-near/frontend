@@ -8,10 +8,13 @@
 import actions from "./actions.ts";
 import common from "./common.ts";
 import demos from "./demos.ts";
+import help from "./help.ts";
 import hud from "./hud.ts";
 import landing from "./landing.ts";
+import onboarding from "./onboarding.ts";
+import onetap from "./onetap.ts";
 import settings from "./settings.ts";
 import skin from "./skin.ts";
 import tx from "./tx.ts";
 
-export const en = { actions, common, demos, hud, landing, settings, skin, tx };
+export const en = { actions, common, demos, help, hud, landing, onboarding, onetap, settings, skin, tx };

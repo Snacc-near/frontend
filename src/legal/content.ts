@@ -118,7 +118,7 @@ export const PRIVACY: LegalDoc = {
       id: "storage",
       heading: "What stays in your browser",
       paragraphs: [
-        "These localStorage keys belong to the Snacc app. They never leave your device, and Settings has a button that clears exactly these keys:",
+        "These localStorage keys belong to the Snacc app, including the one that remembers the language you pick (snacc_locale, English or Bahasa Indonesia). They never leave your device, and Settings has a button that clears exactly these keys:",
       ],
       items: APP_LOCAL_KEY_INFO.map((k) => `${k.key}: ${k.what}`),
     },
