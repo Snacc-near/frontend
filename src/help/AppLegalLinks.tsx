@@ -4,12 +4,16 @@
  * names follow the language (UI-161); the pages they open stay English.
  */
 import { useT } from "../i18n/react.tsx";
+import { LINKS } from "../landing/chapters.ts";
 
 export function AppLegalLinks() {
   const { t } = useT();
   return (
     <nav className="pointer-events-auto flex flex-wrap items-center justify-center gap-x-3 gap-y-0 font-mono text-[10px] lowercase text-[var(--ink)]" aria-label={t("help.legal.aria")} data-testid="app-legal">
       <span>{t("help.legal.line")}</span>
+      <a className="fd-a" href={LINKS.docs} target="_blank" rel="noopener noreferrer" data-testid="app-docs">
+        {t("help.docs.foot")}
+      </a>
       <a className="fd-a" href="/terms" data-testid="app-terms">
         {t("help.legal.terms")}
       </a>

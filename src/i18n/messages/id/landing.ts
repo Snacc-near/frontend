@@ -11,7 +11,7 @@ const landing = {
 
   header: {
     status: { live: "testnet live", loading: "menyambung", offline: "offline" },
-    nav: { label: "Utama", story: "Cerita", live: "Live", github: "GitHub" },
+    nav: { label: "Utama", story: "Cerita", live: "Live", github: "GitHub", docs: "Panduan" },
     sound: "Efek suara",
     launch: "Buka app",
     language: "Bahasa",
@@ -111,6 +111,7 @@ const landing = {
     chip: "fig-01.inkubator · NEAR testnet",
     cta: "Masuk lab",
     scroll: "Gulir",
+    docs: "Baca panduan",
     hintLens: "arahkan lensa ke cawan petri",
     hintDoor: "arahkan kursor ke pintu",
   },

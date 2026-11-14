@@ -36,6 +36,12 @@ const help = {
     onlyEnglish: "This page is only available in English.",
   },
 
+  docs: {
+    label: "Docs",
+    aria: "Open the Snacc docs in a new tab",
+    foot: "docs",
+  },
+
   rules: {
     loop: {
       title: "The loop",
