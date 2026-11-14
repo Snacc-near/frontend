@@ -32,6 +32,12 @@ const help = {
     onlyEnglish: "Halaman ini hanya tersedia dalam bahasa Inggris.",
   },
 
+  docs: {
+    label: "Panduan",
+    aria: "Buka panduan Snacc di tab baru",
+    foot: "panduan",
+  },
+
   rules: {
     loop: {
       title: "Putarannya",

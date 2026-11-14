@@ -59,6 +59,9 @@ export function HeroBlock({ live, finePointer, style }: { live: LiveState; fineP
             <a className="fd-btn fd-btn--primary" href={LINKS.app} data-magnetic="">
               {t("landing.hero.cta")}
             </a>
+            <a className="fd-btn" href={LINKS.docs} target="_blank" rel="noopener noreferrer" data-magnetic="" data-testid="hero-docs">
+              {t("landing.hero.docs")} <span aria-hidden="true">↗</span>
+            </a>
             <a className="fd-btn" href="#ch-02" data-magnetic="">
               {t("landing.hero.scroll")} <span aria-hidden="true">↓</span>
             </a>

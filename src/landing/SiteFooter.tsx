@@ -51,6 +51,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     icon: "doc",
     links: [
       { label: "Snacc-near", href: LINKS.github, ...note("landing.footer.build.githubNote") },
+      { label: "docs", href: LINKS.docs },
       { label: "contracts", href: repo("contracts") },
       { label: "sdk", href: repo("sdk") },
       { label: "backend", href: repo("backend") },

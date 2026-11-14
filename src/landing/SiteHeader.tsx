@@ -33,6 +33,9 @@ export function SiteHeader({ live }: { live: LiveStatus }) {
           <a className="ln-nav__link ln-nav__link--opt" href={LINKS.github} target="_blank" rel="noopener noreferrer">
             {t("landing.header.nav.github")}
           </a>
+          <a className="ln-nav__link ln-nav__link--opt" href={LINKS.docs} target="_blank" rel="noopener noreferrer" data-testid="landing-docs">
+            {t("landing.header.nav.docs")}
+          </a>
           <LanguageToggle label={t("landing.header.language")} />
           <button type="button" className="ln-sound" aria-pressed={sound} onClick={toggle} aria-label={t("landing.header.sound")}>
             <svg viewBox="0 0 20 20" aria-hidden="true">

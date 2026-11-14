@@ -12,7 +12,7 @@ const landing = {
 
   header: {
     status: { live: "testnet live", loading: "connecting", offline: "offline" },
-    nav: { label: "Primary", story: "Story", live: "Live", github: "GitHub" },
+    nav: { label: "Primary", story: "Story", live: "Live", github: "GitHub", docs: "Docs" },
     sound: "Sound effects",
     launch: "Launch app",
     language: "Language",
@@ -120,6 +120,7 @@ const landing = {
     chip: "fig-01.incubator · NEAR testnet",
     cta: "Enter the lab",
     scroll: "Scroll",
+    docs: "Read the docs",
     hintLens: "move the lens over the dish",
     hintDoor: "hover the door",
   },

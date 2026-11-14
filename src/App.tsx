@@ -45,6 +45,7 @@ import { useReducedMotion } from "./prefs/motionPref.ts";
 import { readSkinPref } from "./prefs/prefs.ts";
 import { GuideLayer } from "./help/GuideLayer.tsx";
 import { AppLegalLinks } from "./help/AppLegalLinks.tsx";
+import { DocsButton } from "./help/DocsButton.tsx";
 import { bioSound } from "./sound.ts";
 import { useT } from "./i18n/react.tsx";
 import type { MessageKey, Translate } from "./i18n/catalog.ts";
@@ -766,6 +767,7 @@ export const App: React.FC = () => {
             </div>
             <div className="flex min-w-0 flex-1 flex-col items-end gap-1.5">
               <div className="pointer-events-auto flex items-start gap-1.5">
+                <DocsButton />
                 <NotificationsBell onOpen={() => setTool("notifications")} />
                 <AccountChip onOpenProfile={() => setTool("profile")} />
                 <WalletControl wallet={wallet} info={accountInfo} lowBalanceExtra={starterPack} />
@@ -785,6 +787,7 @@ export const App: React.FC = () => {
               </span>
               <div className="pointer-events-auto flex items-center gap-1.5">
                 <ModeSwitch mode={mode} onChange={handleModeChange} isBackendConnected={isBackendConnected} />
+                <DocsButton compact />
                 <button
                   type="button"
                   onClick={() => setMoreOpen((v) => !v)}

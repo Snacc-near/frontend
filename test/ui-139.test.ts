@@ -16,7 +16,7 @@ describe("UI-139 footer", () => {
         else if (l.href.startsWith("/")) expect(l.href).toBe("/app");
         else
           expect(l.href).toMatch(
-            /^https:\/\/(github\.com\/Snacc-near(\/(contracts|oracle-tee|sdk|backend|frontend|scripts))?$|testnet\.nearblocks\.io(\/address\/snacc-v001\.testnet)?$|docs\.near\.org$|github\.com\/near\/NEPs\/blob\/master\/neps\/nep-0(171|245)\.md$)/,
+            /^https:\/\/(github\.com\/Snacc-near(\/(contracts|oracle-tee|sdk|backend|frontend|scripts))?$|testnet\.nearblocks\.io(\/address\/snacc-v001\.testnet)?$|docs\.near\.org$|snacc-docs\.vercel\.app$|github\.com\/near\/NEPs\/blob\/master\/neps\/nep-0(171|245)\.md$)/,
           );
       }
     }

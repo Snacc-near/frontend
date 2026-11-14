@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useT } from "../i18n/react.tsx";
-import { CHAPTERS, chapterText } from "./chapters.ts";
+import { CHAPTERS, LINKS, chapterText } from "./chapters.ts";
 import { AppetiteDemo, ColonyDemo, EnclaveDemo, FeedDemo, MetabolismDemo } from "./demos.tsx";
 import { Accent, Cap, Chip, Win } from "../ui/fd.tsx";
 import { HeroBlock, Loader, Ruler, Ticker } from "./Hero.tsx";
@@ -105,6 +105,9 @@ export function StaticStory({ source, live }: { source: FigureSource | null; liv
           <div className="ln-cta">
             <a className="fd-btn fd-btn--primary" href="/app">
               {t("landing.hero.cta")}
+            </a>
+            <a className="fd-btn" href={LINKS.docs} target="_blank" rel="noopener noreferrer" data-testid="hero-docs-mobile">
+              {t("landing.hero.docs")} <span aria-hidden="true">↗</span>
             </a>
             <a className="fd-btn" href="#ch-02">
               {t("landing.hero.scroll")} <span aria-hidden="true">↓</span>

@@ -56,6 +56,6 @@ export const CHAPTER_IDS: readonly string[] = CHAPTERS.map((c) => c.id);
 
 export const LINKS = {
   github: "https://github.com/Snacc-near",
-  docs: "https://github.com/Snacc-near/frontend/tree/main/docs",
+  docs: "https://snacc-docs.vercel.app",
   app: "/app",
 } as const;
