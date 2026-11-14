@@ -6,12 +6,14 @@
  * to the Indonesian index.
  */
 import actions from "./actions.ts";
+import collection from "./collection.ts";
 import common from "./common.ts";
 import demos from "./demos.ts";
 import hud from "./hud.ts";
 import landing from "./landing.ts";
+import market from "./market.ts";
 import settings from "./settings.ts";
 import skin from "./skin.ts";
 import tx from "./tx.ts";
 
-export const en = { actions, common, demos, hud, landing, settings, skin, tx };
+export const en = { actions, collection, common, demos, hud, landing, market, settings, skin, tx };

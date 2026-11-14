@@ -127,7 +127,14 @@ function convertedFiles(): string[] {
   ].map((f) => `src/hud/${f}.tsx`);
   // Phase B2: the game action windows, the transaction status lines, the game screen and the shared Modal.
   const actions = ["src/hud/GameActions.tsx", "src/hud/ChainActions.tsx", "src/hud/ChainSections.tsx", "src/hud/ZoneBanner.tsx", "src/App.tsx", "src/ui/Modal.tsx"];
-  return [...landing, ...hud, ...actions, "src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
+  // Phase B3: the market, collection and social windows. Add a file here when it is converted.
+  const windows = [
+    "src/hud/MarketModal.tsx",
+    "src/hud/MyCollection.tsx",
+    "src/hud/StrainDetailModal.tsx",
+    "src/hud/Graveyard.tsx",
+  ];
+  return [...landing, ...hud, ...actions, ...windows,"src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
 }
 
 /** JSX attributes that carry text a reader sees or hears. */

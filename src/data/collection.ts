@@ -9,6 +9,7 @@
  * derived with the contract's own tier rule, not made up.
  */
 
+import { tEn, type Translate } from "../i18n/catalog.ts";
 import { safeNftMediaSrc } from "../landing/lib/live.ts";
 import { viewCall } from "./nearView.ts";
 import type { StrainDetail } from "./types.ts";
@@ -241,14 +242,14 @@ export function hungerSummary(items: readonly CollectionItem[]): HungerSummary {
 }
 
 /** One-line warning computed from view data only; null when nothing owned is hungry. */
-export function hungerMessage(s: HungerSummary): string | null {
+export function hungerMessage(s: HungerSummary, tr: Translate = tEn): string | null {
   const n = s.starving + s.distressed;
   if (n === 0) return null;
-  const tail = n === 1 ? "feed it or it can be snacked" : "feed them or they can be snacked";
-  const verb = n === 1 ? "is" : "are";
-  if (s.distressed === 0) return `${n} of your Snaccs ${verb} starving — ${tail}`;
-  if (s.starving === 0) return `${n} of your Snaccs ${verb} distressed — ${tail}`;
-  return `${n} of your Snaccs are at risk (${s.starving} starving, ${s.distressed} distressed) — ${tail}`;
+  const one = n === 1;
+  const tail = tr(one ? "collection.hunger.tailOne" : "collection.hunger.tailMany");
+  if (s.distressed === 0) return tr(one ? "collection.hunger.starvingOne" : "collection.hunger.starvingMany", { n, tail });
+  if (s.starving === 0) return tr(one ? "collection.hunger.distressedOne" : "collection.hunger.distressedMany", { n, tail });
+  return tr("collection.hunger.mixed", { n, starving: s.starving, distressed: s.distressed, tail });
 }
 
 // ---------------------------------------------------------------- reading from the chain
