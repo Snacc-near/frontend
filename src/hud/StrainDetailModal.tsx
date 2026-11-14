@@ -2,14 +2,19 @@
  * The Strain Detail Modal (the on-chain NFT strain inspector), on the shared `Modal` window.
  * Shows the clicked strain's genetics, organelles, vitality, BMR, and ATP balance.
  * Escape, the focus trap and focus return come from `Modal`.
+ *
+ * UI-161 phase B3: text comes from the `collection.detail` dictionary and the skin words from `useSkinLabels`.
  */
 
 import React from "react";
 import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS, VITALITY_MAX } from "../config/constants.ts";
+import { VITALITY_MAX } from "../config/constants.ts";
 import type { GameMode } from "../config/constants.ts";
 import { healthOf } from "../data/collection.ts";
+import type { MessageKey } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
 import type { GameActionKey } from "./GameActions.tsx";
@@ -36,14 +41,14 @@ interface StrainDetailModalProps {
   onOpenStrain?: (strainId: number) => void;
 }
 
-/** Signed actions offered on an owned strain (UI-150). */
-const DETAIL_ACTIONS: { key: GameActionKey; label: string }[] = [
-  { key: "allocate", label: "allocate ATP" },
-  { key: "divide", label: "divide" },
-  { key: "extract", label: "produce" },
-  { key: "npc", label: "buy spores" },
-  { key: "pool", label: "industrial pool" },
-  { key: "gift", label: "give away" },
+/** Signed actions offered on an owned strain (UI-150); the label is a dictionary key. */
+const DETAIL_ACTIONS: { key: GameActionKey; label: MessageKey }[] = [
+  { key: "allocate", label: "collection.detail.actions.allocate" },
+  { key: "divide", label: "collection.detail.actions.divide" },
+  { key: "extract", label: "collection.detail.actions.extract" },
+  { key: "npc", label: "collection.detail.actions.npc" },
+  { key: "pool", label: "collection.detail.actions.pool" },
+  { key: "gift", label: "collection.detail.actions.gift" },
 ];
 
 const SVG_BOX = "h-40 w-full border border-[var(--ink-hi)] bg-[var(--paper)]";
@@ -53,7 +58,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   isLoading,
   svgDataUri,
   svgStatus = "idle",
-  svgSource = "from /api/strains/{id}/svg",
+  svgSource,
   skin,
   mode,
   onClose,
@@ -63,7 +68,8 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
   onAction,
   onOpenStrain,
 }) => {
-  const labels = SKIN_LABELS[skin];
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
 
   if (!strain && !isLoading) return null;
 
@@ -74,49 +80,57 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
 
   return (
     <Modal
-      title="strain.nft"
-      heading={`strain #${strain?.strain_id ?? "..."}`}
+      title={t("collection.detail.title")}
+      heading={strain ? t("collection.detail.heading", { id: strain.strain_id }) : t("collection.detail.headingLoading")}
       onClose={onClose}
       testId="strain-detail-modal"
-      footer={<span>nft strain on-chain</span>}
+      footer={<span>{t("collection.detail.footer")}</span>}
     >
       {isLoading ? (
-        <Empty icon="ring">loading the strain data from the contract...</Empty>
+        <Empty icon="ring">{t("collection.detail.loading")}</Empty>
       ) : strain ? (
         <div className="fd-stack">
           {/* SVG inspector from nft_token media (rendered safely via img) */}
           <div className="fd-stack" style={{ gap: 6 }}>
             <div className="fd-row fd-row--between">
-              <span className="fd-sub">on-chain svg</span>
+              <span className="fd-sub">{t("collection.detail.svg")}</span>
               <span className="fd-field__hint">
-                {mode === "live" ? (svgStatus === "ready" ? svgSource : svgStatus === "loading" ? "loading…" : svgStatus === "error" ? "unavailable" : "no data") : "demo, simulated"}
+                {mode === "live"
+                  ? svgStatus === "ready"
+                    ? (svgSource ?? t("collection.svgApi"))
+                    : svgStatus === "loading"
+                      ? t("collection.detail.svgLoading")
+                      : svgStatus === "error"
+                        ? t("collection.detail.svgError")
+                        : t("collection.detail.svgNone")
+                  : t("collection.detail.svgDemo")}
               </span>
             </div>
             {mode === "live" && svgStatus === "loading" ? (
               <div className={`${SVG_BOX} flex items-center justify-center text-xs lowercase text-[var(--ink)]`} role="status">
-                loading the on-chain svg…
+                {t("collection.detail.svgLoadingBox")}
               </div>
             ) : mode === "live" && svgDataUri ? (
-              <img src={svgDataUri} alt={`on-chain svg for strain ${strain.strain_id}`} className={`${SVG_BOX} object-contain`} />
+              <img src={svgDataUri} alt={t("collection.detail.svgAlt", { id: strain.strain_id })} className={`${SVG_BOX} object-contain`} />
             ) : mode === "live" ? (
               <div className={`${SVG_BOX} flex items-center justify-center text-xs lowercase text-[var(--ink)]`}>
                 <span className="fd-num text-lg text-[var(--ink-hi)]">—</span>
-                <span className="ml-2">{svgStatus === "error" ? "svg request failed" : "no svg for this strain yet"}</span>
+                <span className="ml-2">{svgStatus === "error" ? t("collection.detail.svgFailed") : t("collection.detail.svgMissing")}</span>
               </div>
             ) : svgDataUri ? (
-              <img src={svgDataUri} alt={`demo svg for strain ${strain.strain_id}`} className={`${SVG_BOX} object-contain`} />
+              <img src={svgDataUri} alt={t("collection.detail.svgDemoAlt", { id: strain.strain_id })} className={`${SVG_BOX} object-contain`} />
             ) : null}
           </div>
 
           {/* Owner & Vault */}
           <dl className="fd-kv">
             <div className="fd-kv__row">
-              <dt>owner</dt>
+              <dt>{t("collection.detail.owner")}</dt>
               <dd className="fd-kv__num">{strain.owner_id}</dd>
             </div>
             {strain.vault_subaccount && (
               <div className="fd-kv__row">
-                <dt>vault subaccount</dt>
+                <dt>{t("collection.detail.vault")}</dt>
                 <dd className="fd-kv__num">{strain.vault_subaccount}</dd>
               </div>
             )}
@@ -142,30 +156,30 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               <span className="fd-meter__fill" style={{ transform: `scaleX(${(vitPct / 100).toFixed(3)})` }} />
             </span>
             <div className="fd-row fd-row--between">
-              <span className="fd-field__hint">stored vitality (before bmr decay)</span>
+              <span className="fd-field__hint">{t("collection.detail.stored")}</span>
               <span className="fd-num text-xs">{strain.vitality.toLocaleString("en-US")}</span>
             </div>
             <div className="fd-row fd-row--between">
-              <span className="fd-field__hint">effective vitality (after bmr decay)</span>
+              <span className="fd-field__hint">{t("collection.detail.effective")}</span>
               <span className="fd-num text-xs">
                 {typeof strain.effective_vitality === "number" ? strain.effective_vitality.toLocaleString("en-US") : "—"}
               </span>
             </div>
             <div className="fd-row fd-row--between">
-              <span className="fd-field__hint">status</span>
+              <span className="fd-field__hint">{t("collection.detail.status")}</span>
               <span className="fd-num text-xs">
                 {strain.status ?? "—"}
-                {starving ? " · starving (effective vitality 0)" : ""}
+                {starving ? t("collection.detail.starvingNote") : ""}
               </span>
             </div>
             <div className="fd-row fd-row--between">
-              <span className="fd-field__hint">hunger rate (bmr)</span>
-              <span className="fd-num text-xs">{strain.bmr_per_hour} / hour</span>
+              <span className="fd-field__hint">{t("collection.detail.bmr")}</span>
+              <span className="fd-num text-xs">{t("collection.detail.perHour", { n: strain.bmr_per_hour })}</span>
             </div>
           </div>
 
           {/* Genetic stats & organelles */}
-          <div className="grid grid-cols-3 gap-2 text-center" role="group" aria-label="organelle levels">
+          <div className="grid grid-cols-3 gap-2 text-center" role="group" aria-label={t("collection.detail.organelLabel")}>
             {(
               [
                 ["mitochondria", strain.organel.mitokondria],
@@ -174,7 +188,7 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
               ] as const
             ).map(([name, level]) => (
               <div key={name} className="flex flex-col gap-0.5 border border-[var(--ink-hi)] bg-[var(--paper)] p-2">
-                <span className="fd-field__hint">{name}</span>
+                <span className="fd-field__hint">{t(`collection.detail.${name}`)}</span>
                 <span className="fd-num text-sm font-semibold">{level}</span>
               </div>
             ))}
@@ -183,9 +197,9 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
           {/* ATP balance & generation */}
           <div className="fd-row fd-row--between">
             <span className="fd-field__hint lowercase">
-              {labels.atp} balance: <span className="fd-num font-semibold text-[var(--ink-hi)]">{strain.atp_balance}</span>
+              {t("collection.detail.balance", { atp: labels.atp })} <span className="fd-num font-semibold text-[var(--ink-hi)]">{strain.atp_balance}</span>
             </span>
-            <span className="fd-field__hint lowercase">generation #{strain.generation}</span>
+            <span className="fd-field__hint lowercase">{t("collection.detail.generation", { n: strain.generation })}</span>
           </div>
 
           {/* UI-155: lineage and history from the chain index (live mode only: demo strains have no chain history) */}
@@ -205,14 +219,14 @@ export const StrainDetailModal: React.FC<StrainDetailModalProps> = ({
             </KeycapButton>
             {mode === "live" ? (
               <span className="fd-field__hint text-center">
-                {feedEnabled ? "feed_strain · signed in your wallet on testnet" : (feedHint ?? labels.feedDisabled)}
+                {feedEnabled ? t("collection.detail.feedSigned") : (feedHint ?? labels.feedDisabled)}
               </span>
             ) : null}
             {mode === "live" && onAction ? (
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" role="group" aria-label="more signed actions" data-testid="strain-actions">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3" role="group" aria-label={t("collection.detail.actionsLabel")} data-testid="strain-actions">
                 {DETAIL_ACTIONS.map((a) => (
                   <KeycapButton key={a.key} onClick={() => onAction(a.key)} data-testid={`strain-action-${a.key}`}>
-                    {a.label}
+                    {t(a.label)}
                   </KeycapButton>
                 ))}
               </div>

@@ -2,6 +2,9 @@
  * My collection: every Snacc an account owns, read from the testnet contract views
  * (`nft_tokens_for_owner`, `get_colony`, `get_strain`). Filters, a hunger warning and the Strain
  * Detail window per strain. Nothing here is simulated, in demo mode too: the window says so.
+ *
+ * UI-161 phase B3: every sentence comes from the `collection` dictionary (`useT()`); thumbnail text and
+ * the health hints reuse `market.row.*` and `market.health.*`.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import "./collection.css";
@@ -29,6 +32,7 @@ import { CONTRACT_ID } from "../data/nearView.ts";
 import { fetchStrainSvg } from "../data/api.ts";
 import { svgToSafeDataUri } from "../data/svg.ts";
 import type { StrainDetail } from "../data/types.ts";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, Field, KeycapButton, Select } from "../ui/controls.tsx";
 import { Icon, Tag } from "../ui/fd.tsx";
@@ -100,36 +104,37 @@ function useCollection(account: string | null): { state: LoadState; reload: () =
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-function hintFor(item: CollectionItem): string | null {
+function hintFor(item: CollectionItem): "starving" | "distressed" | null {
   if (item.health === "starving") return "starving";
   if (item.health === "distressed" && item.status !== "Distressed") return "distressed";
   return null;
 }
 
 function Row({ item, onOpen }: { item: CollectionItem; onOpen: (id: number) => void }) {
+  const { t } = useT();
   const pct = Math.min(100, Math.max(0, (item.effectiveVitality / VITALITY_MAX) * 100));
   const hint = hintFor(item);
   return (
     <li>
       <button type="button" className="coll-row" onClick={() => onOpen(item.strainId)} data-testid={`collection-row-${item.strainId}`} aria-haspopup="dialog">
         {item.mediaSrc ? (
-          <img className="coll-thumb" src={item.mediaSrc} alt={`on-chain svg of strain ${item.strainId}`} loading="lazy" />
+          <img className="coll-thumb" src={item.mediaSrc} alt={t("market.row.svgAlt", { id: item.strainId })} loading="lazy" />
         ) : (
-          <span className="coll-thumb coll-thumb--none" role="img" aria-label={`no valid on-chain svg for strain ${item.strainId}`}>
-            no svg
+          <span className="coll-thumb coll-thumb--none" role="img" aria-label={t("market.row.noSvgLabel", { id: item.strainId })}>
+            {t("market.row.noSvg")}
           </span>
         )}
         <span className="coll-main">
           <span className="fd-row" style={{ gap: 6 }}>
-            <span className="coll-id">strain #{item.strainId}</span>
+            <span className="coll-id">{t("market.row.strain", { id: item.strainId })}</span>
             <Tag>{item.status}</Tag>
-            {hint ? <span className="coll-flag">{hint}</span> : null}
+            {hint ? <span className="coll-flag">{t(`market.health.${hint}`)}</span> : null}
           </span>
           <span className="coll-vit">
             <span
               className="fd-meter"
               role="meter"
-              aria-label={`effective vitality of strain ${item.strainId}`}
+              aria-label={t("market.row.vitalityLabel", { id: item.strainId })}
               aria-valuemin={0}
               aria-valuemax={VITALITY_MAX}
               aria-valuenow={Math.min(VITALITY_MAX, Math.max(0, item.effectiveVitality))}
@@ -141,13 +146,14 @@ function Row({ item, onOpen }: { item: CollectionItem; onOpen: (id: number) => v
             </span>
           </span>
         </span>
-        <span className="coll-gen">generation {item.generation}</span>
+        <span className="coll-gen">{t("market.row.generation", { n: item.generation })}</span>
       </button>
     </li>
   );
 }
 
 export function MyCollection({ accountId, skin = "biolab", mode = "live", onClose, onFeedStrain, onStrainAction, refreshKey = 0, focusStrainId = null }: MyCollectionProps) {
+  const { t } = useT();
   const uid = useId();
   const account = normalizeAccount(accountId);
   const { state, reload } = useCollection(account);
@@ -166,7 +172,7 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
   const items = data?.items;
   const counts = useMemo(() => countByFilter(items ?? []), [items]);
   const shown = useMemo(() => sortItems(filterItems(items ?? [], filter), sort), [items, filter, sort]);
-  const warning = useMemo(() => hungerMessage(hungerSummary(items ?? [])), [items]);
+  const warning = useMemo(() => hungerMessage(hungerSummary(items ?? []), t), [items, t]);
   const opened = openId === null ? null : (items?.find((i) => i.strainId === openId) ?? null);
 
   // The list is a snapshot; opening a strain reads it again so its effective vitality is current.
@@ -210,13 +216,13 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
       if (ac.signal.aborted) return;
       if (!vessel) {
         setLinkedId(null);
-        setLinkNote(`Could not read strain #${linkedId} from the contract.`);
+        setLinkNote(t("collection.linkNote", { id: linkedId }));
         return;
       }
       setLinked({ detail: vessel, svg: svg.svg ? svgToSafeDataUri(svg.svg) : null });
     });
     return () => ac.abort();
-  }, [linkedId]);
+  }, [linkedId, t]);
   useEffect(() => {
     setLinkedId(null);
     setLinkNote(null);
@@ -225,58 +231,50 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
   return (
     <>
       <Modal
-        title="my-collection.idx"
-        heading="My collection"
+        title={t("collection.title")}
+        heading={t("collection.heading")}
         size="lg"
         onClose={onClose}
         testId="collection-modal"
         footer={
           <>
-            <span>
-              source: nft_tokens_for_owner · get_colony · get_strain on {CONTRACT_ID}
-            </span>
-            <Tag>live · testnet</Tag>
+            <span>{t("collection.footer", { contract: CONTRACT_ID })}</span>
+            <Tag>{t("hud.resources.live")}</Tag>
           </>
         }
       >
         <div className="fd-stack">
           {mode === "demo" ? (
             <p className="fd-note" data-testid="collection-demo-note">
-              Demo mode is on: the dish behind this window is simulated, but this list is not. Every number here is read from the testnet contract.
+              {t("collection.demoNote")}
             </p>
           ) : null}
 
           {state.kind === "none" ? (
             <Empty icon="user">
-              Connect a wallet or type an account to see its collection.
+              {t("collection.connect")}
               <br />
-              Type it in the highlight account field, then open this window again.
+              {t("collection.connectHint")}
             </Empty>
           ) : (
             <div className="fd-row fd-row--between">
-              <span className="fd-sub">
-                account <code>{account}</code>
-              </span>
+              <span className="fd-sub">{t("collection.account", { account: account ?? "" })}</span>
               <KeycapButton mono icon="ring" onClick={reload} disabled={state.kind === "loading" || state.kind === "invalid"}>
-                refresh
+                {t("collection.refresh")}
               </KeycapButton>
             </div>
           )}
 
-          {state.kind === "invalid" ? (
-            <Empty icon="warn">
-              “{state.account}” is not a valid NEAR account id (lowercase letters, digits, “-”, “_” and “.”; 2 to 64 characters). Nothing was requested.
-            </Empty>
-          ) : null}
+          {state.kind === "invalid" ? <Empty icon="warn">{t("collection.invalid", { account: state.account })}</Empty> : null}
 
-          {state.kind === "loading" ? <Empty icon="eye">{`reading nft_tokens_for_owner, get_colony and get_strain for ${account}…`}</Empty> : null}
+          {state.kind === "loading" ? <Empty icon="eye">{t("collection.reading", { account: account ?? "" })}</Empty> : null}
 
           {state.kind === "error" ? (
             <Empty icon="warn">
               <div className="fd-stack" style={{ justifyItems: "center" }}>
                 <span data-testid="collection-error">{state.message}</span>
                 <KeycapButton mono icon="ring" onClick={reload}>
-                  retry
+                  {t("collection.retry")}
                 </KeycapButton>
               </div>
             </Empty>
@@ -284,9 +282,9 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
 
           {data && data.items.length === 0 && data.unresolved.length === 0 ? (
             <Empty icon="cell">
-              <span data-testid="collection-empty">{account} owns no Snacc yet (nft_tokens_for_owner returned an empty list).</span>
+              <span data-testid="collection-empty">{t("collection.empty", { account: account ?? "" })}</span>
               <br />
-              Hatch your first Snacc with the Hatch action to start a collection.
+              {t("collection.emptyHint")}
             </Empty>
           ) : null}
 
@@ -301,32 +299,30 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
 
               <div className="coll-controls">
                 <div>
-                  <div className="coll-filters" role="group" aria-label="filter the collection">
+                  <div className="coll-filters" role="group" aria-label={t("collection.filterLabel")}>
                     {FILTERS.map((f) => (
                       <KeycapButton key={f} mono aria-pressed={filter === f} onClick={() => setFilter(f)} data-testid={`collection-filter-${f}`}>
-                        {f} ({counts[f]})
+                        {t(`collection.filters.${f}`)} ({counts[f]})
                       </KeycapButton>
                     ))}
                   </div>
                 </div>
-                <Field id={`${uid}-sort`} label="sort">
+                <Field id={`${uid}-sort`} label={t("collection.sortLabel")}>
                   <Select id={`${uid}-sort`} value={sort} onChange={(e) => setSort(e.target.value as CollectionSort)}>
                     {SORTS.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.label}
+                        {t(`collection.sorts.${s.id}`)}
                       </option>
                     ))}
                   </Select>
                 </Field>
               </div>
-              <p className="fd-field__hint">
-                {`hungry: alive, with effective vitality at or below ${fmt(DISTRESS_MAX_EFFECTIVE_VITALITY)} (the contract’s Distressed band); 0 is starving. Bars show effective vitality, after hunger decay.`}
-              </p>
+              <p className="fd-field__hint">{t("collection.hungryHint", { max: fmt(DISTRESS_MAX_EFFECTIVE_VITALITY) })}</p>
 
               {shown.length === 0 ? (
-                <Empty icon="search">No Snacc matches the “{filter}” filter.</Empty>
+                <Empty icon="search">{t("collection.noMatch", { filter: t(`collection.filters.${filter}`) })}</Empty>
               ) : (
-                <ul className="fd-list coll-list" aria-label="owned snaccs" data-testid="collection-list">
+                <ul className="fd-list coll-list" aria-label={t("collection.listLabel")} data-testid="collection-list">
                   {shown.map((item) => (
                     <Row key={item.strainId} item={item} onOpen={setOpenId} />
                   ))}
@@ -341,11 +337,13 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
 
               {data.unresolved.length > 0 ? (
                 <p className="fd-field__hint fd-field__hint--bad" role="status" data-testid="collection-unresolved">
-                  {data.unresolved.length} owned strain{data.unresolved.length === 1 ? "" : "s"} could not be read this time (
-                  {data.unresolved.map((id) => `#${id}`).join(", ")}). Refresh to try again.
+                  {t(data.unresolved.length === 1 ? "collection.unresolvedOne" : "collection.unresolvedMany", {
+                    n: data.unresolved.length,
+                    ids: data.unresolved.map((id) => `#${id}`).join(", "),
+                  })}
                 </p>
               ) : null}
-              {data.truncated ? <p className="fd-field__hint">This account owns more strains than one read covers; the first {fmt(data.items.length + data.unresolved.length)} are listed.</p> : null}
+              {data.truncated ? <p className="fd-field__hint">{t("collection.truncated", { n: fmt(data.items.length + data.unresolved.length) })}</p> : null}
             </>
           ) : null}
         </div>
@@ -356,12 +354,12 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
           strain={fresh && fresh.strain_id === opened.strainId ? fresh : opened.detail}
           svgDataUri={opened.mediaSrc}
           svgStatus={opened.mediaSrc ? "ready" : "no-data"}
-          svgSource={`from nft_tokens_for_owner on ${CONTRACT_ID}`}
+          svgSource={t("collection.svgSource", { contract: CONTRACT_ID })}
           skin={skin}
           mode="live"
           onClose={() => setOpenId(null)}
           feedEnabled={Boolean(onFeedStrain && wallet.accountId && opened.detail.owner_id === wallet.accountId)}
-          feedHint={wallet.accountId ? "only the owner's connected wallet can feed this Snacc" : "connect a wallet to feed"}
+          feedHint={wallet.accountId ? t("collection.feedOwnerOnly") : t("collection.feedConnect")}
           onFeedClick={() => onFeedStrain?.(opened.strainId)}
           onAction={
             onStrainAction && wallet.accountId && opened.detail.owner_id === wallet.accountId ? (key) => onStrainAction(key, opened.strainId) : undefined
@@ -376,12 +374,12 @@ export function MyCollection({ accountId, skin = "biolab", mode = "live", onClos
           isLoading={linked === null}
           svgDataUri={linked?.svg ?? null}
           svgStatus={linked === null ? "loading" : linked.svg ? "ready" : "no-data"}
-          svgSource="from /api/strains/{id}/svg"
+          svgSource={t("collection.svgApi")}
           skin={skin}
           mode="live"
           onClose={() => setLinkedId(null)}
           feedEnabled={Boolean(onFeedStrain && wallet.accountId && linked && linked.detail.owner_id === wallet.accountId)}
-          feedHint={wallet.accountId ? "only the owner's connected wallet can feed this Snacc" : "connect a wallet to feed"}
+          feedHint={wallet.accountId ? t("collection.feedOwnerOnly") : t("collection.feedConnect")}
           onFeedClick={() => onFeedStrain?.(linkedId)}
           onAction={
             onStrainAction && wallet.accountId && linked && linked.detail.owner_id === wallet.accountId ? (key) => onStrainAction(key, linkedId) : undefined

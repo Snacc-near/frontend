@@ -3,12 +3,15 @@
  * sample numbers): the Rhea price list and a NEAR Intents 1Click dry quote. Display only: nothing
  * here feeds a game mechanic, signs a transaction or moves funds. `$SNACC` is a testnet token and is
  * listed on neither service.
+ *
+ * UI-161 phase B3: text comes from the `npc.swap` dictionary. A quote's own message comes from the service.
  */
 import { useEffect, useId, useState } from "react";
 import type { GameMode, SkinMode } from "../config/constants.ts";
 import { fetchRefPrices, type RefPriceModel } from "../swap/refPrice.ts";
 import { QUOTE_ASSETS, fetchIntentsQuote, type IntentsQuoteResult } from "../swap/intentsQuote.ts";
 import { swapConfig } from "../swap/config.ts";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, ExtLink, Field, Input, KeycapButton, KeycapLink, Select, TabPanel, Tabs } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
@@ -21,9 +24,15 @@ export interface SwapPanelProps {
 
 type SwapTab = "price" | "quote";
 
-const assetLabel = (i: number) => `${QUOTE_ASSETS[i].symbol} (${QUOTE_ASSETS[i].chain})`;
+/** Service routes and request fields: code, the same in every language. */
+const RHEA_SOURCE = "api.rhea.finance /list-token-price";
+const QUOTE_ROUTE = "POST /v0/quote";
+const QUOTE_DRY = "dry: true";
+
+const assetLabel =(i: number) => `${QUOTE_ASSETS[i].symbol} (${QUOTE_ASSETS[i].chain})`;
 
 export function SwapPanel({ mode, onClose, skin = "biolab" }: SwapPanelProps) {
+  const { t, rich } = useT();
   const idBase = useId();
   const [tab, setTab] = useState<SwapTab>("price");
   const [price, setPrice] = useState<RefPriceModel | null>(null);
@@ -51,36 +60,36 @@ export function SwapPanel({ mode, onClose, skin = "biolab" }: SwapPanelProps) {
 
   return (
     <Modal
-      title="swap-quote.view"
-      heading={skin === "fintech" ? "Secondary liquidity preview" : "Swap and price preview"}
+      title={t("npc.swap.title")}
+      heading={skin === "fintech" ? t("npc.swap.headingFintech") : t("npc.swap.headingBiolab")}
       onClose={onClose}
       testId="swap-modal"
       footer={
         <>
-          <span>external public APIs · display only · nothing is signed</span>
-          <Tag>{mode === "demo" ? "demo mode: same live data" : "live"}</Tag>
+          <span>{t("npc.swap.footer")}</span>
+          <Tag>{mode === "demo" ? t("npc.swap.tagDemo") : t("npc.swap.tagLive")}</Tag>
         </>
       }
     >
       <div className="fd-stack">
         <p className="fd-note">
-          <strong>$SNACC is a testnet token with no monetary value.</strong> It is not listed on Rhea or in the 1Click token list, so
-          this panel can only show reference prices and quotes between listed assets.
+          <strong>{t("npc.swap.noteTitle")}</strong>
+          {t("npc.swap.note")}
         </p>
         <Tabs
-          label="swap preview source"
+          label={t("npc.swap.tabsLabel")}
           idBase={idBase}
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "price", label: "Rhea price", icon: "gauge" },
-            { id: "quote", label: "1Click dry quote", icon: "swap" },
+            { id: "price", label: t("npc.swap.tabPrice"), icon: "gauge" },
+            { id: "quote", label: t("npc.swap.tabQuote"), icon: "swap" },
           ]}
         />
         {tab === "price" ? (
           <TabPanel idBase={idBase} id="price">
             {price === null ? (
-              <Empty icon="gauge">reading the Rhea price list…</Empty>
+              <Empty icon="gauge">{t("npc.swap.readingPrice")}</Empty>
             ) : (
               <dl className="fd-kv" data-testid="swap-price">
                 <div className="fd-kv__row">
@@ -90,23 +99,23 @@ export function SwapPanel({ mode, onClose, skin = "biolab" }: SwapPanelProps) {
                 <div className="fd-kv__row">
                   <dt>$SNACC</dt>
                   <dd>
-                    — <Tag>not listed</Tag>
+                    — <Tag>{t("npc.swap.notListed")}</Tag>
                   </dd>
                 </div>
                 <div className="fd-kv__row">
-                  <dt>source</dt>
-                  <dd>{price.status === "error" ? `Rhea unavailable (${price.errorMessage ?? "error"})` : "api.rhea.finance /list-token-price"}</dd>
+                  <dt>{t("npc.swap.source")}</dt>
+                  <dd>{price.status === "error" ? t("npc.swap.rheaDown", { msg: price.errorMessage ?? t("npc.swap.errorWord") }) : RHEA_SOURCE}</dd>
                 </div>
               </dl>
             )}
             <KeycapLink href={price?.rheaSwapUrl ?? "https://app.rhea.finance"} mono>
-              open Rhea
+              {t("npc.swap.openRhea")}
             </KeycapLink>
           </TabPanel>
         ) : (
           <TabPanel idBase={idBase} id="quote">
             <div className="fd-form-grid">
-              <Field id={`${idBase}-in`} label="from">
+              <Field id={`${idBase}-in`} label={t("npc.swap.from")}>
                 <Select id={`${idBase}-in`} value={inIdx} onChange={(e) => setInIdx(Number(e.target.value))}>
                   {QUOTE_ASSETS.map((a, i) => (
                     <option key={a.id} value={i}>
@@ -115,7 +124,7 @@ export function SwapPanel({ mode, onClose, skin = "biolab" }: SwapPanelProps) {
                   ))}
                 </Select>
               </Field>
-              <Field id={`${idBase}-out`} label="to">
+              <Field id={`${idBase}-out`} label={t("npc.swap.to")}>
                 <Select id={`${idBase}-out`} value={outIdx} onChange={(e) => setOutIdx(Number(e.target.value))}>
                   {QUOTE_ASSETS.map((a, i) => (
                     <option key={a.id} value={i}>
@@ -124,31 +133,31 @@ export function SwapPanel({ mode, onClose, skin = "biolab" }: SwapPanelProps) {
                   ))}
                 </Select>
               </Field>
-              <Field id={`${idBase}-amt`} label="amount in">
+              <Field id={`${idBase}-amt`} label={t("npc.swap.amountIn")}>
                 <Input id={`${idBase}-amt`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="1.0" />
               </Field>
             </div>
             <KeycapButton variant="primary" icon="swap" onClick={getQuote} disabled={quoting || inIdx === outIdx}>
-              {quoting ? "asking 1Click…" : inIdx === outIdx ? "pick two different assets" : "get dry-run quote"}
+              {quoting ? t("npc.swap.asking") : inIdx === outIdx ? t("npc.swap.pickTwo") : t("npc.swap.getQuote")}
             </KeycapButton>
             {quote ? (
               quote.status === "ready" ? (
                 <dl className="fd-kv" data-testid="swap-quote">
                   <div className="fd-kv__row">
-                    <dt>amount out</dt>
+                    <dt>{t("npc.swap.amountOut")}</dt>
                     <dd className="fd-kv__num">
                       {quote.amountOut} {quote.assetOutSymbol}
                     </dd>
                   </div>
                   <div className="fd-kv__row">
-                    <dt>min out</dt>
+                    <dt>{t("npc.swap.minOut")}</dt>
                     <dd className="fd-kv__num">
-                      {quote.minAmountOut} {quote.assetOutSymbol} <Tag>1% slippage</Tag>
+                      {quote.minAmountOut} {quote.assetOutSymbol} <Tag>{t("npc.swap.slippage")}</Tag>
                     </dd>
                   </div>
                   <div className="fd-kv__row">
-                    <dt>est. time</dt>
-                    <dd className="fd-kv__num">{quote.timeEstimateSec !== undefined ? `${quote.timeEstimateSec} s` : "—"}</dd>
+                    <dt>{t("npc.swap.estTime")}</dt>
+                    <dd className="fd-kv__num">{quote.timeEstimateSec !== undefined ? t("npc.swap.seconds", { n: quote.timeEstimateSec }) : "—"}</dd>
                   </div>
                 </dl>
               ) : (
@@ -158,8 +167,11 @@ export function SwapPanel({ mode, onClose, skin = "biolab" }: SwapPanelProps) {
               )
             ) : null}
             <p className="fd-field__hint">
-              A dry quote (<code>POST /v0/quote</code>, <code>dry: true</code>) creates no deposit address and starts no swap. See the{" "}
-              <ExtLink href="https://docs.near-intents.org">1Click API docs</ExtLink>.
+              {rich("npc.swap.dryNote", {
+                post: <code>{QUOTE_ROUTE}</code>,
+                dry: <code>{QUOTE_DRY}</code>,
+                link: <ExtLink href="https://docs.near-intents.org">{t("npc.swap.docs")}</ExtLink>,
+              })}
             </p>
           </TabPanel>
         )}

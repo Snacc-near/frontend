@@ -9,6 +9,8 @@
  * says "listed" / "bought" when the views agree (`confirmExpectation`).
  *
  * Testnet only. Testnet NEAR and Snaccs have no money value.
+ *
+ * UI-161 phase B3: every sentence comes from the `market` dictionary (`useT()`).
  */
 import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
 import "./collection.css";
@@ -47,19 +49,20 @@ import { EMPTY_ACCOUNT_INFO, type AccountInfo } from "../chain/useAccountInfo.ts
 import { useWallet, type WalletApi } from "../chain/wallet.tsx";
 import { VITALITY_MAX } from "../config/constants.ts";
 import { explorerAccount, explorerTx } from "../data/nearView.ts";
+import type { Translate } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, ExtLink, Field, Input, KeycapButton, Select, TabPanel, Tabs, type TabDef } from "../ui/controls.tsx";
 import { Icon, Tag } from "../ui/fd.tsx";
 import { FaucetLine, TxStatusView, type TxPhase } from "./ChainActions.tsx";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
-const RPC_DOWN = "The testnet RPC did not answer (test.rpc.fastnear.com and rpc.testnet.near.org). Nothing is shown in its place.";
 
 export type MarketTab = "browse" | "sell" | "mine";
-const TABS: readonly TabDef<MarketTab>[] = [
-  { id: "browse", label: "Browse", icon: "grid" },
-  { id: "sell", label: "Sell", icon: "cell" },
-  { id: "mine", label: "My listings", icon: "user" },
+const tabsFor = (t: Translate): readonly TabDef<MarketTab>[] => [
+  { id: "browse", label: t("market.tabs.browse"), icon: "grid" },
+  { id: "sell", label: t("market.tabs.sell"), icon: "cell" },
+  { id: "mine", label: t("market.tabs.mine"), icon: "user" },
 ];
 
 // ---------------------------------------------------------------- shared state
@@ -120,28 +123,39 @@ function useMarketTx(wallet: WalletApi, view: ChainView, onDone: ((ok: boolean, 
   return { phase, busy, run, reset: () => setPhase({ kind: "idle" }) };
 }
 
-const SETTLED_TEXT: Record<Expectation["kind"], (e: Expectation) => string> = {
-  listed: (e) => `Snacc #${e.tokenId} is listed${"priceYocto" in e ? ` for ${priceLabel(e.priceYocto)}` : ""}.`,
-  repriced: (e) => `Snacc #${e.tokenId} now costs ${"priceYocto" in e ? priceLabel(e.priceYocto) : "the new price"}.`,
-  delisted: (e) => `Snacc #${e.tokenId} is back in your collection.`,
-  bought: (e) => `Snacc #${e.tokenId} is yours now.`,
-};
+/** The sentence for a confirmed outcome. */
+function settledText(t: Translate, e: Expectation): string {
+  const id = e.tokenId;
+  switch (e.kind) {
+    case "listed":
+      return "priceYocto" in e ? t("market.settled.listedFor", { id, price: priceLabel(e.priceYocto) }) : t("market.settled.listed", { id });
+    case "repriced":
+      return t("market.settled.repriced", { id, price: "priceYocto" in e ? priceLabel(e.priceYocto) : t("market.settled.newPrice") });
+    case "delisted":
+      return t("market.settled.delisted", { id });
+    case "bought":
+      return t("market.settled.bought", { id });
+  }
+}
 
-const TxLink = ({ hash }: { hash: string | null }) =>
-  hash ? (
+const TxLink = ({ hash }: { hash: string | null }) => {
+  const { t } = useT();
+  return hash ? (
     <>
-      tx <ExtLink href={explorerTx(hash)}>{`${hash.slice(0, 10)}…`}</ExtLink>
+      {t("market.tx.prefix")} <ExtLink href={explorerTx(hash)}>{`${hash.slice(0, 10)}…`}</ExtLink>
     </>
   ) : (
-    <>The wallet did not return a transaction hash.</>
+    <>{t("market.tx.noHash")}</>
   );
+};
 
 /** Pending, failure and success lines; a success is only "done" once the views confirm it. */
 export function MarketTxStatus({ phase }: { phase: MarketPhase }) {
+  const { t } = useT();
   if (phase.kind === "checking") {
     return (
       <p className="fd-note" role="status" data-testid="market-checking">
-        <strong>Transaction sent.</strong> Checking the market for the result…
+        <strong>{t("market.tx.sent")}</strong> {t("market.tx.checking")}
       </p>
     );
   }
@@ -149,7 +163,7 @@ export function MarketTxStatus({ phase }: { phase: MarketPhase }) {
     if (phase.outcome === "confirmed") {
       return (
         <div className="fd-note" role="status" data-testid="market-confirmed">
-          <strong>Done on testnet.</strong> {SETTLED_TEXT[phase.exp.kind](phase.exp)} <TxLink hash={phase.txHash} />
+          <strong>{t("market.tx.done")}</strong> {settledText(t, phase.exp)} <TxLink hash={phase.txHash} />
         </div>
       );
     }
@@ -167,7 +181,7 @@ export function MarketTxStatus({ phase }: { phase: MarketPhase }) {
 
 // ---------------------------------------------------------------- listing rows
 
-const hintFor = (row: MarketRow): string | null => {
+const hintFor = (row: MarketRow): "starving" | "distressed" | null => {
   if (!row.vessel) return null;
   const h = healthOf(row.vessel.status, row.vessel.effective_vitality);
   return h === "starving" || h === "distressed" ? h : null;
@@ -175,6 +189,7 @@ const hintFor = (row: MarketRow): string | null => {
 
 /** One listing: thumbnail, id, vitality, generation, seller and price; `children` are the action keys. */
 export function ListingRow({ row, showSeller = true, children }: { row: MarketRow; showSeller?: boolean; children?: ReactNode }) {
+  const { t, rich } = useT();
   const { listing, vessel, mediaSrc } = row;
   const hint = hintFor(row);
   const eff = vessel?.effective_vitality ?? 0;
@@ -182,24 +197,24 @@ export function ListingRow({ row, showSeller = true, children }: { row: MarketRo
   return (
     <li className="mkt-row" data-testid={`market-row-${listing.tokenId}`}>
       {mediaSrc ? (
-        <img className="coll-thumb" src={mediaSrc} alt={`on-chain svg of strain ${listing.tokenId}`} loading="lazy" />
+        <img className="coll-thumb" src={mediaSrc} alt={t("market.row.svgAlt", { id: listing.tokenId })} loading="lazy" />
       ) : (
-        <span className="coll-thumb coll-thumb--none" role="img" aria-label={`no valid on-chain svg for strain ${listing.tokenId}`}>
-          no svg
+        <span className="coll-thumb coll-thumb--none" role="img" aria-label={t("market.row.noSvgLabel", { id: listing.tokenId })}>
+          {t("market.row.noSvg")}
         </span>
       )}
       <span className="coll-main">
         <span className="fd-row" style={{ gap: 6 }}>
-          <span className="coll-id">strain #{listing.tokenId}</span>
+          <span className="coll-id">{t("market.row.strain", { id: listing.tokenId })}</span>
           {vessel ? <Tag>{vessel.status}</Tag> : null}
-          {hint ? <span className="coll-flag">{hint}</span> : null}
+          {hint ? <span className="coll-flag">{t(`market.health.${hint}`)}</span> : null}
         </span>
         {vessel ? (
           <span className="coll-vit">
             <span
               className="fd-meter"
               role="meter"
-              aria-label={`effective vitality of strain ${listing.tokenId}`}
+              aria-label={t("market.row.vitalityLabel", { id: listing.tokenId })}
               aria-valuemin={0}
               aria-valuemax={VITALITY_MAX}
               aria-valuenow={Math.min(VITALITY_MAX, Math.max(0, eff))}
@@ -211,16 +226,11 @@ export function ListingRow({ row, showSeller = true, children }: { row: MarketRo
             </span>
           </span>
         ) : (
-          <span className="fd-field__hint">strain details could not be read this time</span>
+          <span className="fd-field__hint">{t("market.row.noDetails")}</span>
         )}
         <span className="mkt-meta">
-          {vessel ? `generation ${vessel.generation}` : "generation —"}
-          {showSeller ? (
-            <>
-              {" · seller "}
-              <ExtLink href={explorerAccount(listing.sellerId)}>{listing.sellerId}</ExtLink>
-            </>
-          ) : null}
+          {vessel ? t("market.row.generation", { n: vessel.generation }) : t("market.row.generationNone")}
+          {showSeller ? rich("market.row.seller", { seller: <ExtLink href={explorerAccount(listing.sellerId)}>{listing.sellerId}</ExtLink> }) : null}
         </span>
       </span>
       <span className="mkt-side">
@@ -273,6 +283,7 @@ export function BuyConfirm({
   onConfirm: () => void;
   onBack: () => void;
 }) {
+  const { t, rich } = useT();
   const { listing, vessel } = row;
   const call: ContractCall = buildBuy({ tokenId: listing.tokenId, priceYocto: listing.priceYocto }).call;
   const gas = maxGasFeeYocto([call]);
@@ -284,59 +295,57 @@ export function BuyConfirm({
   return (
     <div className="fd-stack" data-testid="market-buy-confirm">
       <p className="fd-note">
-        <strong>Confirm: buy Snacc #{listing.tokenId}.</strong> Testnet only: testnet NEAR and Snaccs have no money value, and this is a demo market. The
-        Snacc moves to <code>{accountId ?? "you"}</code> with its whole state (stomach $SNACC, inventory), like a normal transfer.
+        <strong>{t("market.buy.title", { id: listing.tokenId })}</strong>
+        {rich("market.buy.note", { account: <code>{accountId ?? t("market.buy.you")}</code> })}
       </p>
       <dl className="fd-kv" data-testid="market-buy-cost">
         <div className="fd-kv__row">
-          <dt>you attach</dt>
+          <dt>{t("market.buy.attach")}</dt>
           <dd className="fd-kv__num">
-            {yoctoToNear(listing.priceYocto)} NEAR <code>({listing.priceYocto} yoctoNEAR)</code>
+            {t("market.buy.attachValue", { near: yoctoToNear(listing.priceYocto) })} <code>{t("market.buy.yoctoPrice", { yocto: listing.priceYocto })}</code>
           </dd>
         </div>
         <div className="fd-kv__row">
-          <dt>goes to the seller</dt>
-          <dd className="fd-kv__num">
-            <code>{listing.sellerId}</code>, the full price (market fee 0%)
-          </dd>
+          <dt>{t("market.buy.toSeller")}</dt>
+          <dd className="fd-kv__num">{rich("market.buy.toSellerValue", { seller: <code>{listing.sellerId}</code> })}</dd>
         </div>
         <div className="fd-kv__row">
-          <dt>gas, at most</dt>
-          <dd className="fd-kv__num">{`${yoctoToNear(gas)} NEAR (unused gas is refunded)`}</dd>
+          <dt>{t("market.buy.gas")}</dt>
+          <dd className="fd-kv__num">{t("market.buy.gasValue", { gas: yoctoToNear(gas) })}</dd>
         </div>
         <div className="fd-kv__row">
-          <dt>your NEAR</dt>
+          <dt>{t("market.buy.yourNear")}</dt>
           <dd className="fd-kv__num">{info.nearYocto === null ? "—" : priceLabel(info.nearYocto)}</dd>
         </div>
         {vessel ? (
           <div className="fd-kv__row">
-            <dt>this Snacc</dt>
-            <dd className="fd-kv__num">{`${vessel.status}, vitality ${fmt(vessel.effective_vitality)} / ${fmt(VITALITY_MAX)}, generation ${vessel.generation}`}</dd>
+            <dt>{t("market.buy.thisSnacc")}</dt>
+            <dd className="fd-kv__num">
+              {t("market.buy.thisSnaccValue", { status: vessel.status, vit: fmt(vessel.effective_vitality), max: fmt(VITALITY_MAX), gen: vessel.generation })}
+            </dd>
           </div>
         ) : null}
       </dl>
       {hungry ? (
         <p className="fd-field__hint fd-field__hint--bad" role="status">
-          This Snacc is {hungry}: its vitality keeps falling until it is fed, and a starving Snacc can be snacked by others.
+          {t("market.buy.hungry", { state: t(`market.health.${hungry}`) })}
         </p>
       ) : null}
-      <p className="fd-field__hint">
-        If the Snacc cannot be transferred (it died, or someone else bought it at the same moment) the market refunds the full price; only gas is spent.
-      </p>
+      <p className="fd-field__hint">{t("market.buy.refund")}</p>
       <FaucetLine needYocto={need} info={info} />
       <MarketTxStatus phase={phase} />
       <div className="fd-row">
         {done ? (
           <KeycapButton variant="primary" icon="check" onClick={onBack}>
-            back to the list
+            {t("market.buy.backToList")}
           </KeycapButton>
         ) : (
           <>
             <KeycapButton variant="primary" icon="spark" disabled={blocked !== null || busy} onClick={onConfirm} data-testid="market-buy-sign">
-              {busy ? "waiting…" : "sign and buy"}
+              {busy ? t("market.buy.waiting") : t("market.buy.sign")}
             </KeycapButton>
             <KeycapButton mono onClick={onBack} disabled={busy}>
-              back
+              {t("market.buy.back")}
             </KeycapButton>
           </>
         )}
@@ -358,6 +367,7 @@ interface TabProps {
 }
 
 function BrowseTab({ view, accountId, info, tx, version }: TabProps) {
+  const { t } = useT();
   const [page, setPage] = useState(0);
   const [buying, setBuying] = useState<MarketRow | null>(null);
   const { state, reload } = useLoad<{ total: number; rows: MarketRow[] }>(
@@ -368,7 +378,7 @@ function BrowseTab({ view, accountId, info, tx, version }: TabProps) {
       return { total, rows };
     },
     [page, version, view],
-    RPC_DOWN,
+    t("market.rpcDown"),
   );
   const total = state.kind === "ok" ? state.data.total : null;
   const pages = total === null ? 1 : pageCount(total);
@@ -405,52 +415,54 @@ function BrowseTab({ view, accountId, info, tx, version }: TabProps) {
     <div className="fd-stack">
       <div className="fd-row fd-row--between">
         <span className="fd-sub" data-testid="market-count">
-          {total === null ? "listings" : `${fmt(total)} open listing${total === 1 ? "" : "s"}`}
+          {total === null ? t("market.browse.listings") : t(total === 1 ? "market.browse.countOne" : "market.browse.countMany", { n: fmt(total) })}
         </span>
         <KeycapButton mono icon="ring" onClick={reload} disabled={state.kind === "loading"}>
-          refresh
+          {t("market.browse.refresh")}
         </KeycapButton>
       </div>
-      {state.kind === "loading" ? <Empty icon="eye">reading get_listings, get_strain and nft_token…</Empty> : null}
+      {state.kind === "loading" ? <Empty icon="eye">{t("market.browse.reading")}</Empty> : null}
       {state.kind === "error" ? (
         <Empty icon="warn">
           <div className="fd-stack" style={{ justifyItems: "center" }}>
             <span data-testid="market-error">{state.message}</span>
             <KeycapButton mono icon="ring" onClick={reload}>
-              retry
+              {t("market.browse.retry")}
             </KeycapButton>
           </div>
         </Empty>
       ) : null}
       {state.kind === "ok" && state.data.rows.length === 0 ? (
         <Empty icon="cell">
-          <span data-testid="market-empty">No Snacc is listed right now.</span>
+          <span data-testid="market-empty">{t("market.browse.empty")}</span>
           <br />
-          Use the Sell tab to list one of yours.
+          {t("market.browse.emptyHint")}
         </Empty>
       ) : null}
       {state.kind === "ok" && state.data.rows.length > 0 ? (
         <>
           <ListingList
             rows={state.data.rows}
-            label="open listings"
+            label={t("market.browse.listLabel")}
             actions={(row) => {
               const blocked = buyBlockReason(row, accountId);
               return (
                 <KeycapButton mono icon="spark" disabled={blocked !== null} title={blocked ?? undefined} onClick={() => setBuying(row)} data-testid={`market-buy-${row.listing.tokenId}`}>
-                  buy
+                  {t("market.browse.buy")}
                 </KeycapButton>
               );
             }}
           />
           {pages > 1 ? (
-            <div className="fd-row fd-row--between" role="group" aria-label="pages">
+            <div className="fd-row fd-row--between" role="group" aria-label={t("market.browse.pages")}>
               <KeycapButton mono disabled={page === 0} onClick={() => setPage(page - 1)}>
-                previous
+                {t("market.browse.previous")}
               </KeycapButton>
-              <span className="fd-sub" data-testid="market-page">{`page ${page + 1} of ${pages}`}</span>
+              <span className="fd-sub" data-testid="market-page">
+                {t("market.browse.page", { page: page + 1, pages })}
+              </span>
               <KeycapButton mono disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>
-                next
+                {t("market.browse.next")}
               </KeycapButton>
             </div>
           ) : null}
@@ -468,6 +480,7 @@ export function sellableItems(items: readonly CollectionItem[]): CollectionItem[
 }
 
 function SellTab({ view, accountId, tx, version }: TabProps) {
+  const { t, rich } = useT();
   const uid = useId();
   const { state } = useLoad<{ items: CollectionItem[]; open: number }>(
     async (signal) => {
@@ -477,7 +490,7 @@ function SellTab({ view, accountId, tx, version }: TabProps) {
       return { items: sellableItems(coll.data.items), open: mine.length };
     },
     [accountId, version, view],
-    RPC_DOWN,
+    t("market.rpcDown"),
   );
   const [picked, setPicked] = useState<number | null>(null);
   const [price, setPrice] = useState("");
@@ -487,15 +500,15 @@ function SellTab({ view, accountId, tx, version }: TabProps) {
   const check = checkPrice(price);
   const full = open >= MAX_LISTINGS_PER_SELLER;
 
-  if (!accountId) return <Empty icon="user">Connect a wallet to sell. Browsing is open to everyone.</Empty>;
-  if (state.kind === "loading") return <Empty icon="eye">{`reading ${accountId}'s Snaccs and listings…`}</Empty>;
+  if (!accountId) return <Empty icon="user">{t("market.sell.connect")}</Empty>;
+  if (state.kind === "loading") return <Empty icon="eye">{t("market.sell.reading", { account: accountId })}</Empty>;
   if (state.kind === "error") return <Empty icon="warn">{state.message}</Empty>;
   if (items.length === 0) {
     return (
       <Empty icon="cell">
-        <span data-testid="market-sell-empty">You have no living Snacc to list.</span>
+        <span data-testid="market-sell-empty">{t("market.sell.none")}</span>
         <br />
-        A Snacc that has died cannot be listed. Hatch one first.
+        {t("market.sell.noneHint")}
       </Empty>
     );
   }
@@ -505,20 +518,20 @@ function SellTab({ view, accountId, tx, version }: TabProps) {
   return (
     <div className="fd-stack" data-testid="market-sell">
       <div className="fd-form-grid">
-        <Field id={`${uid}-snacc`} label="your snacc">
+        <Field id={`${uid}-snacc`} label={t("market.sell.fieldSnacc")}>
           <Select id={`${uid}-snacc`} value={chosen?.strainId ?? ""} onChange={(e) => setPicked(Number(e.target.value))} disabled={tx.busy}>
             {items.map((i) => (
               <option key={i.strainId} value={i.strainId}>
-                {`#${i.strainId} · vitality ${fmt(i.effectiveVitality)} · generation ${i.generation} · ${i.status}`}
+                {t("market.sell.option", { id: i.strainId, vit: fmt(i.effectiveVitality), gen: i.generation, status: i.status })}
               </option>
             ))}
           </Select>
         </Field>
         <Field
           id={`${uid}-price`}
-          label="price (NEAR)"
+          label={t("market.sell.fieldPrice")}
           bad={price.trim() !== "" && !check.ok}
-          hint={check.ok ? `${yoctoToNear(check.yocto)} NEAR, the buyer pays this much and you get all of it (fee 0%)` : price.trim() === "" ? `up to ${Number(MAX_PRICE_NEAR).toLocaleString("en-US")} NEAR` : check.reason}
+          hint={check.ok ? t("market.sell.priceOk", { near: yoctoToNear(check.yocto) }) : price.trim() === "" ? t("market.sell.priceMax", { max: Number(MAX_PRICE_NEAR).toLocaleString("en-US") }) : check.reason}
         >
           <Input
             id={`${uid}-price`}
@@ -534,27 +547,26 @@ function SellTab({ view, accountId, tx, version }: TabProps) {
           />
         </Field>
       </div>
-      {chosen?.mediaSrc ? <img className="coll-thumb" src={chosen.mediaSrc} alt={`on-chain svg of strain ${chosen.strainId}`} /> : null}
+      {chosen?.mediaSrc ? <img className="coll-thumb" src={chosen.mediaSrc} alt={t("market.row.svgAlt", { id: chosen.strainId })} /> : null}
       <p className="fd-note">
-        <strong>The Snacc leaves your account while it is listed.</strong> It moves to <code>{MARKET_ID}</code> with its whole state (stomach $SNACC,
-        inventory) and moves on to the buyer the same way, like a normal transfer. It keeps getting hungry while listed. You can take it back any time
-        with the My listings tab.
+        <strong>{t("market.sell.leavesTitle")}</strong>
+        {rich("market.sell.leavesBody", { market: <code>{MARKET_ID}</code> })}
       </p>
       <dl className="fd-kv">
         <div className="fd-kv__row">
-          <dt>you attach</dt>
-          <dd className="fd-kv__num">1 yoctoNEAR (the market pays the listing storage)</dd>
+          <dt>{t("market.sell.attach")}</dt>
+          <dd className="fd-kv__num">{t("market.sell.attachValue")}</dd>
         </div>
         <div className="fd-kv__row">
-          <dt>gas, at most</dt>
-          <dd className="fd-kv__num">{built ? `${yoctoToNear(maxGasFeeYocto([built.call]))} NEAR (unused gas is refunded)` : "—"}</dd>
+          <dt>{t("market.sell.gas")}</dt>
+          <dd className="fd-kv__num">{built ? t("market.buy.gasValue", { gas: yoctoToNear(maxGasFeeYocto([built.call])) }) : "—"}</dd>
         </div>
         <div className="fd-kv__row">
-          <dt>your open listings</dt>
-          <dd className="fd-kv__num">{`${open} of ${MAX_LISTINGS_PER_SELLER}`}</dd>
+          <dt>{t("market.sell.open")}</dt>
+          <dd className="fd-kv__num">{t("market.sell.openOf", { open, max: MAX_LISTINGS_PER_SELLER })}</dd>
         </div>
       </dl>
-      {full ? <p className="fd-field__hint fd-field__hint--bad">You already have {MAX_LISTINGS_PER_SELLER} open listings, the most one account can have.</p> : null}
+      {full ? <p className="fd-field__hint fd-field__hint--bad">{t("market.sell.full", { max: MAX_LISTINGS_PER_SELLER })}</p> : null}
       <MarketTxStatus phase={tx.phase} />
       <div className="fd-row">
         <KeycapButton
@@ -568,7 +580,7 @@ function SellTab({ view, accountId, tx, version }: TabProps) {
           }}
           data-testid="market-list-sign"
         >
-          {tx.busy ? "waiting…" : "sign and list for sale"}
+          {tx.busy ? t("market.buy.waiting") : t("market.sell.sign")}
         </KeycapButton>
       </div>
     </div>
@@ -578,6 +590,7 @@ function SellTab({ view, accountId, tx, version }: TabProps) {
 // ---------------------------------------------------------------- My listings
 
 function MineTab({ view, accountId, tx, version }: TabProps) {
+  const { t, rich } = useT();
   const { state, reload } = useLoad<MarketRow[]>(
     async (signal) => {
       if (!accountId) return null;
@@ -585,7 +598,7 @@ function MineTab({ view, accountId, tx, version }: TabProps) {
       return mine === null ? null : enrichListings(mine, view, signal);
     },
     [accountId, version, view],
-    RPC_DOWN,
+    t("market.rpcDown"),
   );
   const [editing, setEditing] = useState<string | null>(null);
   const [price, setPrice] = useState("");
@@ -597,28 +610,26 @@ function MineTab({ view, accountId, tx, version }: TabProps) {
     if (settledOk) setEditing(null);
   }, [settledOk]);
 
-  if (!accountId) return <Empty icon="user">Connect a wallet to see and manage your listings.</Empty>;
+  if (!accountId) return <Empty icon="user">{t("market.mine.connect")}</Empty>;
   return (
     <div className="fd-stack" data-testid="market-mine">
       <div className="fd-row fd-row--between">
-        <span className="fd-sub">
-          seller <code>{accountId}</code>
-        </span>
+        <span className="fd-sub">{rich("market.mine.seller", { account: <code>{accountId}</code> })}</span>
         <KeycapButton mono icon="ring" onClick={reload} disabled={state.kind === "loading" || tx.busy}>
-          refresh
+          {t("market.mine.refresh")}
         </KeycapButton>
       </div>
-      {state.kind === "loading" ? <Empty icon="eye">reading get_listings_by_seller…</Empty> : null}
+      {state.kind === "loading" ? <Empty icon="eye">{t("market.mine.reading")}</Empty> : null}
       {state.kind === "error" ? <Empty icon="warn">{state.message}</Empty> : null}
       {state.kind === "ok" && state.data.length === 0 ? (
         <Empty icon="cell">
-          <span data-testid="market-mine-empty">You have no open listing.</span>
+          <span data-testid="market-mine-empty">{t("market.mine.empty")}</span>
         </Empty>
       ) : null}
       {state.kind === "ok" && state.data.length > 0 ? (
         <ListingList
           rows={state.data}
-          label="your open listings"
+          label={t("market.mine.listLabel")}
           showSeller={false}
           actions={(row) => {
             const dead = row.vessel ? healthOf(row.vessel.status, row.vessel.effective_vitality) === "dead" : false;
@@ -636,20 +647,20 @@ function MineTab({ view, accountId, tx, version }: TabProps) {
                   }}
                   data-testid={`market-edit-${row.listing.tokenId}`}
                 >
-                  change price
+                  {t("market.mine.changePrice")}
                 </KeycapButton>
                 <KeycapButton
                   mono
                   icon="close"
                   disabled={tx.busy || dead}
-                  title={dead ? "this Snacc has died and cannot be transferred back" : undefined}
+                  title={dead ? t("market.mine.died") : undefined}
                   onClick={() => {
                     setEditing(null);
                     void tx.run(buildDelist({ tokenId: row.listing.tokenId }), { kind: "delisted", tokenId: row.listing.tokenId, sellerId: accountId });
                   }}
                   data-testid={`market-delist-${row.listing.tokenId}`}
                 >
-                  delist
+                  {t("market.mine.delist")}
                 </KeycapButton>
               </span>
             );
@@ -660,9 +671,9 @@ function MineTab({ view, accountId, tx, version }: TabProps) {
         <div className="fd-stack" data-testid="market-edit-form">
           <Field
             id={`${uid}-newprice`}
-            label={`new price for #${editing} (NEAR)`}
+            label={t("market.mine.newPrice", { id: editing })}
             bad={!check.ok}
-            hint={check.ok ? `${yoctoToNear(check.yocto)} NEAR, changed with 1 yoctoNEAR and gas only` : check.reason}
+            hint={check.ok ? t("market.mine.priceOk", { near: yoctoToNear(check.yocto) }) : check.reason}
           >
             <Input
               id={`${uid}-newprice`}
@@ -686,16 +697,16 @@ function MineTab({ view, accountId, tx, version }: TabProps) {
               }}
               data-testid="market-reprice-sign"
             >
-              sign the new price
+              {t("market.mine.signPrice")}
             </KeycapButton>
             <KeycapButton mono onClick={() => setEditing(null)} disabled={tx.busy}>
-              cancel
+              {t("market.mine.cancel")}
             </KeycapButton>
           </div>
         </div>
       ) : null}
       <MarketTxStatus phase={tx.phase} />
-      <p className="fd-field__hint">Delisting sends the Snacc back to you with its whole state. A Snacc that died while listed cannot be moved by the contract at all.</p>
+      <p className="fd-field__hint">{t("market.mine.delistNote")}</p>
     </div>
   );
 }
@@ -713,6 +724,7 @@ export interface MarketModalProps {
 }
 
 export function MarketModal({ onClose, info = EMPTY_ACCOUNT_INFO, onDone, view = chainView }: MarketModalProps) {
+  const { t } = useT();
   const idBase = useId();
   const wallet = useWallet();
   const accountId = wallet.status === "connected" ? wallet.accountId : null;
@@ -730,27 +742,24 @@ export function MarketModal({ onClose, info = EMPTY_ACCOUNT_INFO, onDone, view =
 
   return (
     <Modal
-      title="market.idx"
-      heading="Market"
+      title={t("market.title")}
+      heading={t("market.heading")}
       size="lg"
       onClose={onClose}
       testId="market-modal"
       footer={
         <>
-          <span>
-            market {MARKET_ID} · Snaccs {CONTRACT_ID} · testnet NEAR has no money value
-          </span>
+          <span>{t("market.modal.footer", { market: MARKET_ID, contract: CONTRACT_ID })}</span>
           <Tag>testnet</Tag>
         </>
       }
     >
       <div className="fd-stack">
         <p className="fd-note" data-testid="market-note">
-          <Icon name="warn" /> <strong>Testnet demo market.</strong> Testnet NEAR and Snaccs have no money value, and this is not a real exchange. Sellers set
-          their own prices; the market takes no fee (0%). A Snacc moves with its whole state (its stomach $SNACC and inventory) when it is sold, like a
-          normal transfer.
+          <Icon name="warn" /> <strong>{t("market.modal.noteTitle")}</strong>
+          {t("market.modal.note")}
         </p>
-        <Tabs label="market" idBase={idBase} tabs={TABS} value={tab} onChange={changeTab} />
+        <Tabs label={t("market.tabs.label")} idBase={idBase} tabs={tabsFor(t)} value={tab} onChange={changeTab} />
         <TabPanel idBase={idBase} id={tab}>
           {tab === "browse" ? <BrowseTab {...props} /> : null}
           {tab === "sell" ? <SellTab {...props} /> : null}

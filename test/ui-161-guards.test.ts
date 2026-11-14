@@ -127,6 +127,28 @@ function convertedFiles(): string[] {
   ].map((f) => `src/hud/${f}.tsx`);
   // Phase B2: the game action windows, the transaction status lines, the game screen and the shared Modal.
   const actions = ["src/hud/GameActions.tsx", "src/hud/ChainActions.tsx", "src/hud/ChainSections.tsx", "src/hud/ZoneBanner.tsx", "src/App.tsx", "src/ui/Modal.tsx"];
+  // Phase B3: the market, collection and social windows. Add a file here when it is converted.
+  const windows = [
+    "src/hud/MarketModal.tsx",
+    "src/hud/MyCollection.tsx",
+    "src/hud/StrainDetailModal.tsx",
+    "src/hud/Graveyard.tsx",
+    "src/hud/ProfileModal.tsx",
+    "src/hud/InviteFriends.tsx",
+    "src/hud/GuestLabelModal.tsx",
+    "src/hud/QuestsModal.tsx",
+    "src/hud/SeasonBoard.tsx",
+    "src/hud/PlayerBoards.tsx",
+    "src/hud/SocialLeaderboardModal.tsx",
+    "src/hud/NotificationsModal.tsx",
+    "src/hud/IrisOverlay.tsx",
+    "src/hud/NpcPanel.tsx",
+    "src/hud/NpcReasoningTooltip.tsx",
+    "src/hud/SwapPanel.tsx",
+    "src/hud/RecipeSearchModal.tsx",
+    "src/hud/ThesisDashboardModal.tsx",
+    "src/hud/CellLab.tsx",
+  ];
   // Phase B4: the help windows, the first-run intro, Settings (and its one-tap section) and the legal line in the game.
   const help = [
     "src/help/AppLegalLinks.tsx",
@@ -139,6 +161,7 @@ function convertedFiles(): string[] {
     ...landing,
     ...hud,
     ...actions,
+    ...windows,
     ...help,
     "src/help/LanguageSettings.tsx",
     "src/i18n/LanguageToggle.tsx",

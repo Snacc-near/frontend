@@ -47,7 +47,7 @@ import { GuideLayer } from "./help/GuideLayer.tsx";
 import { AppLegalLinks } from "./help/AppLegalLinks.tsx";
 import { bioSound } from "./sound.ts";
 import { useT } from "./i18n/react.tsx";
-import type { MessageKey } from "./i18n/catalog.ts";
+import type { MessageKey, Translate } from "./i18n/catalog.ts";
 
 import { ColonyPlate } from "./plate/ColonyPlate.tsx";
 import { IrisOverlay } from "./hud/IrisOverlay.tsx";
@@ -120,12 +120,13 @@ const LIVE_DOCK_WINDOW: Record<string, GameActionKey> = {
   harvest: "hungry",
 };
 
-const demoSeedLogs: BreachLogItem[] = [
+/** The two demo breach-log lines the demo starts with; the words follow the reader's language, the numbers do not. */
+const demoSeedLogs = (t: Translate): BreachLogItem[] => [
   {
     id: "seed-1",
     kind: "nutrient_burst_released",
-    actor: "strain #3",
-    summary: "cell lysis released 7200 nutrients · discount -20.00% until epoch 2",
+    actor: t("demo.seedLogs.actor"),
+    summary: t("demo.seedLogs.burst"),
     crucibleTemp: 591,
     tempDeltaMk: 0,
     timestampMs: Date.now() - 2400,
@@ -137,7 +138,7 @@ const demoSeedLogs: BreachLogItem[] = [
     id: "seed-2",
     kind: "zone_changed",
     actor: "alkemis.testnet",
-    summary: "alkemis.testnet triggered a zone shift from hypothermia to goldilocks (605 mK)",
+    summary: t("demo.seedLogs.zone"),
     crucibleTemp: 605,
     tempDeltaMk: 14,
     timestampMs: Date.now() - 1100,
@@ -216,7 +217,7 @@ export const App: React.FC = () => {
   const atpBalanceRef = useRef(INITIAL_ATP);
   atpBalanceRef.current = atpBalance;
 
-  const [logs, setLogs] = useState<BreachLogItem[]>(demoSeedLogs);
+  const [logs, setLogs] = useState<BreachLogItem[]>(() => demoSeedLogs(t));
 
   // UI-145: a connected wallet is the effective account; the manual highlight still works without one.
   const wallet = useWallet();
@@ -519,7 +520,7 @@ export const App: React.FC = () => {
     if (nextMode === "live") {
       setLogs([]);
     } else {
-      setLogs(demoSeedLogs);
+      setLogs(demoSeedLogs(t));
       setSim(createInitialSimulation());
     }
   };

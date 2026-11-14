@@ -4,7 +4,15 @@
  * Every number comes from the official constants in `src/types.ts` (OFFICIAL_CONSTANTS)
  * and the zone thresholds in `src/config/zones.ts`. Demo output is simulated
  * and must never be presented as on-chain data.
+ *
+ * UI-161 phase B3: the log lines and refusals are read from the `demo` dictionary in the saved language
+ * (`getLocale()`); the simulation numbers are the same in every language.
  */
+import { t as translate, type MessageKey } from "../i18n/catalog.ts";
+import { getLocale } from "../i18n/locale.ts";
+import type { Vars } from "../i18n/types.ts";
+
+const msg = (key: MessageKey, vars?: Vars): string => translate(getLocale(), key, vars);
 
 export type LabAction =
   | "feed"
@@ -139,7 +147,7 @@ export function createInitialSimulation(): SimulationState {
     generation: 1,
     crucibleTempMk: 605,
     queue: [],
-    log: ["demo · simulated: colony seeded at 600..610 mk balance band"],
+    log: [msg("demo.seed")],
     totalIn: 0,
     totalOut: 0,
   };
@@ -158,10 +166,10 @@ export function startProduction(
   const next: SimulationState = { ...state, queue: [...state.queue], log: [...state.log] };
   const costs = PRODUCTION_COST[kind];
   if (costs?.spores && next.spores < costs.spores) {
-    return { state: next, ok: false, error: `need ${costs.spores} spores, have ${next.spores}` };
+    return { state: next, ok: false, error: msg("demo.needSpores", { need: costs.spores, have: next.spores }) };
   }
   if (costs?.enzymes && next.enzymes < costs.enzymes) {
-    return { state: next, ok: false, error: `need ${costs.enzymes} enzymes, have ${next.enzymes}` };
+    return { state: next, ok: false, error: msg("demo.needEnzymes", { need: costs.enzymes, have: next.enzymes }) };
   }
   if (costs?.spores) next.spores -= costs.spores;
   if (costs?.enzymes) next.enzymes -= costs.enzymes;
@@ -177,7 +185,7 @@ export function startProduction(
     amount,
   };
   next.queue = [...next.queue, item];
-  pushLog(next, `started ${kind} production: +${amount} on collect`);
+  pushLog(next, msg("demo.started", { kind: msg(`demo.kinds.${kind}`), amount }));
   return { state: next, ok: true, error: null };
 }
 
@@ -201,8 +209,8 @@ export function collectProduction(
   id: string,
 ): { state: SimulationState; ok: boolean; error: string | null } {
   const item = state.queue.find((entry) => entry.id === id);
-  if (!item) return { state, ok: false, error: "unknown item" };
-  if (!item.ready) return { state, ok: false, error: "not ready yet" };
+  if (!item) return { state, ok: false, error: msg("demo.unknownItem") };
+  if (!item.ready) return { state, ok: false, error: msg("demo.notReady") };
   const next: SimulationState = {
     ...state,
     queue: state.queue.filter((entry) => entry.id !== id),
@@ -219,14 +227,14 @@ export function collectProduction(
     next.elixir += item.amount;
   }
   next.totalOut += item.amount;
-  pushLog(next, `collected +${item.amount} ${item.kind}`);
+  pushLog(next, msg("demo.collected", { amount: item.amount, kind: msg(`demo.kinds.${item.kind}`) }));
   return { state: next, ok: true, error: null };
 }
 
 export function feedStrain(
   state: SimulationState,
 ): { state: SimulationState; ok: boolean; error: string | null } {
-  if (state.snacc < 10) return { state, ok: false, error: "need 10 snacc" };
+  if (state.snacc < 10) return { state, ok: false, error: msg("demo.needSnacc") };
   const next: SimulationState = {
     ...state,
     snacc: state.snacc - 10,
@@ -237,7 +245,7 @@ export function feedStrain(
     totalIn: state.totalIn + 10,
     log: [...state.log],
   };
-  pushLog(next, "fed strain: +12 atp, +220 vitality (demo · simulated)");
+  pushLog(next, msg("demo.fed"));
   return { state: next, ok: true, error: null };
 }
 
@@ -249,9 +257,9 @@ export function upgradeOrganelle(
   const key: "mitokondria" | "nukleus" | "lisosom" =
     axis === "nucleus" ? "nukleus" : axis === "lysosome" ? "lisosom" : (axis as "mitokondria" | "nukleus" | "lisosom");
   const level = state.organel[key];
-  if (level >= MAX_ORGANELLE_LEVEL) return { state, ok: false, error: `${key} already at max level ${MAX_ORGANELLE_LEVEL}` };
+  if (level >= MAX_ORGANELLE_LEVEL) return { state, ok: false, error: msg("demo.maxLevel", { key, max: MAX_ORGANELLE_LEVEL }) };
   const cost = costAtLevel(level);
-  if (state.atp < cost) return { state, ok: false, error: `need ${cost} atp, have ${state.atp}` };
+  if (state.atp < cost) return { state, ok: false, error: msg("demo.needAtp", { cost, have: state.atp }) };
   const next: SimulationState = {
     ...state,
     atp: state.atp - cost,
@@ -260,11 +268,11 @@ export function upgradeOrganelle(
   };
   const note =
     key === "mitokondria"
-      ? "+10% atp output"
+      ? msg("demo.noteMito")
       : key === "nukleus"
-        ? "+10% output per level"
-        : "-10% hunger per level";
-  pushLog(next, `${key} upgraded to ${level + 1}: ${note}`);
+        ? msg("demo.noteNucleus")
+        : msg("demo.noteLysosome");
+  pushLog(next, msg("demo.upgraded", { key, level: level + 1, note }));
   return { state: next, ok: true, error: null };
 }
 
@@ -272,9 +280,9 @@ export function divideStrain(
   state: SimulationState,
 ): { state: SimulationState; ok: boolean; error: string | null } {
   if (state.births > state.merges + state.lyses) {
-    return { state, ok: false, error: "divide gate: births must stay within merges + lyses" };
+    return { state, ok: false, error: msg("demo.divideGate") };
   }
-  if (state.atp < 30) return { state, ok: false, error: "need 30 atp to divide" };
+  if (state.atp < 30) return { state, ok: false, error: msg("demo.needDivide") };
   const next: SimulationState = {
     ...state,
     atp: state.atp - 30,
@@ -283,7 +291,7 @@ export function divideStrain(
     vitality: Math.max(1000, Math.round(state.vitality / 2)),
     log: [...state.log],
   };
-  pushLog(next, "mitosis: cell split into two (demo · simulated)");
+  pushLog(next, msg("demo.mitosis"));
   return { state: next, ok: true, error: null };
 }
 
@@ -300,14 +308,14 @@ export function harvestStrain(
     totalOut: state.totalOut + released,
     log: [...state.log],
   };
-  pushLog(next, `lysis harvest: released ${released} nutrients (base burst 2.00%)`);
+  pushLog(next, msg("demo.lysis", { n: released }));
   return { state: next, ok: true, error: null };
 }
 
 export function spliceStrains(
   state: SimulationState,
 ): { state: SimulationState; ok: boolean; error: string | null } {
-  if (state.atp < 20) return { state, ok: false, error: "need 20 atp to splice" };
+  if (state.atp < 20) return { state, ok: false, error: msg("demo.needSplice") };
   const next: SimulationState = {
     ...state,
     atp: state.atp - 20,
@@ -319,7 +327,7 @@ export function spliceStrains(
     },
     log: [...state.log],
   };
-  pushLog(next, "splice: two strains merged (demo · simulated)");
+  pushLog(next, msg("demo.splice"));
   return { state: next, ok: true, error: null };
 }
 
@@ -352,13 +360,13 @@ export function applyAction(
     case "vacuole": {
       // Demo only: the Cell Lab figure plays the vacuole pulse. No numbers move.
       const next: SimulationState = { ...state, log: [...state.log] };
-      pushLog(next, "vacuole pulse played (demo · simulated)");
+      pushLog(next, msg("demo.vacuole"));
       return { state: next, ok: true, error: null };
     }
     case "attest": {
       // TEE verification preview. Changes no numbers, in demo and live alike.
       const next: SimulationState = { ...state, log: [...state.log] };
-      pushLog(next, "attest: tee verification preview · no numbers changed");
+      pushLog(next, msg("demo.attest"));
       return { state: next, ok: true, error: null };
     }
   }

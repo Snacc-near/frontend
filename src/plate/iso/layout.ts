@@ -3,6 +3,8 @@
  * Everything here is deterministic and testable: the same strain ids always
  * land in the same spots with the same sizes and status looks.
  */
+import { t as translate } from "../../i18n/catalog.ts";
+import { getLocale } from "../../i18n/locale.ts";
 import { depthOf, type Point3, type Projection } from "./iso-kit.ts";
 
 export interface PlateCellInput {
@@ -178,7 +180,7 @@ export function irisMode(reducedMotion: boolean): "iris" | "fade" {
 /** Demo thesis receipt line, computed from the sim ledger counters. */
 export function receiptLine(totalIn: number, totalOut: number): string {
   const stored = totalIn - totalOut;
-  return `in ${totalIn} = out ${totalOut} + stored ${stored} ✓`;
+  return translate(getLocale(), "demo.receipt", { inflow: totalIn, outflow: totalOut, stored });
 }
 
 /** Thermometer label text: "605 mK" or "— mK" when the API gave nothing. */

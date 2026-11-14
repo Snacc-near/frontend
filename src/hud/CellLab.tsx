@@ -6,7 +6,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { StrainDetail, SvgLoadStatus } from "../data/types.ts";
 import type { MacroZone } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
-import { SKIN_LABELS } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
+import { useSkinLabels } from "../i18n/skin.ts";
 import { Icon, Tag } from "../ui/fd.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import type { HudMode } from "./GameHud.tsx";
@@ -23,7 +24,6 @@ import {
 import {
   BUSY_TIMEOUT_MS,
   LAB_KEYCAPS,
-  LIVE_PREVIEW_NOTE,
   buildLabStateMessage,
   busyReducer,
   createStateSender,
@@ -52,16 +52,15 @@ interface CellLabProps {
   onOpenNpcMarket?: () => void;
 }
 
+/** The three organelle rows; their names and notes come from `collection.lab.organelle.<key>` (UI-161). */
 const ORGANELLES: {
   slot: "mitokondria" | "nucleus" | "lysosome";
   key: "mitokondria" | "nukleus" | "lisosom";
   anim: LabAction;
-  label: string;
-  note: string;
 }[] = [
-  { slot: "mitokondria", key: "mitokondria", anim: "atp", label: "mitochondria", note: "+10% atp per level" },
-  { slot: "nucleus", key: "nukleus", anim: "nucleus", label: "nucleus", note: "+10% output per level" },
-  { slot: "lysosome", key: "lisosom", anim: "lysosome", label: "lysosome", note: "-10% hunger per level" },
+  { slot: "mitokondria", key: "mitokondria", anim: "atp" },
+  { slot: "nucleus", key: "nukleus", anim: "nucleus" },
+  { slot: "lysosome", key: "lisosom", anim: "lysosome" },
 ];
 
 /**
@@ -99,7 +98,8 @@ export const CellLab: React.FC<CellLabProps> = ({
   onUpgrade,
   onOpenNpcMarket,
 }) => {
-  const labels = SKIN_LABELS[skin];
+  const { t } = useT();
+  const labels = useSkinLabels(skin);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [ready, setReady] = useState(false);
   const [slow, setSlow] = useState(false);
@@ -224,12 +224,13 @@ export const CellLab: React.FC<CellLabProps> = ({
   const showPlaceholder = !ready;
   const live = mode === "live";
   const keysLocked = isKeyDisabled(busy);
-  const upgradeNote = "on-chain transactions need a wallet — outside this demo";
+  const upgradeNote = t("collection.lab.upgradeNote");
+  const previewNote = t("collection.lab.livePreviewNote");
 
   return (
     <Modal
-      title="cell-lab.fig"
-      heading={`cell lab${strain ? ` — strain #${strain.strain_id}` : ""}`}
+      title={t("collection.lab.title")}
+      heading={strain ? t("collection.lab.headingStrain", { id: strain.strain_id }) : t("collection.lab.heading")}
       onClose={onClose}
       size="xl"
       testId="cell-lab"
@@ -237,10 +238,10 @@ export const CellLab: React.FC<CellLabProps> = ({
         <>
           <span aria-live="polite">
             {ready
-              ? `figure connected${keysLocked ? " · playing…" : lastDone ? ` · last: ${lastDone}` : ""}`
-              : "waiting for figure (snacc:ready)…"}
+              ? `${t("collection.lab.connected")}${keysLocked ? t("collection.lab.playing") : lastDone ? t("collection.lab.last", { action: lastDone }) : ""}`
+              : t("collection.lab.waiting")}
           </span>
-          <span className="hidden sm:inline">origin validated · same-origin iframe</span>
+          <span className="hidden sm:inline">{t("collection.lab.origin")}</span>
         </>
       }
     >
@@ -248,24 +249,24 @@ export const CellLab: React.FC<CellLabProps> = ({
         <div className="fd-row fd-row--between">
           <p className="fd-sub">
             {strain
-              ? `status ${strain.status} · vitality ${strain.vitality.toLocaleString("en-US")} · zone ${zone}`
+              ? t("collection.lab.statusLine", { status: strain.status, vit: strain.vitality.toLocaleString("en-US"), zone })
               : isLoading
-                ? "loading strain"
-                : "no strain selected"}
+                ? t("collection.lab.loadingStrain")
+                : t("collection.lab.noStrain")}
           </p>
           <span className="fd-row">
-            <Tag>Fig 01</Tag>
-            <Tag>{mode === "demo" ? "demo · simulated" : "live · mechanism preview"}</Tag>
+            <Tag>{t("collection.lab.fig")}</Tag>
+            <Tag>{mode === "demo" ? t("hud.resources.demo") : t("collection.lab.livePreview")}</Tag>
           </span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
-          <section className="flex min-w-0 flex-col gap-3" aria-label="cell figure">
+          <section className="flex min-w-0 flex-col gap-3" aria-label={t("collection.lab.figureLabel")}>
             <div className="lab-figure relative aspect-[4/3] min-h-[260px] w-full flex-none border border-[var(--ink-hi)] lg:aspect-[3/2]">
               <iframe
                 ref={iframeRef}
                 src={CELL_LAB_SRC}
-                title="cell cutaway figure"
+                title={t("collection.lab.iframeTitle")}
                 className="lab-figure__frame absolute inset-0 h-full w-full border-0"
                 sandbox="allow-scripts allow-same-origin"
                 onLoad={(e) => matchEmbedColorScheme(e.currentTarget)}
@@ -286,9 +287,7 @@ export const CellLab: React.FC<CellLabProps> = ({
                     <path d="M30 78c10-8 22 6 32 0s22 6 30-2" fill="none" stroke="#5d6165" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                   <p className="max-w-sm text-sm lowercase text-[var(--ink-hi)]">
-                    {slow
-                      ? "the cutaway figure is taking long to load. the numbers below still work."
-                      : "loading the cutaway figure (about 150 kb)…"}
+                    {slow ? t("collection.lab.slow") : t("collection.lab.loadingFig")}
                   </p>
                 </div>
               ) : null}
@@ -298,15 +297,12 @@ export const CellLab: React.FC<CellLabProps> = ({
               <div
                 className="flex snap-x gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-6 lg:overflow-visible lg:pb-0"
                 role="group"
-                aria-label="cell actions"
+                aria-label={t("collection.lab.actionsLabel")}
                 data-testid="lab-keycaps"
               >
                 {LAB_KEYCAPS.map((cap) => {
-                  const note = live
-                    ? LIVE_PREVIEW_NOTE
-                    : cap.previewOnly
-                      ? "plays the mechanism only, changes no numbers"
-                      : `play ${cap.label} (demo · simulated)`;
+                  const capLabel = t(`collection.lab.keycaps.${cap.action}`);
+                  const note = live ? previewNote : cap.previewOnly ? t("collection.lab.previewOnly") : t("collection.lab.play", { label: capLabel });
                   return (
                     <button
                       key={cap.action}
@@ -316,38 +312,37 @@ export const CellLab: React.FC<CellLabProps> = ({
                       aria-busy={busy.busy.has(cap.action) || undefined}
                       onClick={() => press(cap.action)}
                       title={note}
-                      aria-label={`${cap.label} — ${note}`}
+                      aria-label={`${capLabel} — ${note}`}
                       className={`keycap min-h-[44px] flex-none snap-start whitespace-nowrap px-3 text-xs focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none lg:px-2 ${cap.primary ? "keycap--primary" : ""}`}
                     >
-                      {cap.label}
+                      {capLabel}
                     </button>
                   );
                 })}
               </div>
               <p className="text-[11px] lowercase text-[var(--ink)]" data-testid="lab-keycap-note">
-                {live
-                  ? LIVE_PREVIEW_NOTE
-                  : "demo · simulated: keys change the demo numbers; vacuole and attest only play the mechanism."}
+                {live ? previewNote : t("collection.lab.demoNote")}
               </p>
             </div>
 
           </section>
 
-          <aside className="flex min-w-0 flex-col gap-4" aria-label="cell details">
-            <section className="plate-panel p-3" aria-label="organelle upgrades">
-              <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">organelles</h3>
+          <aside className="flex min-w-0 flex-col gap-4" aria-label={t("collection.lab.detailsLabel")}>
+            <section className="plate-panel p-3" aria-label={t("collection.lab.upgradesLabel")}>
+              <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">{t("collection.lab.organelles")}</h3>
               <div className="flex flex-col gap-2">
                 {ORGANELLES.map((item) => {
                   const level = resolved.levels[item.key];
                   const levelLabel = resolved.known[item.key] ? String(level) : "—";
                   const cost = costAtLevel(Math.min(level, MAX_ORGANELLE_LEVEL));
                   const canUpgrade = !live && level < MAX_ORGANELLE_LEVEL && atpAvailable >= cost;
+                  const itemLabel = t(`collection.lab.organelle.${item.key}.label`);
                   return (
                     <div key={item.slot} className="flex items-center gap-3 rounded-xl border border-[var(--edge)] bg-white p-2.5">
                       <div className="min-w-0 flex-1">
-                        <span className="block text-xs font-semibold lowercase text-[var(--ink-hi)]">{item.label}</span>
-                        <span className="block text-[11px] lowercase text-[var(--ink)]">{item.note}</span>
-                        <span className="mt-1 flex gap-1" aria-label={`${item.label} level ${levelLabel} of ${MAX_ORGANELLE_LEVEL}`}>
+                        <span className="block text-xs font-semibold lowercase text-[var(--ink-hi)]">{itemLabel}</span>
+                        <span className="block text-[11px] lowercase text-[var(--ink)]">{t(`collection.lab.organelle.${item.key}.note`)}</span>
+                        <span className="mt-1 flex gap-1" aria-label={t("collection.lab.levelLabel", { label: itemLabel, level: levelLabel, max: MAX_ORGANELLE_LEVEL })}>
                           {Array.from({ length: MAX_ORGANELLE_LEVEL }, (_, i) => (
                             <span
                               key={i}
@@ -366,11 +361,19 @@ export const CellLab: React.FC<CellLabProps> = ({
                           onUpgrade(item.slot);
                           playAnimation(item.anim);
                         }}
-                        title={live ? upgradeNote : canUpgrade ? `upgrade for ${cost} atp` : level >= MAX_ORGANELLE_LEVEL ? "max level" : `need ${cost} atp`}
-                        aria-label={`${item.label} upgrade`}
+                        title={
+                          live
+                            ? upgradeNote
+                            : canUpgrade
+                              ? t("collection.lab.upgradeFor", { cost })
+                              : level >= MAX_ORGANELLE_LEVEL
+                                ? t("collection.lab.maxLevel")
+                                : t("collection.lab.needAtp", { cost })
+                        }
+                        aria-label={t("collection.lab.upgradeLabel", { label: itemLabel })}
                         className={`keycap min-h-[44px] px-3 text-[11px] focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none ${canUpgrade ? "keycap--primary" : ""}`}
                       >
-                        {level >= MAX_ORGANELLE_LEVEL ? "max" : live ? "preview" : `up ${cost}`}
+                        {level >= MAX_ORGANELLE_LEVEL ? t("collection.lab.max") : live ? t("collection.lab.preview") : t("collection.lab.up", { cost })}
                       </button>
                     </div>
                   );
@@ -379,7 +382,7 @@ export const CellLab: React.FC<CellLabProps> = ({
               {live ? <p className="mt-2 text-[11px] lowercase text-[var(--ink)]">{upgradeNote}</p> : null}
             </section>
 
-            <section className="plate-panel p-3" aria-label="production chain">
+            <section className="plate-panel p-3" aria-label={t("collection.lab.chainLabel")}>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold lowercase text-[var(--ink-hi)]">{labels.productionChain}</h3>
                 {onOpenNpcMarket && (
@@ -390,7 +393,7 @@ export const CellLab: React.FC<CellLabProps> = ({
                     className="keycap inline-flex min-h-[40px] items-center gap-1.5 px-3 text-[11px] font-semibold focus-visible:ring-2 focus-visible:ring-[var(--accent-dk)] focus:outline-none"
                   >
                     <Icon name="scale" />
-                    <span>{skin === "fintech" ? "market makers" : "npc merchants"}</span>
+                    <span>{skin === "fintech" ? t("collection.lab.makers") : t("collection.lab.merchants")}</span>
                   </button>
                 )}
               </div>
@@ -409,28 +412,28 @@ export const CellLab: React.FC<CellLabProps> = ({
               </ol>
             </section>
 
-            <section className="plate-panel p-3" aria-label="on chain svg">
+            <section className="plate-panel p-3" aria-label={t("collection.lab.svgLabel")}>
               <h3 className="mb-2 text-sm font-semibold lowercase text-[var(--ink-hi)]">{labels.onChainSvg}</h3>
               <div className="onchain-frame rounded-xl border border-[var(--line)] bg-[var(--pl-base)] p-2">
                 {live && svgStatus === "loading" ? (
-                  <div className="eyepiece relative flex h-32 flex-col rounded-lg border border-[var(--line)]" role="status" aria-label="focusing">
+                  <div className="eyepiece relative flex h-32 flex-col rounded-lg border border-[var(--line)]" role="status" aria-label={t("collection.lab.focusingLabel")}>
                     <div className="eyepiece-ring" aria-hidden="true" />
-                    <span className="absolute bottom-2 font-mono text-[10px] lowercase text-[var(--ink)]">focusing…</span>
+                    <span className="absolute bottom-2 font-mono text-[10px] lowercase text-[var(--ink)]">{t("collection.lab.focusing")}</span>
                   </div>
                 ) : svgDataUri ? (
                   <img
                     src={svgDataUri}
-                    alt={strain ? `on-chain svg for strain ${strain.strain_id}` : "strain svg"}
+                    alt={strain ? t("collection.detail.svgAlt", { id: strain.strain_id }) : t("collection.lab.svgAlt")}
                     className="h-32 w-full rounded-lg object-contain"
                   />
                 ) : (
                   <div className="flex h-32 flex-col items-center justify-center gap-1 rounded-lg text-xs lowercase text-[var(--ink)]">
                     <span className="font-mono text-lg text-[var(--ink-hi)]">—</span>
-                    <span>{svgStatus === "error" ? "svg request failed" : "no svg for this strain yet"}</span>
+                    <span>{svgStatus === "error" ? t("collection.detail.svgFailed") : t("collection.detail.svgMissing")}</span>
                   </div>
                 )}
                 <p className="onchain-frame__caption mt-1.5 text-center font-mono text-[10px] tracking-[0.18em] text-[var(--ink-mute)]">
-                  {live ? "on-chain svg" : "on-chain svg (demo stub)"}
+                  {live ? t("collection.detail.svg") : t("collection.lab.svgDemoStub")}
                 </p>
               </div>
             </section>
