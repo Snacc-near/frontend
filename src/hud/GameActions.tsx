@@ -7,6 +7,11 @@
  * why a button is disabled. After a successful transaction the window re-reads its views and the
  * app refreshes the account. Without a wallet the windows still show the live reads and a connect
  * button; nothing is signed. Values that could not be read show "—".
+ *
+ * UI-161 phase B2: every sentence a player reads comes from the `actions` dictionary (`useT()`), in
+ * English or Indonesian. `GAME_ACTIONS` keeps the English label and blurb as data (tests, search); the
+ * menu renders them from `actions.menu.<key>`. The reasons returned by the `check*` helpers in
+ * `chain/actions.ts` are still English.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -83,6 +88,8 @@ import type { WalletApi } from "../chain/wallet.tsx";
 import { fetchVessel } from "../data/collection.ts";
 import { explorerAccount } from "../data/nearView.ts";
 import type { StrainDetail } from "../data/types.ts";
+import type { Translate } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { ExtLink, Field, Input, KeycapButton, Select, TabPanel, Tabs } from "../ui/controls.tsx";
 import { Footer, FaucetLine, StorageLine, TxStatusView, plan, useSend, type ChainActionProps, type TxPhase } from "./ChainActions.tsx";
@@ -90,6 +97,7 @@ import { Footer, FaucetLine, StorageLine, TxStatusView, plan, useSend, type Chai
 /** Windows reachable from the action menu, the dock and Strain Detail. */
 export type GameActionKey = "allocate" | "divide" | "splice" | "extract" | "transmute" | "synthesize" | "npc" | "hungry" | "pool" | "gift" | "send";
 
+/** English label and blurb as data; the menu shows `actions.menu.<key>.label` / `.blurb` in the reader's language. */
 export const GAME_ACTIONS: readonly { key: GameActionKey; label: string; method: string; blurb: string }[] = [
   { key: "allocate", label: "Allocate ATP", method: "allocate_atp", blurb: "level up mitochondria, nucleus, lysosome (once per epoch)" },
   { key: "divide", label: "Divide", method: "divide_strain", blurb: "split a Snacc in two (3 ATP)" },
@@ -142,8 +150,13 @@ function useReload(onDone: (ok: boolean, txHash?: string | null) => void): [numb
   ];
 }
 
+/** Contract status values, shown as code in the notes; they are the same in every language. */
+const STATUS_SPLICED = "SplicedBurned";
+const STATUS_LIQUIDATED = "Liquidated";
+
 const dash = (v: ReactNode | null | undefined) => (v === null || v === undefined ? "—" : v);
-const roleText = (mask: number) => rolesOf(mask).join(" + ") || "no role";
+/** Role names stay in English (game proper nouns); only "no role" is translated. */
+const roleText = (t: Translate, mask: number) => rolesOf(mask).join(" + ") || t("actions.shared.noRole");
 
 function Kv({ rows, testId }: { rows: [string, ReactNode][]; testId?: string }) {
   return (
@@ -159,13 +172,14 @@ function Kv({ rows, testId }: { rows: [string, ReactNode][]; testId?: string }) 
 }
 
 function ConnectLine({ wallet }: { wallet: WalletApi }) {
+  const { t } = useT();
   if (wallet.accountId) return null;
   return (
     <div className="fd-note" role="status" data-testid="connect-line">
-      <strong>Connect a wallet to sign this on testnet.</strong> The reads below are live; nothing is sent until you connect and approve.
+      <strong>{t("actions.shared.connectTitle")}</strong> {t("actions.shared.connectBody")}
       <div className="fd-row mt-2">
         <KeycapButton icon="user" onClick={() => void wallet.connect()} disabled={wallet.status === "connecting"}>
-          connect wallet
+          {t("actions.shared.connectButton")}
         </KeycapButton>
       </div>
     </div>
@@ -190,14 +204,15 @@ function StrainPicker({
   disabled?: boolean;
   exclude?: number | null;
 }) {
+  const { t } = useT();
   const owned = (info.colony ?? []).filter((s) => s.strain_id !== exclude);
   if (info.colony === null) {
-    return <p className="fd-field__hint" role="status">{info.loading ? "Reading your colony…" : "Your colony is not read yet (connect a wallet, or the RPC did not answer)."}</p>;
+    return <p className="fd-field__hint" role="status">{info.loading ? t("actions.shared.readingColony") : t("actions.shared.colonyNotRead")}</p>;
   }
   if (owned.length === 0) {
     return (
       <p className="fd-field__hint" role="status" data-testid={`${id}-empty`}>
-        No living Snacc to pick here. Hatch one first.
+        {t("actions.shared.noLiving")}
       </p>
     );
   }
@@ -206,7 +221,12 @@ function StrainPicker({
       <Select id={id} value={value ?? ""} onChange={(e) => onChange(Number(e.target.value))} disabled={disabled}>
         {owned.map((s) => (
           <option key={s.strain_id} value={s.strain_id}>
-            {`#${s.strain_id} · ${roleText(s.role_mask)} · vitality ${s.effective_vitality.toLocaleString("en-US")} · gen ${s.generation}`}
+            {t("actions.shared.strainOption", {
+              id: s.strain_id,
+              roles: roleText(t, s.role_mask),
+              vitality: s.effective_vitality.toLocaleString("en-US"),
+              gen: s.generation,
+            })}
           </option>
         ))}
       </Select>
@@ -249,19 +269,27 @@ function SignBlock({
   label: string;
   testId: string;
 }) {
+  const { t } = useT();
   const busy = phase.kind === "pending";
   const done = phase.kind === "done" && phase.result.ok;
   const connected = Boolean(wallet.accountId);
   const attached = totalDeposit(calls);
   const gas = maxGasFeeYocto(calls);
-  const reason = !connected ? "Connect a wallet first." : blocked;
+  const reason = !connected ? t("actions.shared.connectFirst") : blocked;
   return (
     <>
       {calls.length ? (
         <Kv
           rows={[
-            ["attached", BigInt(attached) === 0n ? "0 NEAR" : BigInt(attached) === 1n ? "1 yoctoNEAR" : `${formatYocto(attached, 6)} NEAR`],
-            ["gas, at most", `${formatYocto(gas)} NEAR (unused gas is refunded)`],
+            [
+              t("actions.shared.attached"),
+              BigInt(attached) === 0n
+                ? t("actions.shared.nearAmount", { amount: "0" })
+                : BigInt(attached) === 1n
+                  ? t("actions.shared.oneYocto")
+                  : t("actions.shared.nearAmount", { amount: formatYocto(attached, 6) }),
+            ],
+            [t("actions.shared.gasAtMost"), t("actions.shared.gasValue", { amount: formatYocto(gas) })],
           ]}
         />
       ) : null}
@@ -276,11 +304,11 @@ function SignBlock({
       <div className="fd-row">
         {done ? (
           <KeycapButton variant="primary" icon="check" onClick={onClose}>
-            close
+            {t("actions.shared.close")}
           </KeycapButton>
         ) : (
           <KeycapButton variant="primary" icon="spark" disabled={Boolean(reason) || calls.length === 0 || busy} onClick={() => void send(calls)} data-testid={`${testId}-sign`}>
-            {busy ? (phase.kind === "pending" && phase.oneTap ? "sending (one-tap)…" : "waiting for wallet…") : label}
+            {busy ? (phase.kind === "pending" && phase.oneTap ? t("actions.shared.sendingOneTap") : t("actions.shared.waitingWallet")) : label}
           </KeycapButton>
         )}
       </div>
@@ -292,28 +320,29 @@ function useVessel(strainId: number | null, reload: number) {
   return useView<StrainDetail>(strainId === null ? null : (s) => fetchVessel(strainId, s), [strainId, reload]);
 }
 
-const vesselBlocked = (v: StrainDetail | null, loading: boolean): string | null => {
-  if (!v) return loading ? "Reading the Snacc from testnet…" : "Pick a Snacc you own (or the strain read failed).";
-  if (v.status === "Liquidated" || v.status === "SplicedBurned") return "This Snacc is no longer alive.";
+const vesselBlocked = (t: Translate, v: StrainDetail | null, loading: boolean): string | null => {
+  if (!v) return loading ? t("actions.shared.readingSnacc") : t("actions.shared.pickSnacc");
+  if (v.status === "Liquidated" || v.status === "SplicedBurned") return t("actions.shared.notAlive");
   return null;
 };
 
 // ---------------------------------------------------------------- action menu
 
 export function ActionMenuModal({ onPick, onClose, connected }: { onPick: (key: GameActionKey) => void; onClose: () => void; connected: boolean }) {
+  const { t } = useT();
   return (
-    <Modal title="actions.tx" heading="Game actions" onClose={onClose} testId="action-menu" footer={<Footer />}>
+    <Modal title="actions.tx" heading={t("actions.menu.heading")} onClose={onClose} testId="action-menu" footer={<Footer />}>
       <div className="fd-stack">
         {!connected ? (
           <p className="fd-field__hint" role="status">
-            Every action is signed in your wallet on testnet. You can open each one to see its rules and live reads before connecting.
+            {t("actions.menu.offline")}
           </p>
         ) : null}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="list">
           {GAME_ACTIONS.map((a) => (
             <KeycapButton key={a.key} block onClick={() => onPick(a.key)} data-testid={`action-${a.key}`} className="!h-auto min-w-0 flex-col !items-start gap-0.5 !py-2 text-left" role="listitem">
-              <span className="w-full min-w-0 font-semibold">{a.label}</span>
-              <span className="fd-field__hint block w-full min-w-0 whitespace-normal break-words text-left">{a.blurb}</span>
+              <span className="w-full min-w-0 font-semibold">{t(`actions.menu.${a.key}.label`)}</span>
+              <span className="fd-field__hint block w-full min-w-0 whitespace-normal break-words text-left">{t(`actions.menu.${a.key}.blurb`)}</span>
             </KeycapButton>
           ))}
         </div>
@@ -324,13 +353,10 @@ export function ActionMenuModal({ onPick, onClose, connected }: { onPick: (key: 
 
 // ---------------------------------------------------------------- allocate_atp
 
-const SLOTS: { key: keyof OrganelLevels; name: string; effect: string }[] = [
-  { key: "mitokondria", name: "mitochondria", effect: "+10% ATP minted per level when you feed" },
-  { key: "nukleus", name: "nucleus", effect: "+10% production output per level" },
-  { key: "lisosom", name: "lysosome", effect: "−10% hunger (BMR) per level" },
-];
+const SLOTS: { key: keyof OrganelLevels }[] = [{ key: "mitokondria" }, { key: "nukleus" }, { key: "lisosom" }];
 
 export function AllocateAtpModal({ wallet, info, onClose, onDone, preferredStrainId }: GameActionProps) {
+  const { t } = useT();
   const [reload, done] = useReload(onDone);
   const { phase, send } = useSend(wallet, done);
   const [strainId, setStrainId] = useStrainChoice(info, preferredStrainId);
@@ -359,22 +385,21 @@ export function AllocateAtpModal({ wallet, info, onClose, onDone, preferredStrai
   const busy = phase.kind === "pending";
 
   return (
-    <Modal title="allocate.tx" heading="Allocate ATP" onClose={onClose} testId="allocate-modal" footer={<Footer />}>
+    <Modal title="allocate.tx" heading={t("actions.allocate.heading")} onClose={onClose} testId="allocate-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <p className="fd-note">
-          <strong>Set each organelle level from 0 to {MAX_ORGANEL_LEVEL}.</strong> Every level you add costs 1 ATP from this Snacc; lowering a level is free. One
-          allocation per Snacc per epoch.
+          <strong>{t("actions.allocate.noteTitle", { max: MAX_ORGANEL_LEVEL })}</strong> {t("actions.allocate.noteBody")}
         </p>
-        <StrainPicker id="allocate-strain" label="your snacc" info={info} value={strainId} onChange={setStrainId} disabled={busy} />
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="organelle levels">
+        <StrainPicker id="allocate-strain" label={t("actions.shared.yourSnacc")} info={info} value={strainId} onChange={setStrainId} disabled={busy} />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label={t("actions.allocate.levels")}>
           {SLOTS.map((s) => (
             <div key={s.key} className="fd-stack border border-[var(--ink-hi)] bg-[var(--paper)] p-2" style={{ gap: 4 }}>
-              <span className="fd-field__label">{s.name}</span>
+              <span className="fd-field__label">{t(`actions.allocate.slot.${s.key}.name`)}</span>
               <div className="fd-row" style={{ gap: 6 }}>
                 <KeycapButton
                   mono
-                  aria-label={`lower ${s.name}`}
+                  aria-label={t("actions.allocate.lower", { name: t(`actions.allocate.slot.${s.key}.name`) })}
                   disabled={!v || busy || levels[s.key] <= 0}
                   onClick={() => setTarget({ ...levels, [s.key]: levels[s.key] - 1 })}
                 >
@@ -385,30 +410,33 @@ export function AllocateAtpModal({ wallet, info, onClose, onDone, preferredStrai
                 </span>
                 <KeycapButton
                   mono
-                  aria-label={`raise ${s.name}`}
+                  aria-label={t("actions.allocate.raise", { name: t(`actions.allocate.slot.${s.key}.name`) })}
                   disabled={!v || busy || levels[s.key] >= MAX_ORGANEL_LEVEL}
                   onClick={() => setTarget({ ...levels, [s.key]: levels[s.key] + 1 })}
                 >
                   +
                 </KeycapButton>
               </div>
-              <span className="fd-field__hint">{s.effect}</span>
+              <span className="fd-field__hint">{t(`actions.allocate.slot.${s.key}.effect`)}</span>
             </div>
           ))}
         </div>
         <Kv
           testId="allocate-cost"
           rows={[
-            ["cost", v ? `${check.cost} ATP` : "—"],
-            ["this snacc's ATP", v ? `${v.atp_balance} → ${v && BigInt(check.cost) <= atp ? (atp - BigInt(check.cost)).toString() : "not enough"}` : "—"],
-            ["epoch", dash(macro.data?.currentEpoch)],
+            [t("actions.allocate.cost"), v ? `${check.cost} ATP` : "—"],
             [
-              "epoch closes",
-              left === null ? "—" : left > 0 ? `in ${formatCountdown(left)} (contract clock)` : "ended; it closes when anyone calls advance_epoch",
+              t("actions.allocate.atpOf"),
+              v ? `${v.atp_balance} → ${v && BigInt(check.cost) <= atp ? (atp - BigInt(check.cost)).toString() : t("actions.allocate.notEnough")}` : "—",
+            ],
+            [t("actions.allocate.epoch"), dash(macro.data?.currentEpoch)],
+            [
+              t("actions.allocate.closes"),
+              left === null ? "—" : left > 0 ? t("actions.allocate.closesIn", { time: formatCountdown(left) }) : t("actions.allocate.ended"),
             ],
             [
-              "last allocation",
-              !v || v.last_allocate_epoch === undefined ? "—" : v.last_allocate_epoch > 1e15 ? "never" : `epoch ${v.last_allocate_epoch}`,
+              t("actions.allocate.last"),
+              !v || v.last_allocate_epoch === undefined ? "—" : v.last_allocate_epoch > 1e15 ? t("actions.allocate.never") : t("actions.allocate.epochN", { n: v.last_allocate_epoch }),
             ],
           ]}
         />
@@ -419,8 +447,8 @@ export function AllocateAtpModal({ wallet, info, onClose, onDone, preferredStrai
           phase={phase}
           send={send}
           onClose={onClose}
-          blocked={vesselBlocked(v, vessel.loading) ?? (check.ok ? null : check.reason)}
-          label="sign and allocate"
+          blocked={vesselBlocked(t, v, vessel.loading) ?? (check.ok ? null : check.reason)}
+          label={t("actions.allocate.sign")}
           testId="allocate"
         />
       </div>
@@ -431,6 +459,7 @@ export function AllocateAtpModal({ wallet, info, onClose, onDone, preferredStrai
 // ---------------------------------------------------------------- divide_strain + splice_strains
 
 export function DivideModal({ wallet, info, onClose, onDone, preferredStrainId }: GameActionProps) {
+  const { t } = useT();
   const [reload, done] = useReload(onDone);
   const { phase, send } = useSend(wallet, done);
   const [strainId, setStrainId] = useStrainChoice(info, preferredStrainId);
@@ -451,21 +480,23 @@ export function DivideModal({ wallet, info, onClose, onDone, preferredStrainId }
   const calls = useMemo(() => plan(v && check?.ok ? buildDivide({ strainId: v.strain_id }) : null, wallet.accountId ?? "", info), [v, check?.ok, wallet.accountId, info]);
 
   return (
-    <Modal title="divide.tx" heading="Divide a Snacc" onClose={onClose} testId="divide-modal" footer={<Footer />}>
+    <Modal title="divide.tx" heading={t("actions.divide.heading")} onClose={onClose} testId="divide-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <p className="fd-note">
-          <strong>Cell division.</strong> The child gets half of the parent&apos;s $SNACC, vitality and spore-ignis; organelles are split between them. The child is one
-          generation newer.
+          <strong>{t("actions.divide.noteTitle")}</strong> {t("actions.divide.noteBody")}
         </p>
-        <StrainPicker id="divide-strain" label="parent snacc" info={info} value={strainId} onChange={setStrainId} disabled={phase.kind === "pending"} />
+        <StrainPicker id="divide-strain" label={t("actions.divide.parent")} info={info} value={strainId} onChange={setStrainId} disabled={phase.kind === "pending"} />
         <Kv
           testId="divide-rules"
           rows={[
-            ["ATP cost", `${ATP_COST.divide} ATP (this Snacc has ${v ? v.atp_balance : "—"})`],
-            ["colony", `${dash(colonySize)} / ${MAX_COLONY_SIZE} living Snaccs`],
-            ["generation", v ? `${v.generation} → child ${v.generation + 1} (max ${MAX_GENERATION})` : `max ${MAX_GENERATION}`],
-            ["divisions open", macro.data ? `${Math.max(0, macro.data.birthBudget)} (total divides ≤ mergers + lyses)` : "—"],
+            [t("actions.divide.atpCost"), t("actions.divide.atpCostValue", { cost: ATP_COST.divide, atp: v ? v.atp_balance : "—" })],
+            [t("actions.divide.colony"), t("actions.divide.colonyValue", { n: String(dash(colonySize)), max: MAX_COLONY_SIZE })],
+            [
+              t("actions.divide.generation"),
+              v ? t("actions.divide.generationValue", { gen: v.generation, child: v.generation + 1, max: MAX_GENERATION }) : t("actions.divide.generationMax", { max: MAX_GENERATION }),
+            ],
+            [t("actions.divide.open"), macro.data ? t("actions.divide.openValue", { n: Math.max(0, macro.data.birthBudget) }) : "—"],
           ]}
         />
         <SignBlock
@@ -475,8 +506,8 @@ export function DivideModal({ wallet, info, onClose, onDone, preferredStrainId }
           phase={phase}
           send={send}
           onClose={onClose}
-          blocked={vesselBlocked(v, vessel.loading) ?? (check && !check.ok ? check.reason : null)}
-          label="sign and divide"
+          blocked={vesselBlocked(t, v, vessel.loading) ?? (check && !check.ok ? check.reason : null)}
+          label={t("actions.divide.sign")}
           testId="divide"
         />
       </div>
@@ -485,6 +516,7 @@ export function DivideModal({ wallet, info, onClose, onDone, preferredStrainId }
 }
 
 export function SpliceModal({ wallet, info, onClose, onDone, preferredStrainId }: GameActionProps) {
+  const { t, rich } = useT();
   const { phase, send } = useSend(wallet, onDone);
   const [dominant, setDominant] = useStrainChoice(info, preferredStrainId);
   const [absorbed, setAbsorbed] = useStrainChoice(info, null, dominant);
@@ -492,30 +524,33 @@ export function SpliceModal({ wallet, info, onClose, onDone, preferredStrainId }
   const dom = owned.find((s) => s.strain_id === dominant) ?? null;
   const abs = owned.find((s) => s.strain_id === absorbed) ?? null;
   let blocked: string | null = null;
-  if (!dom || !abs) blocked = "Splicing needs two living Snaccs in your colony.";
-  else if (dom.effective_vitality <= 0) blocked = "A starving dominant Snacc (vitality 0) cannot splice. Feed it first.";
-  else if (dom.generation + 1 > MAX_GENERATION) blocked = `The dominant Snacc would reach generation ${dom.generation + 1}; the limit is ${MAX_GENERATION}.`;
+  if (!dom || !abs) blocked = t("actions.splice.needTwo");
+  else if (dom.effective_vitality <= 0) blocked = t("actions.splice.starving");
+  else if (dom.generation + 1 > MAX_GENERATION) blocked = t("actions.splice.genLimit", { gen: dom.generation + 1, max: MAX_GENERATION });
   const calls = useMemo(
     () => plan(!blocked && dom && abs ? buildSplice({ dominantId: dom.strain_id, absorbedId: abs.strain_id }) : null, wallet.accountId ?? "", info),
     [blocked, dom, abs, wallet.accountId, info],
   );
   return (
-    <Modal title="splice.tx" heading="Splice two Snaccs" onClose={onClose} testId="splice-modal" footer={<Footer />}>
+    <Modal title="splice.tx" heading={t("actions.splice.heading")} onClose={onClose} testId="splice-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <p className="fd-note">
-          <strong>Voluntary merger of two of your own Snaccs.</strong> {MERGER_TAX_BPS / 100}% of the absorbed Snacc&apos;s $SNACC goes to the contract treasury as merger
-          tax; the dominant one takes the other 97.5%, all its molecules and its roles, gains one generation and +8% efficiency. The absorbed Snacc ends as{" "}
-          <code>SplicedBurned</code> and cannot be used again.
+          <strong>{t("actions.splice.noteTitle")}</strong> {rich("actions.splice.noteBody", { tax: MERGER_TAX_BPS / 100, status: <code>{STATUS_SPLICED}</code> })}
         </p>
         <div className="fd-form-grid">
-          <StrainPicker id="splice-dominant" label="dominant (keeps living)" info={info} value={dominant} onChange={setDominant} />
-          <StrainPicker id="splice-absorbed" label="absorbed (is burnt)" info={info} value={absorbed} onChange={setAbsorbed} exclude={dominant} />
+          <StrainPicker id="splice-dominant" label={t("actions.splice.dominant")} info={info} value={dominant} onChange={setDominant} />
+          <StrainPicker id="splice-absorbed" label={t("actions.splice.absorbed")} info={info} value={absorbed} onChange={setAbsorbed} exclude={dominant} />
         </div>
         {dom && abs ? (
-          <Kv rows={[["roles after", roleText(dom.role_mask | abs.role_mask)], ["generation after", `${dom.generation + 1} (max ${MAX_GENERATION})`]]} />
+          <Kv
+            rows={[
+              [t("actions.splice.rolesAfter"), roleText(t, dom.role_mask | abs.role_mask)],
+              [t("actions.splice.genAfter"), t("actions.splice.genAfterValue", { gen: dom.generation + 1, max: MAX_GENERATION })],
+            ]}
+          />
         ) : null}
-        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label="sign and splice" testId="splice" />
+        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label={t("actions.splice.sign")} testId="splice" />
       </div>
     </Modal>
   );
@@ -529,16 +564,18 @@ const TAB_CONST: Record<ProduceTab, string> = { extract: "ROLE_EXTRACTOR", trans
 const short = (id: string) => id.replace(/^mt:/, "");
 
 function InventoryLine({ inv }: { inv: Inventory | null }) {
-  if (!inv) return <p className="fd-field__hint">inventory: —</p>;
+  const { t } = useT();
+  if (!inv) return <p className="fd-field__hint">{t("actions.produce.inventoryNone")}</p>;
   const items = Object.entries(inv).filter(([, n]) => (n ?? 0n) > 0n);
   return (
     <p className="fd-field__hint" data-testid="inventory-line">
-      inventory: {items.length ? items.map(([id, n]) => `${short(id)} ${n}`).join(" · ") : "empty"}
+      {t("actions.produce.inventory", { items: items.length ? items.map(([id, n]) => `${short(id)} ${n}`).join(" · ") : t("actions.produce.empty") })}
     </p>
   );
 }
 
 export function ProduceModal({ wallet, info, onClose, onDone, preferredStrainId, initialTab = "extract" }: GameActionProps & { initialTab?: ProduceTab }) {
+  const { t } = useT();
   const [tab, setTab] = useState<ProduceTab>(initialTab);
   const [reload, done] = useReload(onDone);
   const { phase, send } = useSend(wallet, done);
@@ -556,45 +593,45 @@ export function ProduceModal({ wallet, info, onClose, onDone, preferredStrainId,
   const role = TAB_ROLE[tab];
   const atp = v ? BigInt(v.atp_balance) : 0n;
 
-  let blocked = vesselBlocked(v, vessel.loading);
+  let blocked = vesselBlocked(t, v, vessel.loading);
   if (!blocked && v && !hasRole(v.role_mask, role)) {
-    blocked = `Snacc #${v.strain_id} is ${roleText(v.role_mask)}. ${tab[0].toUpperCase()}${tab.slice(1)} needs the ${role} role (${TAB_CONST[tab]}). Hatch a ${role} or splice one in.`;
+    blocked = t("actions.produce.needsRole", { id: v.strain_id, roles: roleText(t, v.role_mask), step: t(`actions.produce.step.${tab}`), role, constant: TAB_CONST[tab] });
   }
-  if (!blocked && v && v.effective_vitality <= 0) blocked = "A starving Snacc (vitality 0) cannot work. Feed it first.";
-  if (!blocked && v && atp < BigInt(ATP_COST[tab])) blocked = `This step costs ${ATP_COST[tab]} ATP; this Snacc has ${v.atp_balance}.`;
-  if (!blocked && feeYocto === null) blocked = "Enter the catalyst fee in NEAR, e.g. 0.001.";
+  if (!blocked && v && v.effective_vitality <= 0) blocked = t("actions.produce.starving");
+  if (!blocked && v && atp < BigInt(ATP_COST[tab])) blocked = t("actions.produce.costs", { cost: ATP_COST[tab], atp: v.atp_balance });
+  if (!blocked && feeYocto === null) blocked = t("actions.produce.enterFee");
 
   let call: ContractCall | null = null;
   let detail: [string, ReactNode][] = [];
   const nucleus = v?.organel.nukleus ?? 0;
   if (tab === "extract") {
-    detail = [["output", `+1 ${short(spore)}`]];
+    detail = [[t("actions.produce.output"), `+1 ${short(spore)}`]];
     if (!blocked && v && feeYocto !== null) call = buildExtract({ strainId: v.strain_id, sporeType: spore, feeYocto });
   } else if (tab === "transmute") {
     const n = Number(burn);
     const diet = v && macro.data ? transmuteDietBps({ roleMask: v.role_mask, tempMk: macro.data.crucibleTempMk, feverMk: macro.data.feverMk, hypothermiaMk: macro.data.hypothermiaMk }) : 0;
     const preview = inv.data && v ? transmutePreview(inv.data, n, v.efficiency_bps, nucleus) : null;
     detail = [
-      ["recipe", preview ? `${preview.burns.map(([id, k]) => `${k} ${short(id)}`).join(" + ")} → ${preview.minted} ${short(preview.enzyme)}` : "—"],
-      ["diet discount", macro.data ? `${diet / 100}% (zone at ${macro.data.crucibleTempMk} mK)` : "—"],
-      ["fee attached", feeYocto !== null ? `${formatYocto(transmuteDeposit(feeYocto, diet), 6)} NEAR` : "—"],
+      [t("actions.produce.recipe"), preview ? `${preview.burns.map(([id, k]) => `${k} ${short(id)}`).join(" + ")} → ${preview.minted} ${short(preview.enzyme)}` : "—"],
+      [t("actions.produce.diet"), macro.data ? t("actions.produce.dietValue", { pct: diet / 100, mk: macro.data.crucibleTempMk }) : "—"],
+      [t("actions.produce.feeAttached"), feeYocto !== null ? t("actions.shared.nearAmount", { amount: formatYocto(transmuteDeposit(feeYocto, diet), 6) }) : "—"],
     ];
-    if (!blocked && (!Number.isSafeInteger(n) || n <= 0 || n % 2 !== 0)) blocked = "Spores to burn must be a positive even number (recipes use batches of 2).";
-    if (!blocked && !macro.data) blocked = "Waiting for the zone read (the transmute fee depends on it).";
-    if (!blocked && inv.data && !preview) blocked = "Not enough spores for any recipe: 2 ignis → amalgam, 1 ignis + 1 lumin → redactase, or 2 cryo → synthase (per batch).";
+    if (!blocked && (!Number.isSafeInteger(n) || n <= 0 || n % 2 !== 0)) blocked = t("actions.produce.evenBurn");
+    if (!blocked && !macro.data) blocked = t("actions.produce.waitingZone");
+    if (!blocked && inv.data && !preview) blocked = t("actions.produce.noRecipe");
     if (!blocked && v && feeYocto !== null) call = buildTransmute({ strainId: v.strain_id, sporesToBurn: n, feeYocto, dietBps: diet });
   } else {
     const n = Number(enzymes);
     const r = ELIXIR_RECIPES[elixir];
     const preview = synthesizePreview(elixir, n, nucleus);
     detail = [
-      ["recipe per batch", `${r.perA} ${short(r.a)} + ${r.perB} ${short(r.b)} (${r.batch} enzymes)`],
-      ["output", preview ? `${preview.minted} ${short(elixir)}` : "—"],
+      [t("actions.produce.recipeBatch"), t("actions.produce.recipeBatchValue", { perA: r.perA, a: short(r.a), perB: r.perB, b: short(r.b), batch: r.batch })],
+      [t("actions.produce.output"), preview ? `${preview.minted} ${short(elixir)}` : "—"],
     ];
-    if (!blocked && !preview) blocked = `Enzymes to burn must be a positive multiple of ${r.batch} for ${short(elixir)}.`;
-    if (!blocked && r.needsTrait && v && !v.phenotype_trait) blocked = "Elixir-aether needs a Snacc that had a verified TEE mutation (phenotype trait); this one has none.";
+    if (!blocked && !preview) blocked = t("actions.produce.multiple", { batch: r.batch, elixir: short(elixir) });
+    if (!blocked && r.needsTrait && v && !v.phenotype_trait) blocked = t("actions.produce.needsTrait");
     if (!blocked && preview && inv.data && ((inv.data[preview.needA[0]] ?? 0n) < preview.needA[1] || (inv.data[preview.needB[0]] ?? 0n) < preview.needB[1])) {
-      blocked = `Needs ${preview.needA[1]} ${short(preview.needA[0])} and ${preview.needB[1]} ${short(preview.needB[0])}.`;
+      blocked = t("actions.produce.needs", { a: String(preview.needA[1]), typeA: short(preview.needA[0]), b: String(preview.needB[1]), typeB: short(preview.needB[0]) });
     }
     if (!blocked && v && feeYocto !== null) call = buildSynthesize({ strainId: v.strain_id, elixirType: elixir, enzymesToBurn: n, feeYocto });
   }
@@ -602,33 +639,29 @@ export function ProduceModal({ wallet, info, onClose, onDone, preferredStrainId,
   const busy = phase.kind === "pending";
 
   return (
-    <Modal title="produce.tx" heading="Production chain" onClose={onClose} testId="produce-modal" footer={<Footer />}>
+    <Modal title="produce.tx" heading={t("actions.produce.heading")} onClose={onClose} testId="produce-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <Tabs
-          label="production step"
+          label={t("actions.produce.stepLabel")}
           idBase="produce"
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "extract", label: "extract" },
-            { id: "transmute", label: "transmute" },
-            { id: "synthesize", label: "synthesize" },
+            { id: "extract", label: t("actions.produce.tab.extract") },
+            { id: "transmute", label: t("actions.produce.tab.transmute") },
+            { id: "synthesize", label: t("actions.produce.tab.synthesize") },
           ]}
         />
         <TabPanel idBase="produce" id={tab}>
           <p className="fd-note">
-            <strong>
-              {tab === "extract" ? "Extract one spore." : tab === "transmute" ? "Turn spores into an enzyme." : "Turn enzymes into an elixir."}
-            </strong>{" "}
-            Needs the {role} role, {ATP_COST[tab]} ATP and a catalyst fee in NEAR attached to the call. The fee goes to the contract (part burnt in Fever, half of the
-            rest to the industrial pool, the remainder to the treasury); it is not refunded.
+            <strong>{t(`actions.produce.title.${tab}`)}</strong> {t("actions.produce.noteBody", { role, atp: ATP_COST[tab] })}
           </p>
-          <StrainPicker id="produce-strain" label="your snacc" info={info} value={strainId} onChange={setStrainId} disabled={busy} />
+          <StrainPicker id="produce-strain" label={t("actions.shared.yourSnacc")} info={info} value={strainId} onChange={setStrainId} disabled={busy} />
           <InventoryLine inv={inv.data} />
           <div className="fd-form-grid">
             {tab === "extract" ? (
-              <Field id="produce-spore" label="spore type">
+              <Field id="produce-spore" label={t("actions.produce.sporeType")}>
                 <Select id="produce-spore" value={spore} onChange={(e) => setSpore(e.target.value as SporeType)} disabled={busy}>
                   {SPORE_TYPES.map((s) => (
                     <option key={s} value={s}>
@@ -638,12 +671,12 @@ export function ProduceModal({ wallet, info, onClose, onDone, preferredStrainId,
                 </Select>
               </Field>
             ) : tab === "transmute" ? (
-              <Field id="produce-burn" label="spores to burn (even)">
+              <Field id="produce-burn" label={t("actions.produce.sporesToBurn")}>
                 <Input id="produce-burn" inputMode="numeric" value={burn} onChange={(e) => setBurn(e.target.value)} disabled={busy} autoComplete="off" />
               </Field>
             ) : (
               <>
-                <Field id="produce-elixir" label="elixir">
+                <Field id="produce-elixir" label={t("actions.produce.elixir")}>
                   <Select
                     id="produce-elixir"
                     value={elixir}
@@ -661,18 +694,18 @@ export function ProduceModal({ wallet, info, onClose, onDone, preferredStrainId,
                     ))}
                   </Select>
                 </Field>
-                <Field id="produce-enzymes" label="enzymes to burn">
+                <Field id="produce-enzymes" label={t("actions.produce.enzymesToBurn")}>
                   <Input id="produce-enzymes" inputMode="numeric" value={enzymes} onChange={(e) => setEnzymes(e.target.value)} disabled={busy} autoComplete="off" />
                 </Field>
               </>
             )}
-            <Field id="produce-fee" label="catalyst fee (NEAR)" bad={feeYocto === null} hint={feeYocto === null ? "Enter an amount, e.g. 0.001." : "attached to the call as snacc_catalyst_fee"}>
+            <Field id="produce-fee" label={t("actions.produce.feeLabel")} bad={feeYocto === null} hint={feeYocto === null ? t("actions.produce.feeBad") : t("actions.produce.feeHint")}>
               <Input id="produce-fee" inputMode="decimal" value={fee} onChange={(e) => setFee(e.target.value)} disabled={busy} autoComplete="off" />
             </Field>
           </div>
-          <Kv testId="produce-detail" rows={[["ATP cost", `${ATP_COST[tab]} (this Snacc has ${v ? v.atp_balance : "—"})`], ...detail]} />
+          <Kv testId="produce-detail" rows={[[t("actions.produce.atpCost"), t("actions.produce.atpCostValue", { cost: ATP_COST[tab], atp: v ? v.atp_balance : "—" })], ...detail]} />
         </TabPanel>
-        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label={`sign and ${tab}`} testId="produce" />
+        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label={t(`actions.produce.sign.${tab}`)} testId="produce" />
       </div>
     </Modal>
   );
@@ -681,6 +714,7 @@ export function ProduceModal({ wallet, info, onClose, onDone, preferredStrainId,
 // ---------------------------------------------------------------- npc_buy_spores
 
 export function NpcBuyModal({ wallet, info, onClose, onDone, preferredStrainId }: GameActionProps) {
+  const { t } = useT();
   const [reload, done] = useReload(onDone);
   const { phase, send } = useSend(wallet, done);
   const [strainId, setStrainId] = useStrainChoice(info, preferredStrainId);
@@ -692,25 +726,24 @@ export function NpcBuyModal({ wallet, info, onClose, onDone, preferredStrainId }
   const stock = useView((s) => fetchNpcStock(npcId, s), [npcId, reload]);
   const inStrains = info.wealthYocto !== null && info.snaccYocto !== null ? BigInt(info.wealthYocto) - BigInt(info.snaccYocto) : null;
   let blocked: string | null = null;
-  if (strainId === null) blocked = "Pick a Snacc you own; the spores land in it and its $SNACC pays.";
-  else if (!amountOk) blocked = "Enter how many spores to buy (a whole number).";
-  else if (stock.data !== null && n > stock.data) blocked = `The merchant has ${stock.data} spores left.`;
-  else if (!quote.data) blocked = quote.loading ? "Getting the quote…" : "The quote did not load (npc_quote_spores).";
+  if (strainId === null) blocked = t("actions.npc.pick");
+  else if (!amountOk) blocked = t("actions.npc.enterAmount");
+  else if (stock.data !== null && n > stock.data) blocked = t("actions.npc.stockLeft", { n: stock.data });
+  else if (!quote.data) blocked = quote.loading ? t("actions.npc.gettingQuote") : t("actions.npc.quoteFailed");
   const calls = useMemo(
     () => plan(!blocked && strainId !== null ? buildNpcBuy({ strainId, npcId, buyAmount: n }) : null, wallet.accountId ?? "", info),
     [blocked, strainId, npcId, n, wallet.accountId, info],
   );
   const busy = phase.kind === "pending";
   return (
-    <Modal title="npc.tx" heading="Buy spores from a merchant" onClose={onClose} testId="npc-modal" footer={<Footer />}>
+    <Modal title="npc.tx" heading={t("actions.npc.heading")} onClose={onClose} testId="npc-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <p className="fd-note">
-          <strong>Quote first, then buy.</strong> The merchant sells spore-ignis; the price rises as its stock falls below target. The $SNACC is taken from the
-          Snacc you pick and the spores are added to it. No NEAR is attached.
+          <strong>{t("actions.npc.noteTitle")}</strong> {t("actions.npc.noteBody")}
         </p>
         <div className="fd-form-grid">
-          <Field id="npc-id" label="merchant">
+          <Field id="npc-id" label={t("actions.npc.merchant")}>
             <Select id="npc-id" value={npcId} onChange={(e) => setNpcId(e.target.value)} disabled={busy}>
               {NPC_IDS.map((id) => (
                 <option key={id} value={id}>
@@ -719,23 +752,26 @@ export function NpcBuyModal({ wallet, info, onClose, onDone, preferredStrainId }
               ))}
             </Select>
           </Field>
-          <Field id="npc-amount" label="spores to buy" bad={!amountOk} hint={amountOk ? undefined : "a whole number above 0"}>
+          <Field id="npc-amount" label={t("actions.npc.amount")} bad={!amountOk} hint={amountOk ? undefined : t("actions.npc.amountHint")}>
             <Input id="npc-amount" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={busy} autoComplete="off" />
           </Field>
         </div>
-        <StrainPicker id="npc-strain" label="paying snacc" info={info} value={strainId} onChange={setStrainId} disabled={busy} />
+        <StrainPicker id="npc-strain" label={t("actions.npc.payer")} info={info} value={strainId} onChange={setStrainId} disabled={busy} />
         <Kv
           testId="npc-quote"
           rows={[
-            ["stock", stock.data === null ? "—" : `${stock.data} spores`],
-            ["unit price", quote.data ? `${quote.data.unitPrice} yocto-$SNACC` : "—"],
-            ["total", quote.data ? `${quote.data.totalCost} yocto-$SNACC (${formatYocto(quote.data.totalCost.toString(), 8)} $SNACC)` : "—"],
-            ["stock after", quote.data ? String(quote.data.stockAfter) : "—"],
-            ["in your snaccs", inStrains === null ? "—" : `${formatYocto(inStrains.toString())} $SNACC (all strains together)`],
+            [t("actions.npc.stock"), stock.data === null ? "—" : t("actions.npc.stockValue", { n: stock.data })],
+            [t("actions.npc.unitPrice"), quote.data ? t("actions.npc.unitPriceValue", { n: String(quote.data.unitPrice) }) : "—"],
+            [
+              t("actions.npc.total"),
+              quote.data ? t("actions.npc.totalValue", { yocto: String(quote.data.totalCost), snacc: formatYocto(quote.data.totalCost.toString(), 8) }) : "—",
+            ],
+            [t("actions.npc.stockAfter"), quote.data ? String(quote.data.stockAfter) : "—"],
+            [t("actions.npc.inSnaccs"), inStrains === null ? "—" : t("actions.npc.inSnaccsValue", { amount: formatYocto(inStrains.toString()) })],
           ]}
         />
         {quote.data?.reasoning ? <p className="fd-field__hint">&ldquo;{quote.data.reasoning}&rdquo;</p> : null}
-        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label="sign and buy" testId="npc" />
+        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label={t("actions.npc.sign")} testId="npc" />
       </div>
     </Modal>
   );
@@ -746,6 +782,7 @@ export function NpcBuyModal({ wallet, info, onClose, onDone, preferredStrainId }
 type SnackMode = "adopt" | "hostile" | "harvest";
 
 export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStrainId }: GameActionProps) {
+  const { t, rich } = useT();
   const [reload, done] = useReload(onDone);
   const { phase, send } = useSend(wallet, done);
   const list = useView((s) => fetchHungryStrains(wallet.accountId, s), [wallet.accountId, reload]);
@@ -764,37 +801,36 @@ export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStr
 
   let blocked: string | null = null;
   let call: ContractCall | null = null;
-  if (!picked) blocked = "Pick a hungry Snacc from the list.";
-  else if (picked.vessel.pending_callbacks > 0) blocked = "That Snacc has a pending cross-contract call; try again shortly.";
+  if (!picked) blocked = t("actions.hungry.pickOne");
+  else if (picked.vessel.pending_callbacks > 0) blocked = t("actions.hungry.pending");
   else if (effectiveMode === "harvest") call = buildHarvest({ targetId: picked.vessel.strain_id });
-  else if (raider === null) blocked = "Pick one of your Snaccs to pay; its $SNACC covers the price.";
-  else if (effectiveMode === "adopt" && colonySize !== null && colonySize >= MAX_COLONY_SIZE) blocked = `Your colony is full (${MAX_COLONY_SIZE} living Snaccs).`;
+  else if (raider === null) blocked = t("actions.hungry.pickPayer");
+  else if (effectiveMode === "adopt" && colonySize !== null && colonySize >= MAX_COLONY_SIZE) blocked = t("actions.hungry.colonyFull", { max: MAX_COLONY_SIZE });
   else if (effectiveMode === "adopt") call = buildAdopt({ targetId: picked.vessel.strain_id, raiderStrainId: raider, expectedTargetNonce: picked.vessel.state_nonce });
   else call = buildHostileTakeover({ raiderStrainId: raider, distressedTargetId: picked.vessel.strain_id, expectedTargetNonce: picked.vessel.state_nonce });
   const calls = useMemo(() => plan(call, wallet.accountId ?? "", info), [JSON.stringify(call), wallet.accountId, info]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bound = (x: bigint) => `${exact ? "" : "at most "}${formatYocto(x.toString())} $SNACC`;
+  const bound = (x: bigint) => t(exact ? "actions.hungry.exact" : "actions.hungry.atMost", { amount: formatYocto(x.toString()) });
   const split = book !== null ? hostilePrice(book) : null;
   const harvest = ownerSnacc.data ? harvestSplit(ownerSnacc.data.inStrains) : null;
 
   return (
-    <Modal title="hungry.tx" heading="Hungry strains nearby" onClose={onClose} testId="hungry-modal" size="lg" footer={<Footer />}>
+    <Modal title="hungry.tx" heading={t("actions.hungry.heading")} onClose={onClose} testId="hungry-modal" size="lg" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <p className="fd-note">
-          <strong>Other players&apos; Snaccs that are distressed (vitality 1 to {DISTRESSED_MAX.toLocaleString("en-US")}) or starving (0).</strong> Only the owner can
-          feed a Snacc. Anyone can adopt or take over a distressed one, and harvest a starving one.
+          <strong>{t("actions.hungry.noteTitle", { max: DISTRESSED_MAX.toLocaleString("en-US") })}</strong> {t("actions.hungry.noteBody")}
         </p>
         {list.loading && !list.data ? (
           <p className="fd-field__hint" role="status">
-            Scanning strains on testnet…
+            {t("actions.hungry.scanning")}
           </p>
         ) : !list.data ? (
           <p className="fd-field__hint fd-field__hint--bad" role="status">
-            The testnet RPC did not answer. Nothing is shown in its place.
+            {t("actions.hungry.rpcDown")}
           </p>
         ) : list.data.items.length === 0 ? (
           <p className="fd-field__hint" role="status" data-testid="hungry-empty">
-            No other player&apos;s Snacc is distressed or starving right now ({list.data.scanned} of {list.data.total} strains scanned).
+            {t("actions.hungry.none", { scanned: list.data.scanned, total: list.data.total })}
           </p>
         ) : (
           <ul className="fd-stack" style={{ gap: 6 }} data-testid="hungry-list">
@@ -806,8 +842,10 @@ export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStr
                   onClick={() => setPickedId(h.vessel.strain_id)}
                   style={{ whiteSpace: "normal", height: "auto", flexWrap: "wrap", justifyContent: "space-between", textAlign: "left", maxWidth: "100%", minWidth: 0, columnGap: 12 }}
                 >
-                  <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{`#${h.vessel.strain_id} · ${roleText(h.vessel.role_mask)} · ${h.vessel.owner_id}`}</span>
-                  <span className="fd-num">{h.kind === "starving" ? "starving · vitality 0" : `distressed · vitality ${h.vessel.effective_vitality.toLocaleString("en-US")}`}</span>
+                  <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{`#${h.vessel.strain_id} · ${roleText(t, h.vessel.role_mask)} · ${h.vessel.owner_id}`}</span>
+                  <span className="fd-num">
+                    {h.kind === "starving" ? t("actions.hungry.kindStarving") : t("actions.hungry.kindDistressed", { vitality: h.vessel.effective_vitality.toLocaleString("en-US") })}
+                  </span>
                 </KeycapButton>
               </li>
             ))}
@@ -817,60 +855,55 @@ export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStr
           <div className="fd-stack border-t border-dashed border-[var(--rule-dash)] pt-3">
             {picked.kind === "distressed" ? (
               <Tabs
-                label="what to do"
+                label={t("actions.hungry.whatToDo")}
                 idBase="snack"
                 value={effectiveMode}
                 onChange={(m) => setMode(m)}
                 tabs={[
-                  { id: "adopt", label: "adopt" },
-                  { id: "hostile", label: "hostile takeover" },
+                  { id: "adopt", label: t("actions.hungry.tabAdopt") },
+                  { id: "hostile", label: t("actions.hungry.tabHostile") },
                 ]}
               />
             ) : null}
             {effectiveMode === "harvest" ? (
               <p className="fd-note">
-                <strong>harvest_starving_strain.</strong> Ends Snacc #{picked.vessel.strain_id} (status <code>Liquidated</code>): 10% of its $SNACC is credited to your
-                account as a bounty, 90% goes to the contract treasury, and all its molecules are burnt. The owner gets nothing back.
+                <strong>{t("actions.hungry.harvestTitle")}</strong> {rich("actions.hungry.harvestBody", { id: picked.vessel.strain_id, status: <code>{STATUS_LIQUIDATED}</code> })}
               </p>
             ) : effectiveMode === "adopt" ? (
               <p className="fd-note">
-                <strong>adopt.</strong> Snacc #{picked.vessel.strain_id} moves to your colony alive. Your paying Snacc pays its book value (its $SNACC + one unit per
-                molecule), and 100% of that goes to the current owner <code>{picked.vessel.owner_id}</code>.
+                <strong>{t("actions.hungry.adoptTitle")}</strong> {rich("actions.hungry.adoptBody", { id: picked.vessel.strain_id, owner: <code>{picked.vessel.owner_id}</code> })}
               </p>
             ) : (
               <p className="fd-note">
-                <strong>hostile_takeover_splice.</strong> Your raiding Snacc pays book value + 15%: 95% to <code>{picked.vessel.owner_id}</code>, 5% to the treasury. It
-                absorbs the target&apos;s $SNACC, molecules and roles, gains one generation, and Snacc #{picked.vessel.strain_id} ends as <code>SplicedBurned</code>.
+                <strong>{t("actions.hungry.hostileTitle")}</strong>{" "}
+                {rich("actions.hungry.hostileBody", { owner: <code>{picked.vessel.owner_id}</code>, id: picked.vessel.strain_id, status: <code>{STATUS_SPLICED}</code> })}
               </p>
             )}
             {effectiveMode !== "harvest" ? (
-              <StrainPicker id="snack-raider" label="your paying snacc" info={info} value={raider} onChange={setRaider} disabled={phase.kind === "pending"} />
+              <StrainPicker id="snack-raider" label={t("actions.hungry.payingSnacc")} info={info} value={raider} onChange={setRaider} disabled={phase.kind === "pending"} />
             ) : null}
             <Kv
               testId="snack-terms"
               rows={[
-                ["owner", <ExtLink key="o" href={explorerAccount(picked.vessel.owner_id)}>{picked.vessel.owner_id}</ExtLink>],
-                ["molecules", inv.data ? String(Object.values(inv.data).reduce((a, b) => a + (b ?? 0n), 0n)) : "—"],
+                [t("actions.hungry.owner"), <ExtLink key="o" href={explorerAccount(picked.vessel.owner_id)}>{picked.vessel.owner_id}</ExtLink>],
+                [t("actions.hungry.molecules"), inv.data ? String(Object.values(inv.data).reduce((a, b) => a + (b ?? 0n), 0n)) : "—"],
                 ...(effectiveMode === "harvest"
                   ? ([
-                      ["your bounty", harvest ? bound(harvest.bounty) : "—"],
-                      ["to treasury", harvest ? bound(harvest.treasury) : "—"],
+                      [t("actions.hungry.yourBounty"), harvest ? bound(harvest.bounty) : "—"],
+                      [t("actions.hungry.toTreasury"), harvest ? bound(harvest.treasury) : "—"],
                     ] as [string, ReactNode][])
                   : effectiveMode === "adopt"
-                    ? ([["book value", book !== null ? bound(book) : "—"]] as [string, ReactNode][])
+                    ? ([[t("actions.hungry.bookValue"), book !== null ? bound(book) : "—"]] as [string, ReactNode][])
                     : ([
-                        ["price", split ? bound(split.payment) : "—"],
-                        ["to the owner", split ? bound(split.seller) : "—"],
-                        ["to treasury", split ? bound(split.treasury) : "—"],
+                        [t("actions.hungry.price"), split ? bound(split.payment) : "—"],
+                        [t("actions.hungry.toOwner"), split ? bound(split.seller) : "—"],
+                        [t("actions.hungry.toTreasury"), split ? bound(split.treasury) : "—"],
                       ] as [string, ReactNode][])),
-                ["state nonce", `${picked.vessel.state_nonce} (sent as expected_target_nonce)`],
+                [t("actions.hungry.nonce"), t("actions.hungry.nonceValue", { n: picked.vessel.state_nonce })],
               ]}
             />
             {!exact && ownerSnacc.data ? (
-              <p className="fd-field__hint">
-                The contract has no per-Snacc $SNACC view. The owner has {ownerSnacc.data.living} living Snaccs, so this is an upper bound; the contract computes the exact
-                amount when it runs.
-              </p>
+              <p className="fd-field__hint">{t("actions.hungry.upperBound", { living: ownerSnacc.data.living })}</p>
             ) : null}
           </div>
         ) : null}
@@ -882,7 +915,7 @@ export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStr
           send={send}
           onClose={onClose}
           blocked={blocked}
-          label={effectiveMode === "harvest" ? "sign and harvest" : effectiveMode === "adopt" ? "sign and adopt" : "sign and take over"}
+          label={effectiveMode === "harvest" ? t("actions.hungry.signHarvest") : effectiveMode === "adopt" ? t("actions.hungry.signAdopt") : t("actions.hungry.signTakeover")}
           testId="snack"
         />
       </div>
@@ -893,6 +926,7 @@ export function HungryStrainsModal({ wallet, info, onClose, onDone, preferredStr
 // ---------------------------------------------------------------- industrial pool: redeem aether + claim
 
 export function DividendModal({ wallet, info, onClose, onDone, preferredStrainId }: GameActionProps) {
+  const { t } = useT();
   const [reload, done] = useReload(onDone);
   const { phase, send } = useSend(wallet, done);
   const [strainId, setStrainId] = useStrainChoice(info, preferredStrainId);
@@ -921,70 +955,68 @@ export function DividendModal({ wallet, info, onClose, onDone, preferredStrainId
   const aether = inv.data?.["mt:elixir-aether"] ?? null;
   const amountRaw = parseUnits(amount, 0);
 
-  let blocked = vesselBlocked(v, vessel.loading);
+  let blocked = vesselBlocked(t, v, vessel.loading);
   let call: ContractCall | null = null;
   if (tab === "claim") {
-    if (!blocked && pool.data && pool.data.pool === 0n) blocked = "The industrial pool is empty, so nothing is claimable.";
-    if (!blocked && epochToClaim === null) blocked = contribs.loading ? "Reading your contributions…" : "Nothing to claim: no unclaimed contribution in a closed epoch of the last 8.";
+    if (!blocked && pool.data && pool.data.pool === 0n) blocked = t("actions.pool.empty");
+    if (!blocked && epochToClaim === null) blocked = contribs.loading ? t("actions.pool.readingContribs") : t("actions.pool.nothingToClaim");
     if (!blocked && v && epochToClaim !== null) call = buildClaimDividend({ strainId: v.strain_id, epoch: epochToClaim });
   } else {
-    if (!blocked && v && !hasRole(v.role_mask, "Synthesizer")) blocked = `Redeeming needs the Synthesizer role; Snacc #${v.strain_id} is ${roleText(v.role_mask)}.`;
-    if (!blocked && v && v.effective_vitality <= 0) blocked = "A starving Snacc (vitality 0) cannot redeem. Feed it first.";
-    if (!blocked && (amountRaw === null || BigInt(amountRaw) < 1n)) blocked = "Enter a whole number of elixir-aether units (at least 1).";
-    if (!blocked && aether !== null && amountRaw !== null && BigInt(amountRaw) > aether) blocked = `This Snacc holds ${aether} elixir-aether.`;
+    if (!blocked && v && !hasRole(v.role_mask, "Synthesizer")) blocked = t("actions.pool.needsRole", { id: v.strain_id, roles: roleText(t, v.role_mask) });
+    if (!blocked && v && v.effective_vitality <= 0) blocked = t("actions.pool.starving");
+    if (!blocked && (amountRaw === null || BigInt(amountRaw) < 1n)) blocked = t("actions.pool.enterAmount");
+    if (!blocked && aether !== null && amountRaw !== null && BigInt(amountRaw) > aether) blocked = t("actions.pool.holds", { n: String(aether) });
     if (!blocked && v && amountRaw !== null) call = buildRedeemAether({ strainId: v.strain_id, amount: amountRaw });
   }
   const calls = useMemo(() => plan(call, wallet.accountId ?? "", info), [JSON.stringify(call), wallet.accountId, info]); // eslint-disable-line react-hooks/exhaustive-deps
   const busy = phase.kind === "pending";
 
   return (
-    <Modal title="pool.tx" heading="Industrial pool" onClose={onClose} testId="pool-modal" footer={<Footer />}>
+    <Modal title="pool.tx" heading={t("actions.pool.heading")} onClose={onClose} testId="pool-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <p className="fd-note">
-          <strong>Half of the catalyst fees that are not burnt flow into the industrial pool.</strong> Burning elixir-aether in an epoch records your share; after that
-          epoch closes, your Snacc can claim its part of that epoch&apos;s inflow, paid into the Snacc in $SNACC, for up to 8 epochs. Payouts come only from the pool,
-          nothing is minted, and an empty pool pays nothing.
+          <strong>{t("actions.pool.noteTitle")}</strong> {t("actions.pool.noteBody")}
         </p>
         <Kv
           testId="pool-totals"
           rows={[
-            ["pool", pool.data ? `${formatYocto(pool.data.pool.toString())} $SNACC` : "—"],
-            ["this epoch's inflow", pool.data ? `${formatYocto(pool.data.inflow.toString())} $SNACC` : "—"],
-            ["epoch", macro.data ? `${macro.data.currentEpoch} (last closed ${pool.data ? pool.data.lastClosedEpoch : "—"})` : "—"],
-            ["your aether burnt this epoch", currentContrib.data ? `${currentContrib.data.contribution}` : "—"],
+            [t("actions.pool.pool"), pool.data ? t("actions.pool.snaccAmount", { amount: formatYocto(pool.data.pool.toString()) }) : "—"],
+            [t("actions.pool.inflow"), pool.data ? t("actions.pool.snaccAmount", { amount: formatYocto(pool.data.inflow.toString()) }) : "—"],
+            [t("actions.pool.epoch"), macro.data ? t("actions.pool.epochValue", { n: macro.data.currentEpoch, last: pool.data ? pool.data.lastClosedEpoch : "—" }) : "—"],
+            [t("actions.pool.burnt"), currentContrib.data ? `${currentContrib.data.contribution}` : "—"],
           ]}
         />
-        <StrainPicker id="pool-strain" label="your snacc" info={info} value={strainId} onChange={setStrainId} disabled={busy} />
+        <StrainPicker id="pool-strain" label={t("actions.shared.yourSnacc")} info={info} value={strainId} onChange={setStrainId} disabled={busy} />
         <Tabs
-          label="pool step"
+          label={t("actions.pool.stepLabel")}
           idBase="pool"
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "claim", label: "claim" },
-            { id: "redeem", label: "burn aether" },
+            { id: "claim", label: t("actions.pool.tabClaim") },
+            { id: "redeem", label: t("actions.pool.tabRedeem") },
           ]}
         />
         <TabPanel idBase="pool" id={tab}>
           {tab === "claim" ? (
             claimable.length ? (
-              <Field id="pool-epoch" label="closed epoch">
+              <Field id="pool-epoch" label={t("actions.pool.closedEpoch")}>
                 <Select id="pool-epoch" value={epochToClaim ?? ""} onChange={(e) => setClaimEpoch(Number(e.target.value))} disabled={busy}>
                   {claimable.map((c) => (
                     <option key={c.epoch} value={c.epoch}>
-                      {`epoch ${c.epoch} · contribution ${c.contribution} · about ${formatYocto(estimatePayout(c, pool.data?.pool ?? 0n).toString())} $SNACC`}
+                      {t("actions.pool.epochOption", { epoch: c.epoch, contribution: String(c.contribution), amount: formatYocto(estimatePayout(c, pool.data?.pool ?? 0n).toString()) })}
                     </option>
                   ))}
                 </Select>
               </Field>
             ) : (
               <p className="fd-field__hint" data-testid="pool-none">
-                {contribs.loading ? "Reading contributions…" : "No unclaimed contribution in the closed epochs this Snacc can still claim."}
+                {contribs.loading ? t("actions.pool.readingContribsShort") : t("actions.pool.noneClaimable")}
               </p>
             )
           ) : (
-            <Field id="pool-amount" label={`elixir-aether to burn (holds ${aether === null ? "—" : aether})`}>
+            <Field id="pool-amount" label={t("actions.pool.amountLabel", { n: aether === null ? "—" : String(aether) })}>
               <Input id="pool-amount" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={busy} autoComplete="off" />
             </Field>
           )}
@@ -997,7 +1029,7 @@ export function DividendModal({ wallet, info, onClose, onDone, preferredStrainId
           send={send}
           onClose={onClose}
           blocked={blocked}
-          label={tab === "claim" ? "sign and claim" : "sign and burn aether"}
+          label={tab === "claim" ? t("actions.pool.signClaim") : t("actions.pool.signBurn")}
           testId="pool"
         />
       </div>
@@ -1008,6 +1040,7 @@ export function DividendModal({ wallet, info, onClose, onDone, preferredStrainId
 // ---------------------------------------------------------------- nft_transfer + ft_transfer
 
 export function SendModal({ wallet, info, onClose, onDone, preferredStrainId, initialTab = "gift" }: GameActionProps & { initialTab?: "gift" | "send" }) {
+  const { t } = useT();
   const [tab, setTab] = useState<"gift" | "send">(initialTab);
   const { phase, send } = useSend(wallet, onDone);
   const [strainId, setStrainId] = useStrainChoice(info, preferredStrainId);
@@ -1020,18 +1053,18 @@ export function SendModal({ wallet, info, onClose, onDone, preferredStrainId, in
   const amountYocto = parseUnits(amount, 24);
   const amountOk = amountYocto !== null && BigInt(amountYocto) > 0n;
 
-  let blocked: string | null = rc.ok ? null : receiver.trim() ? rc.reason : "Enter the receiver's testnet account.";
+  let blocked: string | null = rc.ok ? null : receiver.trim() ? rc.reason : t("actions.send.enterReceiver");
   const calls: ContractCall[] = [];
   if (tab === "gift") {
-    if (!blocked && strainId === null) blocked = "Pick a living Snacc to give.";
+    if (!blocked && strainId === null) blocked = t("actions.send.pickGift");
     if (!blocked && strainId !== null && rcId) calls.push(...plan(buildNftTransfer({ receiverId: rcId, strainId }), wallet.accountId ?? "", info));
   } else {
-    if (!blocked && !amountOk) blocked = "Enter an amount of $SNACC, e.g. 0.1.";
+    if (!blocked && !amountOk) blocked = t("actions.send.enterAmount");
     if (!blocked && info.snaccYocto !== null && amountYocto !== null && BigInt(amountYocto) > BigInt(info.snaccYocto)) {
-      blocked = `Your wallet holds ${formatYocto(info.snaccYocto)} $SNACC. $SNACC inside your Snaccs is not in your wallet balance.`;
+      blocked = t("actions.send.walletHolds", { amount: formatYocto(info.snaccYocto) });
     }
-    if (!blocked && registered.data === null) blocked = registered.loading ? "Checking the receiver's registration…" : "Could not read the receiver's registration.";
-    if (!blocked && registered.data === false && !registerToo) blocked = "The receiver is not registered with the contract, so ft_transfer would fail. Tick the box to register them first (you pay the storage deposit).";
+    if (!blocked && registered.data === null) blocked = registered.loading ? t("actions.send.checkingReg") : t("actions.send.regUnreadable");
+    if (!blocked && registered.data === false && !registerToo) blocked = t("actions.send.notRegistered");
     if (!blocked && rcId && amountYocto !== null) {
       const transfer = buildFtTransfer({ receiverId: rcId, amountYocto });
       const base = plan(transfer, wallet.accountId ?? "", info);
@@ -1042,40 +1075,43 @@ export function SendModal({ wallet, info, onClose, onDone, preferredStrainId, in
   const busy = phase.kind === "pending";
 
   return (
-    <Modal title="send.tx" heading={tab === "gift" ? "Give a Snacc" : "Send $SNACC"} onClose={onClose} testId="send-modal" footer={<Footer />}>
+    <Modal title="send.tx" heading={tab === "gift" ? t("actions.send.headingGift") : t("actions.send.headingSend")} onClose={onClose} testId="send-modal" footer={<Footer />}>
       <div className="fd-stack">
         <ConnectLine wallet={wallet} />
         <Tabs
-          label="what to send"
+          label={t("actions.send.whatToSend")}
           idBase="send"
           value={tab}
           onChange={setTab}
           tabs={[
-            { id: "gift", label: "give a snacc" },
-            { id: "send", label: "send $SNACC" },
+            { id: "gift", label: t("actions.send.tabGift") },
+            { id: "send", label: t("actions.send.tabSend") },
           ]}
         />
         <TabPanel idBase="send" id={tab}>
           {tab === "gift" ? (
             <>
               <p className="fd-note">
-                <strong>nft_transfer.</strong> The whole Snacc moves to the receiver: its $SNACC, molecules, organelles and ATP go with it. You attach exactly 1
-                yoctoNEAR (the standard transfer guard). This cannot be undone from your side.
+                <strong>{t("actions.send.giftTitle")}</strong> {t("actions.send.giftBody")}
               </p>
-              <StrainPicker id="send-strain" label="snacc to give" info={info} value={strainId} onChange={setStrainId} disabled={busy} />
+              <StrainPicker id="send-strain" label={t("actions.send.snaccToGive")} info={info} value={strainId} onChange={setStrainId} disabled={busy} />
             </>
           ) : (
             <>
               <p className="fd-note">
-                <strong>ft_transfer.</strong> Sends $SNACC from your wallet balance (not from inside your Snaccs). The receiver must be registered with the
-                contract (NEP-145 storage). $SNACC on testnet has no monetary value.
+                <strong>{t("actions.send.sendTitle")}</strong> {t("actions.send.sendBody")}
               </p>
-              <Field id="send-amount" label="amount ($SNACC)" bad={!amountOk} hint={`your wallet: ${info.snaccYocto === null ? "—" : formatYocto(info.snaccYocto)} $SNACC`}>
+              <Field
+                id="send-amount"
+                label={t("actions.send.amountLabel")}
+                bad={!amountOk}
+                hint={t("actions.send.yourWallet", { amount: info.snaccYocto === null ? "—" : formatYocto(info.snaccYocto) })}
+              >
                 <Input id="send-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={busy} autoComplete="off" />
               </Field>
             </>
           )}
-          <Field id="send-receiver" label="receiver (testnet account)" bad={Boolean(receiver.trim()) && !rc.ok} hint={receiver.trim() && !rc.ok ? rc.reason : "e.g. friend.testnet"}>
+          <Field id="send-receiver" label={t("actions.send.receiver")} bad={Boolean(receiver.trim()) && !rc.ok} hint={receiver.trim() && !rc.ok ? rc.reason : t("actions.send.receiverHint")}>
             <Input
               id="send-receiver"
               data-autofocus=""
@@ -1093,21 +1129,21 @@ export function SendModal({ wallet, info, onClose, onDone, preferredStrainId, in
             <p className="fd-field__hint" data-testid="send-registration">
               {registered.data === null
                 ? registered.loading
-                  ? "checking registration…"
-                  : "registration: —"
+                  ? t("actions.send.checking")
+                  : t("actions.send.regNone")
                 : registered.data
-                  ? `${rcId} is registered.`
-                  : `${rcId} is not registered with the contract yet.`}
+                  ? t("actions.send.isRegistered", { id: rcId })
+                  : t("actions.send.isNotRegistered", { id: rcId })}
             </p>
           ) : null}
           {tab === "send" && registered.data === false ? (
             <label className="fd-row fd-field__hint" style={{ gap: 6 }}>
               <input type="checkbox" checked={registerToo} onChange={(e) => setRegisterToo(e.target.checked)} disabled={busy} />
-              Register {rcId} first (storage_deposit, {formatYocto(info.storage?.minYocto ?? STORAGE_MIN_FALLBACK_YOCTO)} NEAR from you, once)
+              {t("actions.send.registerFirst", { id: String(rcId), amount: formatYocto(info.storage?.minYocto ?? STORAGE_MIN_FALLBACK_YOCTO) })}
             </label>
           ) : null}
         </TabPanel>
-        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label={tab === "gift" ? "sign and give" : "sign and send"} testId="send" />
+        <SignBlock wallet={wallet} info={info} calls={calls} phase={phase} send={send} onClose={onClose} blocked={blocked} label={tab === "gift" ? t("actions.send.signGive") : t("actions.send.signSend")} testId="send" />
       </div>
     </Modal>
   );

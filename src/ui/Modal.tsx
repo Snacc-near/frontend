@@ -4,6 +4,7 @@
  * 640 px (CSS); the body scrolls inside the window.
  */
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from "react";
+import { useT } from "../i18n/react.tsx";
 import { Icon } from "./fd.tsx";
 import { FOCUSABLE, isTopModal, modalKeyAction, popModal, pushModal } from "./a11y.ts";
 
@@ -28,6 +29,7 @@ function focusablesIn(root: HTMLElement | null): HTMLElement[] {
 }
 
 export function Modal({ title, heading, onClose, children, footer, size = "md", initialFocus, testId }: ModalProps) {
+  const { t } = useT();
   const titleId = useId();
   const headingId = useId();
   const winRef = useRef<HTMLDivElement | null>(null);
@@ -88,7 +90,7 @@ export function Modal({ title, heading, onClose, children, footer, size = "md", 
             {title}
           </h2>
           <span className="fd-win__rule" aria-hidden="true" />
-          <button type="button" className="fd-win__close" onClick={onClose} aria-label={`close ${title}`}>
+          <button type="button" className="fd-win__close" onClick={onClose} aria-label={t("actions.modal.close", { title })}>
             <Icon name="close" />
           </button>
         </div>

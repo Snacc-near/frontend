@@ -1,7 +1,8 @@
 import React from "react";
 import type { MacroZone } from "../config/zones.ts";
-import { ZONE_THEMES } from "../config/zones.ts";
+import { ZONE_DESCRIPTION_KEYS, ZONE_THEMES } from "../config/zones.ts";
 import type { SkinMode } from "../config/constants.ts";
+import { useT } from "../i18n/react.tsx";
 import { useSkinLabels } from "../i18n/skin.ts";
 
 interface ZoneBannerProps {
@@ -12,6 +13,7 @@ interface ZoneBannerProps {
 export const ZoneBanner: React.FC<ZoneBannerProps> = ({ zone, skin }) => {
   const theme = ZONE_THEMES[zone];
   const labels = useSkinLabels(skin);
+  const { t } = useT();
 
   return (
     <div
@@ -28,7 +30,7 @@ export const ZoneBanner: React.FC<ZoneBannerProps> = ({ zone, skin }) => {
           {labels[zone.toLowerCase()] ?? theme.label}
         </span>
         <span className="text-[10px] text-slate-300 lowercase">
-          {theme.description}
+          {t(ZONE_DESCRIPTION_KEYS[zone])}
         </span>
       </div>
     </div>

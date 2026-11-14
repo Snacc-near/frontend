@@ -5,11 +5,13 @@
  * To add a namespace: create `<ns>.ts` here and in `../id/`, then add one line to this file and one
  * to the Indonesian index.
  */
+import actions from "./actions.ts";
 import common from "./common.ts";
 import demos from "./demos.ts";
 import hud from "./hud.ts";
 import landing from "./landing.ts";
 import settings from "./settings.ts";
 import skin from "./skin.ts";
+import tx from "./tx.ts";
 
-export const en = { common, demos, hud, landing, settings, skin };
+export const en = { actions, common, demos, hud, landing, settings, skin, tx };

@@ -4,6 +4,8 @@
  * one-time NEP-145 storage registration when the account is not registered yet, and reports the
  * transaction as pending → success (tx hash + explorer link) or failure (plain English + raw error).
  * Only real chain reads are shown; while a read is missing the value is "—".
+ *
+ * UI-161 phase B2: the text comes from the `actions` dictionary (English or Indonesian).
  */
 import { useMemo, useState } from "react";
 import {
@@ -29,6 +31,7 @@ import type { WalletApi } from "../chain/wallet.tsx";
 import type { TxResult } from "../chain/txResult.ts";
 import { useOneTap } from "../chain/oneTapSession.ts";
 import { CONTRACT_ID, explorerTx } from "../data/nearView.ts";
+import { useT } from "../i18n/react.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { ExtLink, Field, Input, KeycapButton, Select } from "../ui/controls.tsx";
 import { Tag } from "../ui/fd.tsx";
@@ -38,26 +41,20 @@ export { TESTNET_FAUCET_URL };
 /** `oneTap`: RES-111, the call is expected to go out with this browser's one-tap key (no wallet popup). */
 export type TxPhase = { kind: "idle" } | { kind: "pending"; oneTap?: boolean } | { kind: "done"; result: TxResult };
 
-const ROLE_HINT: Record<StrainRole, string> = {
-  Extractor: "extracts spores",
-  Fermenter: "turns spores into enzymes",
-  Synthesizer: "turns enzymes into elixirs",
-};
-
 export function TxStatusView({ phase }: { phase: TxPhase }) {
+  const { t, rich } = useT();
   if (phase.kind === "idle") return null;
   if (phase.kind === "pending") {
     if (phase.oneTap) {
       return (
         <p className="fd-note" role="status" data-testid="tx-pending">
-          <strong>Sending with one-tap play.</strong> This browser signs this deposit-free action, no wallet popup; this window updates when the
-          chain answers.
+          <strong>{t("actions.tx.pendingOneTapTitle")}</strong> {t("actions.tx.pendingOneTapBody")}
         </p>
       );
     }
     return (
       <p className="fd-note" role="status" data-testid="tx-pending">
-        <strong>Waiting for your wallet.</strong> Approve the transaction there; this window updates when the chain answers.
+        <strong>{t("actions.tx.pendingWalletTitle")}</strong> {t("actions.tx.pendingWalletBody")}
       </p>
     );
   }
@@ -72,14 +69,8 @@ export function TxStatusView({ phase }: { phase: TxPhase }) {
     return (
       <div className="fd-note" role="status" data-testid="tx-success">
         {notice}
-        <strong>{r.signless ? "Done on testnet with one-tap play." : "Done on testnet."}</strong>{" "}
-        {r.txHash ? (
-          <>
-            tx <ExtLink href={explorerTx(r.txHash)}>{`${r.txHash.slice(0, 10)}…`}</ExtLink>
-          </>
-        ) : (
-          "The wallet did not return a transaction hash."
-        )}
+        <strong>{r.signless ? t("actions.tx.doneOneTap") : t("actions.tx.done")}</strong>{" "}
+        {r.txHash ? rich("actions.tx.hashLine", { link: <ExtLink href={explorerTx(r.txHash)}>{`${r.txHash.slice(0, 10)}…`}</ExtLink> }) : t("actions.tx.noHash")}
       </div>
     );
   }
@@ -87,13 +78,9 @@ export function TxStatusView({ phase }: { phase: TxPhase }) {
     <div className="fd-stack" role="alert" data-testid="tx-failure">
       {notice}
       <p className="fd-field__hint fd-field__hint--bad">{r.message}</p>
-      {r.txHash ? (
-        <p className="fd-field__hint">
-          tx <ExtLink href={explorerTx(r.txHash)}>{`${r.txHash.slice(0, 10)}…`}</ExtLink>
-        </p>
-      ) : null}
+      {r.txHash ? <p className="fd-field__hint">{rich("actions.tx.hashLine", { link: <ExtLink href={explorerTx(r.txHash)}>{`${r.txHash.slice(0, 10)}…`}</ExtLink> })}</p> : null}
       <details className="fd-field__hint">
-        <summary>details</summary>
+        <summary>{t("actions.tx.details")}</summary>
         <code className="break-all">{r.raw.slice(0, 600)}</code>
       </details>
     </div>
@@ -102,22 +89,27 @@ export function TxStatusView({ phase }: { phase: TxPhase }) {
 
 /** One line on the NEP-145 storage registration the first signed call carries. */
 export function StorageLine({ info }: { info: AccountInfo }) {
+  const { rich } = useT();
   if (info.storage?.registered) return null;
   const min = info.storage?.minYocto ?? STORAGE_MIN_FALLBACK_YOCTO;
   return (
     <p className="fd-field__hint" data-testid="storage-line">
-      First signed action also registers your account with the contract (<code>storage_deposit</code>, {formatYocto(min)} NEAR, once).
+      {rich("actions.tx.storage", { method: <code>storage_deposit</code>, amount: formatYocto(min) })}
     </p>
   );
 }
 
 /** Shown when the account cannot cover the attached NEAR plus the gas ceiling. */
 export function FaucetLine({ needYocto, info }: { needYocto: string; info: AccountInfo }) {
+  const { t, rich } = useT();
   if (info.nearYocto === null || BigInt(info.nearYocto) >= BigInt(needYocto)) return null;
   return (
     <p className="fd-field__hint fd-field__hint--bad" data-testid="faucet-line">
-      This account has {formatYocto(info.nearYocto)} testnet NEAR, less than the {formatYocto(needYocto)} needed. Get free testnet NEAR from the{" "}
-      <ExtLink href={TESTNET_FAUCET_URL}>NEAR testnet faucet</ExtLink>.
+      {rich("actions.tx.faucet", {
+        have: formatYocto(info.nearYocto),
+        need: formatYocto(needYocto),
+        link: <ExtLink href={TESTNET_FAUCET_URL}>{t("actions.tx.faucetLink")}</ExtLink>,
+      })}
     </p>
   );
 }
@@ -156,14 +148,12 @@ export function useSend(wallet: WalletApi, onDone: (ok: boolean, txHash?: string
 }
 
 export function Footer() {
+  const { t } = useT();
   const st = useOneTap().snapshot.status;
   const oneTapOn = st.kind === "on" && st.chain !== "missing" && !st.outdated;
   return (
     <>
-      <span>
-        {oneTapOn ? "deposit-free calls are signed by your one-tap key, the rest in your wallet" : "every call is signed in your wallet"} · {CONTRACT_ID} ·
-        $SNACC on testnet has no monetary value
-      </span>
+      <span>{t("actions.footer.line", { mode: oneTapOn ? t("actions.footer.oneTapOn") : t("actions.footer.walletOnly"), contract: CONTRACT_ID })}</span>
       <Tag>testnet</Tag>
     </>
   );
@@ -178,6 +168,7 @@ export interface ChainActionProps {
 }
 
 export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) {
+  const { t, rich } = useT();
   const [role, setRole] = useState<StrainRole>("Extractor");
   const [stake, setStake] = useState(DEFAULT_STAKE_NEAR);
   const { phase, send } = useSend(wallet, onDone);
@@ -194,14 +185,13 @@ export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) 
   const done = phase.kind === "done" && phase.result.ok;
 
   return (
-    <Modal title="hatch.tx" heading="Hatch a Snacc" onClose={onClose} testId="hatch-modal" footer={<Footer />}>
+    <Modal title="hatch.tx" heading={t("actions.hatch.heading")} onClose={onClose} testId="hatch-modal" footer={<Footer />}>
       <div className="fd-stack">
         <p className="fd-note">
-          <strong>Your NEAR stake becomes the new Snacc&apos;s food.</strong> 80% is credited to it as $SNACC, 20% goes to the contract treasury.
-          The Snacc is minted to <code>{accountId}</code>.
+          <strong>{t("actions.hatch.noteTitle")}</strong> {rich("actions.hatch.noteBody", { account: <code>{accountId}</code> })}
         </p>
         <div className="fd-form-grid">
-          <Field id="hatch-role" label="role" hint={ROLE_HINT[role]}>
+          <Field id="hatch-role" label={t("actions.hatch.role")} hint={t(`actions.hatch.roleHint.${role}`)}>
             <Select id="hatch-role" value={role} onChange={(e) => setRole(e.target.value as StrainRole)} disabled={busy} aria-describedby="hatch-role-hint">
               {STRAIN_ROLES.map((r) => (
                 <option key={r} value={r}>
@@ -210,7 +200,7 @@ export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) 
               ))}
             </Select>
           </Field>
-          <Field id="hatch-stake" label="stake (NEAR)" bad={!check.ok} hint={check.ok ? "attached to the call, equal to initial_snacc_stake" : check.reason}>
+          <Field id="hatch-stake" label={t("actions.hatch.stake")} bad={!check.ok} hint={check.ok ? t("actions.hatch.stakeHint") : check.reason}>
             <Input
               id="hatch-stake"
               data-autofocus=""
@@ -224,7 +214,7 @@ export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) 
             />
           </Field>
         </div>
-        <div className="fd-row" role="group" aria-label="stake presets">
+        <div className="fd-row" role="group" aria-label={t("actions.hatch.presets")}>
           {STAKE_PRESETS_NEAR.map((p) => (
             <KeycapButton key={p} mono onClick={() => setStake(p)} disabled={busy} aria-pressed={stake === p}>
               {p} NEAR
@@ -233,16 +223,16 @@ export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) 
         </div>
         <dl className="fd-kv" data-testid="hatch-cost">
           <div className="fd-kv__row">
-            <dt>attached</dt>
-            <dd className="fd-kv__num">{check.ok ? `${formatYocto(attached)} NEAR` : "—"}</dd>
+            <dt>{t("actions.shared.attached")}</dt>
+            <dd className="fd-kv__num">{check.ok ? t("actions.shared.nearAmount", { amount: formatYocto(attached) }) : "—"}</dd>
           </div>
           <div className="fd-kv__row">
-            <dt>gas, at most</dt>
-            <dd className="fd-kv__num">{check.ok ? `${formatYocto(gasCap)} NEAR (unused gas is refunded)` : "—"}</dd>
+            <dt>{t("actions.shared.gasAtMost")}</dt>
+            <dd className="fd-kv__num">{check.ok ? t("actions.shared.gasValue", { amount: formatYocto(gasCap) }) : "—"}</dd>
           </div>
           <div className="fd-kv__row">
-            <dt>your NEAR</dt>
-            <dd className="fd-kv__num">{info.nearYocto === null ? "—" : `${formatYocto(info.nearYocto)} NEAR`}</dd>
+            <dt>{t("actions.hatch.yourNear")}</dt>
+            <dd className="fd-kv__num">{info.nearYocto === null ? "—" : t("actions.shared.nearAmount", { amount: formatYocto(info.nearYocto) })}</dd>
           </div>
         </dl>
         <StorageLine info={info} />
@@ -251,11 +241,11 @@ export function HatchModal({ wallet, info, onClose, onDone }: ChainActionProps) 
         <div className="fd-row">
           {done ? (
             <KeycapButton variant="primary" icon="check" onClick={onClose}>
-              close
+              {t("actions.shared.close")}
             </KeycapButton>
           ) : (
             <KeycapButton variant="primary" icon="spark" disabled={!check.ok || busy} onClick={() => void send(calls)} data-testid="hatch-sign">
-              {busy ? "waiting for wallet…" : "sign and hatch"}
+              {busy ? t("actions.shared.waitingWallet") : t("actions.hatch.sign")}
             </KeycapButton>
           )}
         </div>
@@ -270,6 +260,7 @@ export interface FeedModalProps extends ChainActionProps {
 }
 
 export function FeedModal({ wallet, info, onClose, onDone, preferredStrainId }: FeedModalProps) {
+  const { t } = useT();
   const owned = info.colony ?? [];
   const initial = owned.find((s) => s.strain_id === preferredStrainId)?.strain_id ?? owned[0]?.strain_id ?? null;
   const [strainId, setStrainId] = useState<number | null>(initial);
@@ -290,31 +281,31 @@ export function FeedModal({ wallet, info, onClose, onDone, preferredStrainId }: 
   const done = phase.kind === "done" && phase.result.ok;
 
   return (
-    <Modal title="feed.tx" heading="Feed a Snacc" onClose={onClose} testId="feed-modal" footer={<Footer />}>
+    <Modal title="feed.tx" heading={t("actions.feed.heading")} onClose={onClose} testId="feed-modal" footer={<Footer />}>
       <div className="fd-stack">
         <p className="fd-note">
-          <strong>Feeding burns $SNACC from the Snacc&apos;s own balance and restores its vitality.</strong> No NEAR is attached; you only pay gas.
+          <strong>{t("actions.feed.noteTitle")}</strong> {t("actions.feed.noteBody")}
         </p>
         {info.colony === null ? (
           <p className="fd-field__hint" role="status">
-            {info.loading ? "Reading your colony…" : "Could not read your colony from testnet. Try again in a moment."}
+            {info.loading ? t("actions.shared.readingColony") : t("actions.feed.colonyFailed")}
           </p>
         ) : owned.length === 0 ? (
           <p className="fd-field__hint" role="status" data-testid="feed-empty">
-            This account owns no living Snacc yet. Hatch one first.
+            {t("actions.feed.empty")}
           </p>
         ) : (
           <div className="fd-form-grid">
-            <Field id="feed-strain" label="your snacc">
+            <Field id="feed-strain" label={t("actions.shared.yourSnacc")}>
               <Select id="feed-strain" value={effectiveId ?? ""} onChange={(e) => setStrainId(Number(e.target.value))} disabled={busy}>
                 {owned.map((s) => (
                   <option key={s.strain_id} value={s.strain_id}>
-                    {`#${s.strain_id} · vitality ${s.effective_vitality.toLocaleString("en-US")} · ${s.status}`}
+                    {t("actions.feed.option", { id: s.strain_id, vitality: s.effective_vitality.toLocaleString("en-US"), status: s.status })}
                   </option>
                 ))}
               </Select>
             </Field>
-            <Field id="feed-amount" label="amount ($SNACC)" bad={!amountOk} hint={amountOk ? "burnt from the Snacc, not from your wallet" : "Enter an amount, e.g. 0.05."}>
+            <Field id="feed-amount" label={t("actions.feed.amount")} bad={!amountOk} hint={amountOk ? t("actions.feed.amountHint") : t("actions.feed.amountBad")}>
               <Input
                 id="feed-amount"
                 data-autofocus=""
@@ -331,12 +322,12 @@ export function FeedModal({ wallet, info, onClose, onDone, preferredStrainId }: 
         )}
         <dl className="fd-kv">
           <div className="fd-kv__row">
-            <dt>in your snaccs</dt>
-            <dd className="fd-kv__num">{inStrains === null ? "—" : `${formatYocto(inStrains)} $SNACC (all strains together)`}</dd>
+            <dt>{t("actions.feed.inSnaccs")}</dt>
+            <dd className="fd-kv__num">{inStrains === null ? "—" : t("actions.feed.inSnaccsValue", { amount: formatYocto(inStrains) })}</dd>
           </div>
           <div className="fd-kv__row">
-            <dt>gas, at most</dt>
-            <dd className="fd-kv__num">{calls.length ? `${formatYocto(maxGasFeeYocto(calls))} NEAR (unused gas is refunded)` : "—"}</dd>
+            <dt>{t("actions.shared.gasAtMost")}</dt>
+            <dd className="fd-kv__num">{calls.length ? t("actions.shared.gasValue", { amount: formatYocto(maxGasFeeYocto(calls)) }) : "—"}</dd>
           </div>
         </dl>
         <StorageLine info={info} />
@@ -345,11 +336,11 @@ export function FeedModal({ wallet, info, onClose, onDone, preferredStrainId }: 
         <div className="fd-row">
           {done ? (
             <KeycapButton variant="primary" icon="check" onClick={onClose}>
-              close
+              {t("actions.shared.close")}
             </KeycapButton>
           ) : (
             <KeycapButton variant="primary" icon="spark" disabled={calls.length === 0 || busy} onClick={() => void send(calls)} data-testid="feed-sign">
-              {busy ? (phase.kind === "pending" && phase.oneTap ? "sending (one-tap)…" : "waiting for wallet…") : "sign and feed"}
+              {busy ? (phase.kind === "pending" && phase.oneTap ? t("actions.shared.sendingOneTap") : t("actions.shared.waitingWallet")) : t("actions.feed.sign")}
             </KeycapButton>
           )}
         </div>

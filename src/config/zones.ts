@@ -4,6 +4,8 @@
  * The live zone still comes from the API / on-chain contract.
  */
 
+import type { MessageKey } from "../i18n/catalog.ts";
+
 export const HYPOTHERMIA_THRESHOLD_MK = 600;
 export const FEVER_THRESHOLD_MK = 610;
 
@@ -20,6 +22,16 @@ export function classifyZone(crucibleTempMk: number): MacroZone {
   if (crucibleTempMk < HYPOTHERMIA_THRESHOLD_MK) return "Hypothermia";
   return "Goldilocks";
 }
+
+/**
+ * UI-161: the dictionary key of each zone's one-line description (`actions.zone.*`, English and Indonesian).
+ * `ZONE_THEMES[zone].description` below keeps the English text as data; screens read the dictionary instead.
+ */
+export const ZONE_DESCRIPTION_KEYS = {
+  Hypothermia: "actions.zone.Hypothermia",
+  Goldilocks: "actions.zone.Goldilocks",
+  Fever: "actions.zone.Fever",
+} as const satisfies Record<MacroZone, MessageKey>;
 
 /**
  * The dish and cell glow palette per active zone.
