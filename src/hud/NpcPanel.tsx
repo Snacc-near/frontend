@@ -3,6 +3,9 @@
  * `npc_quote_spores` on `snacc-v001.testnet` and shows their values only; buying needs the signed
  * change call `npc_buy_spores`, which this wallet-less app cannot make. Demo mode runs the same
  * quote rule on local genesis state and labels every number as a simulation.
+ *
+ * UI-161 phase B3: text comes from the `npc` dictionary. Merchant names and roles (`NPC_SKIN`) and the
+ * contract's reasoning line stay as the data gives them.
  */
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { SkinMode } from "../config/constants.ts";
@@ -19,6 +22,7 @@ import {
   type NpcQuote,
 } from "../data/npc.ts";
 import { CONTRACT_ID } from "../data/nearView.ts";
+import { useT } from "../i18n/react.tsx";
 import { NpcReasoningTooltip } from "./NpcReasoningTooltip.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { CopyButton, Empty, Field, Input, KeycapButton, TabPanel, Tabs } from "../ui/controls.tsx";
@@ -35,8 +39,11 @@ export interface NpcPanelProps {
 }
 
 const QUICK_AMOUNTS = [1, 10, 50];
+/** The contract call the live note names; code, the same in every language. */
+const BUY_SIGNATURE = "npc_buy_spores(strain_id, npc_id, buy_amount)";
 
 export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance, onBuySpores }: NpcPanelProps) {
+  const { t, rich } = useT();
   const idBase = useId();
   const live = mode === "live";
   const [selected, setSelected] = useState<NpcId>("npc-extractor");
@@ -59,14 +66,14 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
     if (!live) return;
     setLiveQuote("loading");
     const ac = new AbortController();
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchNpcQuote(selected, amount, ac.signal).then((q) => {
         if (!ac.signal.aborted) setLiveQuote(q);
       });
     }, 300);
     return () => {
       ac.abort();
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [live, selected, amount]);
 
@@ -77,6 +84,7 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
   );
   const quote: NpcQuote | null = live ? (liveQuote === "loading" ? null : liveQuote) : demoQuote;
   const name = npcName(selected, skin);
+  const callTemplate = `npc_buy_spores(${JSON.stringify({ strain_id: "<your strain id>", npc_id: selected, buy_amount: amount })})`;
   // Every demo number carries its own SIMULATION chip.
   const V = ({ children }: { children: ReactNode }) => (
     <dd className="fd-kv__num">
@@ -88,11 +96,11 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
     if (!demoQuote) return;
     const cost = Number(demoQuote.total_cost_snacc);
     if (amount > demoNpcs[selected].spores_stock) {
-      setFeedback(`${name} holds only ${demoNpcs[selected].spores_stock} spores.`);
+      setFeedback(t("npc.holdsOnly", { name, n: demoNpcs[selected].spores_stock }));
       return;
     }
     if (cost > userSnaccBalance) {
-      setFeedback(`Not enough simulated $SNACC: need ${cost}, have ${userSnaccBalance}.`);
+      setFeedback(t("npc.notEnough", { cost, have: userSnaccBalance }));
       return;
     }
     setDemoNpcs((prev) => ({
@@ -105,25 +113,25 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
       },
     }));
     onBuySpores?.(selected, amount, cost);
-    setFeedback(`Simulation: bought ${amount} spores from ${name} for ${cost} simulated $SNACC.`);
+    setFeedback(t("npc.bought", { n: amount, name, cost }));
   };
 
   return (
     <Modal
-      title={skin === "fintech" ? "market-makers.view" : "npc-merchants.view"}
-      heading={skin === "fintech" ? "NPC market makers" : "NPC spore merchants"}
+      title={skin === "fintech" ? t("npc.titleFintech") : t("npc.titleBiolab")}
+      heading={skin === "fintech" ? t("npc.headingFintech") : t("npc.headingBiolab")}
       onClose={onClose}
       size="lg"
       testId="npc-modal"
       footer={
         live ? (
           <>
-            <span>contract views get_npc · npc_quote_spores on {CONTRACT_ID}</span>
-            <Tag>live · testnet</Tag>
+            <span>{t("npc.footerLive", { contract: CONTRACT_ID })}</span>
+            <Tag>{t("hud.resources.live")}</Tag>
           </>
         ) : (
           <>
-            <span>local copy of the contract rule on genesis state</span>
+            <span>{t("npc.footerDemo")}</span>
             <Sim />
           </>
         )
@@ -131,7 +139,7 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
     >
       <div className="fd-stack">
         <Tabs
-          label="NPC merchant"
+          label={t("npc.tabsLabel")}
           idBase={idBase}
           value={selected}
           onChange={(id) => {
@@ -141,13 +149,11 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
           tabs={NPC_IDS.map((id) => ({ id, label: NPC_SKIN[id][skin].name }))}
         />
         <TabPanel idBase={idBase} id={selected}>
-          <p className="fd-sub">
-            {NPC_SKIN[selected][skin].role} · <code>{selected}</code> · sells mt:spore-ignis
-          </p>
+          <p className="fd-sub">{rich("npc.sells", { role: NPC_SKIN[selected][skin].role, npc: <code>{selected}</code> })}</p>
           {live && liveNpcs === null ? (
-            <Empty icon="eye">reading get_npc from {CONTRACT_ID}…</Empty>
+            <Empty icon="eye">{t("npc.readingNpc", { contract: CONTRACT_ID })}</Empty>
           ) : !npc ? (
-            <Empty icon="warn">Could not read get_npc(&quot;{selected}&quot;) from {CONTRACT_ID}. No numbers are shown instead.</Empty>
+            <Empty icon="warn">{t("npc.noNpc", { id: selected, contract: CONTRACT_ID })}</Empty>
           ) : (
             <dl className="fd-kv" data-testid="npc-state">
               <div className="fd-kv__row">
@@ -156,9 +162,7 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
               </div>
               <div className="fd-kv__row">
                 <dt>spores_stock</dt>
-                <V>
-                  {npc.spores_stock} / target {npc.target_spores_stock}
-                </V>
+                <V>{t("npc.stockTarget", { stock: npc.spores_stock, target: npc.target_spores_stock })}</V>
               </div>
               <div className="fd-kv__row">
                 <dt>base_spore_price</dt>
@@ -175,7 +179,7 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
             </dl>
           )}
 
-          <Field id={`${idBase}-amount`} label="buy_amount (spores)">
+          <Field id={`${idBase}-amount`} label={t("npc.amountLabel")}>
             <div className="fd-row">
               <Input
                 id={`${idBase}-amount`}
@@ -195,9 +199,9 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
           </Field>
 
           {live && liveQuote === "loading" ? (
-            <Empty icon="eye">reading npc_quote_spores…</Empty>
+            <Empty icon="eye">{t("npc.readingQuote")}</Empty>
           ) : !quote ? (
-            <Empty icon="warn">The contract did not return a quote for this amount (the view rejects amounts it cannot fill).</Empty>
+            <Empty icon="warn">{t("npc.noQuote")}</Empty>
           ) : (
             <>
               <dl className="fd-kv" data-testid="npc-quote">
@@ -208,11 +212,11 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
                 <div className="fd-kv__row">
                   <dt>total_cost_snacc</dt>
                   <V>
-                    {String(quote.total_cost_snacc)} {live ? <Tag>raw yocto units</Tag> : null}
+                    {String(quote.total_cost_snacc)} {live ? <Tag>{t("npc.rawYocto")}</Tag> : null}
                   </V>
                 </div>
                 <div className="fd-kv__row">
-                  <dt>stock after</dt>
+                  <dt>{t("npc.stockAfter")}</dt>
                   <V>{quote.npc_spores_stock_after}</V>
                 </div>
                 <div className="fd-kv__row">
@@ -226,21 +230,18 @@ export function NpcPanel({ onClose, skin, crucibleTempMk, mode, userSnaccBalance
 
           {live ? (
             <div className="fd-stack">
-              <p className="fd-note">
-                Buying calls <code>npc_buy_spores(strain_id, npc_id, buy_amount)</code>, a signed change call. This app has no wallet
-                connection, so live mode is read-only.
-              </p>
+              <p className="fd-note">{rich("npc.buyNote", { call: <code>{BUY_SIGNATURE}</code> })}</p>
               <div className="fd-row">
-                <CopyButton label="copy call template" text={`npc_buy_spores(${JSON.stringify({ strain_id: "<your strain id>", npc_id: selected, buy_amount: amount })})`} />
+                <CopyButton label={t("npc.copyCall")} text={callTemplate} />
               </div>
             </div>
           ) : (
             <div className="fd-row">
               <KeycapButton variant="primary" icon="spark" onClick={buyDemo}>
-                buy in simulation
+                {t("npc.buyDemo")}
               </KeycapButton>
               <span className="fd-field__hint">
-                balance {userSnaccBalance.toLocaleString("en-US")} <Sim />
+                {t("npc.balance", { n: userSnaccBalance.toLocaleString("en-US") })} <Sim />
               </span>
             </div>
           )}

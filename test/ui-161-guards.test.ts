@@ -142,6 +142,11 @@ function convertedFiles(): string[] {
     "src/hud/SocialLeaderboardModal.tsx",
     "src/hud/NotificationsModal.tsx",
     "src/hud/IrisOverlay.tsx",
+    "src/hud/NpcPanel.tsx",
+    "src/hud/NpcReasoningTooltip.tsx",
+    "src/hud/SwapPanel.tsx",
+    "src/hud/RecipeSearchModal.tsx",
+    "src/hud/ThesisDashboardModal.tsx",
   ];
   return [...landing, ...hud, ...actions, ...windows,"src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
 }

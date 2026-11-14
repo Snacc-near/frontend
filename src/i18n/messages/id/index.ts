@@ -12,9 +12,10 @@ import demos from "./demos.ts";
 import hud from "./hud.ts";
 import landing from "./landing.ts";
 import market from "./market.ts";
+import npc from "./npc.ts";
 import settings from "./settings.ts";
 import skin from "./skin.ts";
 import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const id = { actions, collection, common, demos, hud, landing, market, settings, skin, social, tx } satisfies Messages<typeof en>;
+export const id = { actions, collection, common, demos, hud, landing, market, npc, settings, skin, social, tx } satisfies Messages<typeof en>;
