@@ -274,9 +274,8 @@ owner, status, vitality, "Open in game" = `/app?strain=<id>`).
 
 ### Daily quests, XP and seasons (UI-153, UI-154)
 
-**Status: built. It needs the backend migration `0004` (quests, XP, seasons) on the profile database; this
-README does not record that migration as applied, so treat quests, XP and seasons as unverified on production
-until the backend README says so.**
+**Status: deployed.** The backend migration `0004` (`snacc_quests_seasons`: quests, XP, seasons) is applied
+to the profile database (2026-11-13), and the production build carries the two Supabase variables.
 Behind the same two variables the toolbar gets a "quests" key. The Quests window shows today's three
 quests with progress bars, the countdown to the 00:00 UTC reset, the player's level and XP and a
 "How XP works" list; signed out, it explains that quests need a sign-in. Level shows on the Profile window,
