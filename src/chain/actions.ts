@@ -14,6 +14,12 @@
  * No keys and no signing here: the wallet signs. Every amount is an integer string in yocto.
  */
 import { CONTRACT_ID } from "../data/nearView.ts";
+import { t as translate, type MessageKey } from "../i18n/catalog.ts";
+import { getLocale } from "../i18n/locale.ts";
+import type { Vars } from "../i18n/types.ts";
+
+/** A reason string in the saved language (UI-161): only the returned text is translated, never the rule behind it. */
+const msg = (key: MessageKey, vars?: Vars): string => translate(getLocale(), key, vars);
 
 export { CONTRACT_ID };
 
@@ -184,11 +190,11 @@ export type StakeCheck = { ok: true; yocto: string } | { ok: false; reason: stri
 /** Validates the stake typed in the hatch form against the testnet bounds. */
 export function checkStake(input: string): StakeCheck {
   const yocto = parseNear(input);
-  if (yocto === null) return { ok: false, reason: "Enter an amount in NEAR, e.g. 0.25." };
+  if (yocto === null) return { ok: false, reason: msg("checks.stake.invalid") };
   const min = BigInt(parseNear(MIN_STAKE_NEAR)!);
   const max = BigInt(parseNear(MAX_STAKE_NEAR)!);
-  if (BigInt(yocto) < min) return { ok: false, reason: `The smallest stake here is ${MIN_STAKE_NEAR} NEAR.` };
-  if (BigInt(yocto) > max) return { ok: false, reason: `Keep the stake at ${MAX_STAKE_NEAR} NEAR or less on testnet.` };
+  if (BigInt(yocto) < min) return { ok: false, reason: msg("checks.stake.min", { min: MIN_STAKE_NEAR }) };
+  if (BigInt(yocto) > max) return { ok: false, reason: msg("checks.stake.max", { max: MAX_STAKE_NEAR }) };
   return { ok: true, yocto };
 }
 
@@ -305,16 +311,16 @@ export function checkAllocation(input: {
 }): Check & { cost: number } {
   const cost = allocationCost(input.current, input.target);
   const fail = (reason: string) => ({ ok: false as const, reason, cost });
-  if (isDead(input.status)) return fail("This Snacc is no longer alive.");
-  if (input.currentEpoch === null || input.lastAllocateEpoch === null) return fail("Waiting for the epoch read from testnet.");
-  if (input.lastAllocateEpoch === input.currentEpoch) return fail(`This Snacc already allocated ATP in epoch ${input.currentEpoch}. Once per epoch.`);
+  if (isDead(input.status)) return fail(msg("checks.dead"));
+  if (input.currentEpoch === null || input.lastAllocateEpoch === null) return fail(msg("checks.alloc.waitingEpoch"));
+  if (input.lastAllocateEpoch === input.currentEpoch) return fail(msg("checks.alloc.already", { epoch: input.currentEpoch }));
   for (const v of [input.target.mitokondria, input.target.nukleus, input.target.lisosom]) {
-    if (v < 0 || v > MAX_ORGANEL_LEVEL) return fail(`Each organelle level is 0 to ${MAX_ORGANEL_LEVEL}.`);
+    if (v < 0 || v > MAX_ORGANEL_LEVEL) return fail(msg("checks.alloc.levelRange", { max: MAX_ORGANEL_LEVEL }));
   }
   const same =
     input.target.mitokondria === input.current.mitokondria && input.target.nukleus === input.current.nukleus && input.target.lisosom === input.current.lisosom;
-  if (same) return fail("Change at least one level.");
-  if (BigInt(cost) > input.atp) return fail(`Needs ${cost} ATP; this Snacc has ${input.atp}.`);
+  if (same) return fail(msg("checks.alloc.same"));
+  if (BigInt(cost) > input.atp) return fail(msg("checks.alloc.needAtp", { cost, atp: String(input.atp) }));
   return { ok: true, cost };
 }
 
@@ -332,14 +338,14 @@ export function checkDivide(input: {
   colonySize: number | null;
   birthBudget: number | null;
 }): Check {
-  if (isDead(input.status)) return { ok: false, reason: "This Snacc is no longer alive." };
-  if (input.effectiveVitality <= 0) return { ok: false, reason: "A starving Snacc (vitality 0) cannot divide. Feed it first." };
-  if (input.atp < BigInt(ATP_COST.divide)) return { ok: false, reason: `Dividing costs ${ATP_COST.divide} ATP; this Snacc has ${input.atp}.` };
-  if (input.generation + 1 > MAX_GENERATION) return { ok: false, reason: `The child would be generation ${input.generation + 1}; the limit is ${MAX_GENERATION}.` };
-  if (input.colonySize === null) return { ok: false, reason: "Waiting for your colony read from testnet." };
-  if (input.colonySize >= MAX_COLONY_SIZE) return { ok: false, reason: `Your colony already has ${input.colonySize} living Snaccs (limit ${MAX_COLONY_SIZE}).` };
+  if (isDead(input.status)) return { ok: false, reason: msg("checks.dead") };
+  if (input.effectiveVitality <= 0) return { ok: false, reason: msg("checks.divide.starving") };
+  if (input.atp < BigInt(ATP_COST.divide)) return { ok: false, reason: msg("checks.divide.cost", { cost: ATP_COST.divide, atp: String(input.atp) }) };
+  if (input.generation + 1 > MAX_GENERATION) return { ok: false, reason: msg("checks.divide.generation", { gen: input.generation + 1, max: MAX_GENERATION }) };
+  if (input.colonySize === null) return { ok: false, reason: msg("checks.divide.waitingColony") };
+  if (input.colonySize >= MAX_COLONY_SIZE) return { ok: false, reason: msg("checks.divide.colony", { n: input.colonySize, max: MAX_COLONY_SIZE }) };
   if (input.birthBudget !== null && input.birthBudget < 1) {
-    return { ok: false, reason: "The contract allows a division only after a merger or a lysis frees a slot (total divides ≤ mergers + lyses)." };
+    return { ok: false, reason: msg("checks.divide.budget") };
   }
   return { ok: true };
 }
@@ -496,13 +502,13 @@ export function buildFtTransfer(input: { receiverId: string; amountYocto: string
 /** NEAR testnet account id: a `.testnet` named account or a 64-hex implicit account. */
 export function checkTestnetAccount(raw: string, self: string | null): { ok: true; id: string } | { ok: false; reason: string } {
   const id = raw.trim().toLowerCase();
-  if (!id) return { ok: false, reason: "Enter a testnet account, e.g. friend.testnet." };
+  if (!id) return { ok: false, reason: msg("checks.account.empty") };
   const named = /^(?:[a-z\d]+[-_])*[a-z\d]+(?:\.(?:[a-z\d]+[-_])*[a-z\d]+)*$/.test(id) && id.length >= 2 && id.length <= 64;
   const implicit = /^[0-9a-f]{64}$/.test(id);
   if (!implicit && !(named && id.endsWith(".testnet") && id !== "testnet")) {
-    return { ok: false, reason: "Use a testnet account id: name.testnet, or a 64-character implicit id." };
+    return { ok: false, reason: msg("checks.account.invalid") };
   }
-  if (self && id === self) return { ok: false, reason: "That is your own account." };
+  if (self && id === self) return { ok: false, reason: msg("checks.account.self") };
   return { ok: true, id };
 }
 

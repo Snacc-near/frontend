@@ -6,6 +6,7 @@
 import type { Messages } from "../../types.ts";
 import type { en } from "../en/index.ts";
 import actions from "./actions.ts";
+import checks from "./checks.ts";
 import collection from "./collection.ts";
 import common from "./common.ts";
 import demos from "./demos.ts";
@@ -18,4 +19,4 @@ import skin from "./skin.ts";
 import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const id = { actions, collection, common, demos, hud, landing, market, npc, settings, skin, social, tx } satisfies Messages<typeof en>;
+export const id = { actions, checks, collection, common, demos, hud, landing, market, npc, settings, skin, social, tx } satisfies Messages<typeof en>;

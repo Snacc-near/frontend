@@ -19,6 +19,12 @@ import { CONTRACT_ID, ONE_YOCTO, YOCTO_PER_NEAR, formatYocto, type ContractCall 
 import { parseOwnedToken, parseVessel } from "../data/collection.ts";
 import type { StrainDetail } from "../data/types.ts";
 import { MARKET_ID, viewCall } from "../data/nearView.ts";
+import { t as translate, type MessageKey } from "../i18n/catalog.ts";
+import { getLocale } from "../i18n/locale.ts";
+import type { Vars } from "../i18n/types.ts";
+
+/** A reason string in the saved language (UI-161): only the returned text is translated, never the rule behind it. */
+const msg = (key: MessageKey, vars?: Vars): string => translate(getLocale(), key, vars);
 
 export { CONTRACT_ID, MARKET_ID, YOCTO_PER_NEAR };
 
@@ -77,12 +83,12 @@ export function isValidPriceYocto(yocto: string): boolean {
 /** Validates the price typed in the Sell form (NEAR, decimal). */
 export function checkPrice(input: string): PriceCheck {
   const s = input.trim();
-  if (s === "") return { ok: false, reason: "Enter a price in NEAR, e.g. 1.5." };
+  if (s === "") return { ok: false, reason: msg("checks.price.empty") };
   const yocto = nearToYocto(s);
-  if (yocto === null) return { ok: false, reason: "Use digits and one dot only, with at most 24 decimals, e.g. 1.5." };
+  if (yocto === null) return { ok: false, reason: msg("checks.price.format") };
   const v = BigInt(yocto);
-  if (v === 0n) return { ok: false, reason: "The price must be greater than zero." };
-  if (v > MAX_PRICE_YOCTO) return { ok: false, reason: `The market accepts at most ${Number(MAX_PRICE_NEAR).toLocaleString("en-US")} NEAR per Snacc.` };
+  if (v === 0n) return { ok: false, reason: msg("checks.price.zero") };
+  if (v > MAX_PRICE_YOCTO) return { ok: false, reason: msg("checks.price.max", { max: Number(MAX_PRICE_NEAR).toLocaleString("en-US") }) };
   return { ok: true, yocto };
 }
 
@@ -242,9 +248,9 @@ export const isDeadStatus = (status: string): boolean => status === "Liquidated"
 
 /** Why a listing cannot be bought right now (shown on the disabled key), or null when it can. */
 export function buyBlockReason(row: MarketRow, accountId: string | null): string | null {
-  if (!accountId) return "connect a wallet to buy";
-  if (row.listing.sellerId === accountId) return "this is your own listing";
-  if (row.vessel && isDeadStatus(row.vessel.status)) return "this Snacc has died and cannot be transferred";
+  if (!accountId) return msg("checks.buy.connect");
+  if (row.listing.sellerId === accountId) return msg("checks.buy.own");
+  if (row.vessel && isDeadStatus(row.vessel.status)) return msg("checks.buy.dead");
   return null;
 }
 
@@ -306,16 +312,17 @@ export async function confirmExpectation(
 
 /** Plain-English line for a transaction the wallet reported as successful but the views do not show. */
 export function notConfirmedMessage(exp: Expectation, outcome: Confirmation): string {
-  const lag = outcome === "unknown" ? " The testnet RPC did not answer, so this could not be checked: refresh in a moment." : "";
+  const lag = outcome === "unknown" ? msg("checks.notConfirmed.lag") : "";
+  const id = exp.tokenId;
   switch (exp.kind) {
     case "listed":
-      return `The transaction finished but no listing for Snacc #${exp.tokenId} shows up. The market hands the Snacc back when it refuses a listing (price out of range, new listings paused, or a limit reached). Check My collection.${lag}`;
+      return `${msg("checks.notConfirmed.listed", { id })}${lag}`;
     case "repriced":
-      return `The transaction finished but the price of Snacc #${exp.tokenId} is not the new one yet. Refresh in a few seconds.${lag}`;
+      return `${msg("checks.notConfirmed.repriced", { id })}${lag}`;
     case "delisted":
-      return `The transaction finished but Snacc #${exp.tokenId} is not back with you yet. Refresh in a few seconds; if the listing stays, the Snacc may have died while listed.${lag}`;
+      return `${msg("checks.notConfirmed.delisted", { id })}${lag}`;
     case "bought":
-      return `The transaction finished but Snacc #${exp.tokenId} is not yours. The market refunds the full price when a Snacc cannot be transferred (it died, or it was bought or delisted at the same moment); only gas is spent.${lag}`;
+      return `${msg("checks.notConfirmed.bought", { id })}${lag}`;
   }
 }
 

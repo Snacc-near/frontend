@@ -6,6 +6,7 @@
  * to the Indonesian index.
  */
 import actions from "./actions.ts";
+import checks from "./checks.ts";
 import collection from "./collection.ts";
 import common from "./common.ts";
 import demos from "./demos.ts";
@@ -18,4 +19,4 @@ import skin from "./skin.ts";
 import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const en = { actions, collection, common, demos, hud, landing, market, npc, settings, skin, social, tx };
+export const en = { actions, checks, collection, common, demos, hud, landing, market, npc, settings, skin, social, tx };
