@@ -4,6 +4,9 @@
  * shows an empty state. Demo mode shows invented feeders, each number labelled SIMULATION.
  * With the profile features on, tabs add most active, longest streaks and (UI-154) the season XP board
  * with its hall of fame; rows show the player's level. UI-156 adds a "graveyard" tab (public chain history of the Snaccs that died).
+ *
+ * UI-161 phase B3: text comes from the `social.leaderboard` dictionary. The near.social post is content the
+ * player copies out, so it stays English.
  */
 import { useEffect, useId, useState } from "react";
 import { useAccount } from "../account/session.tsx";
@@ -12,17 +15,17 @@ import { SeasonBoardPanel } from "./SeasonBoard.tsx";
 import { GraveyardPanel } from "./Graveyard.tsx";
 import { useWallet } from "../chain/wallet.tsx";
 import { KeycapButton, TabPanel, Tabs, type TabDef } from "../ui/controls.tsx";
+import type { Translate } from "../i18n/catalog.ts";
+import { useT } from "../i18n/react.tsx";
 
 type BoardTab = "feeders" | "active" | "streaks" | "season" | "graveyard";
-const BOARD_TABS: readonly TabDef<BoardTab>[] = [
-  { id: "feeders", label: "top feeders", icon: "podium" },
-  { id: "active", label: "most active (7 days)", icon: "spark" },
-  { id: "streaks", label: "longest streaks", icon: "lines" },
-  { id: "season", label: "season xp", icon: "gauge" },
-  { id: "graveyard", label: "graveyard", icon: "ring" },
+const boardTabs = (t: Translate): readonly TabDef<BoardTab>[] => [
+  { id: "feeders", label: t("social.leaderboard.tabs.feeders"), icon: "podium" },
+  { id: "active", label: t("social.leaderboard.tabs.active"), icon: "spark" },
+  { id: "streaks", label: t("social.leaderboard.tabs.streaks"), icon: "lines" },
+  { id: "season", label: t("social.leaderboard.tabs.season"), icon: "gauge" },
+  { id: "graveyard", label: t("social.leaderboard.tabs.graveyard"), icon: "ring" },
 ];
-/** The tabs that read public chain data only (no player boards): available as soon as the profile database is configured. */
-const PUBLIC_TABS: readonly TabDef<BoardTab>[] = BOARD_TABS.filter((t) => t.id === "feeders" || t.id === "graveyard");
 import type { GameMode, SkinMode } from "../config/constants.ts";
 import type { AppetiteViewModel } from "../data/types.ts";
 import { DEMO_FEAST, fetchFeastBoard, formatSnacc, formatSocialPost, type FeastBoard } from "../swap/socialFormat.ts";
@@ -51,6 +54,7 @@ function boardFromAppetite(a: AppetiteViewModel | null): FeastBoard | null {
 }
 
 export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab" }: SocialLeaderboardModalProps) {
+  const { t, rich } = useT();
   const live = mode === "live";
   const fromBackend = live ? boardFromAppetite(appetite) : null;
   const [rpcBoard, setRpcBoard] = useState<FeastBoard | null | "loading">(live && !fromBackend ? "loading" : null);
@@ -67,7 +71,11 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
   }, [live]);
 
   const board: FeastBoard | null = live ? (fromBackend ?? (rpcBoard === "loading" ? null : rpcBoard)) : DEMO_FEAST;
-  const source = live ? (fromBackend ? "backend /api/appetite" : `contract views on ${CONTRACT_ID}`) : "demo fixture";
+  const source = live
+    ? fromBackend
+      ? t("social.leaderboard.srcBackend")
+      : t("social.leaderboard.srcContract", { contract: CONTRACT_ID })
+    : t("social.leaderboard.srcDemo");
   const S = () => (live ? null : <Sim />);
 
   // UI-148: player names and boards, only with the profile features on and a loaded client.
@@ -86,37 +94,47 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
   const levels = useLevels(players && live ? client : null, feeders.map((f) => f.account_id));
   const tabsId = useId();
   const graveyard = account.enabled && tab === "graveyard";
-  const boardSource =
-    graveyard
-      ? "graveyard_snacc (chain index of the contract's events)"
-      : players && tab === "active"
-      ? "activity_snacc, last 7 days"
+  const allTabs = boardTabs(t);
+  /** The tabs that read public chain data only (no player boards): available as soon as the profile database is configured. */
+  const publicTabs = allTabs.filter((x) => x.id === "feeders" || x.id === "graveyard");
+  const boardSource = graveyard
+    ? t("social.leaderboard.srcGraveyard")
+    : players && tab === "active"
+      ? t("social.leaderboard.srcActive")
       : players && tab === "streaks"
-        ? "streaks_snacc"
+        ? t("social.leaderboard.srcStreaks")
         : players && tab === "season"
-          ? "season_leaderboard_snacc, hall_of_fame_snacc"
+          ? t("social.leaderboard.srcSeason")
           : null;
 
   return (
     <Modal
-      title="great-feast.md"
-      heading={skin === "fintech" ? "Top feeders board" : "The Great Feast"}
+      title={t("social.leaderboard.title")}
+      heading={skin === "fintech" ? t("social.leaderboard.headingFintech") : t("social.leaderboard.headingBiolab")}
       onClose={onClose}
       testId="social-modal"
       footer={
         <>
-          <span>source: {boardSource ?? source}</span>
-          {graveyard ? <Tag>chain index · testnet</Tag> : boardSource ? <Tag>profile database</Tag> : live ? <Tag>live · testnet</Tag> : <Sim />}
+          <span>{t("social.leaderboard.sourceLine", { source: boardSource ?? source })}</span>
+          {graveyard ? (
+            <Tag>{t("social.leaderboard.tagChainIndex")}</Tag>
+          ) : boardSource ? (
+            <Tag>{t("social.leaderboard.tagProfileDb")}</Tag>
+          ) : live ? (
+            <Tag>{t("hud.resources.live")}</Tag>
+          ) : (
+            <Sim />
+          )}
         </>
       }
     >
       <div className="fd-stack">
         {account.enabled ? (
           <div className="fd-stack" data-testid="board-tabs">
-            <Tabs label="leaderboards" idBase={tabsId} tabs={players ? BOARD_TABS : PUBLIC_TABS} value={tab} onChange={setTab} />
+            <Tabs label={t("social.leaderboard.tabsLabel")} idBase={tabsId} tabs={players ? allTabs : publicTabs} value={tab} onChange={setTab} />
             {following && tab !== "graveyard" ? (
               <KeycapButton mono icon={onlyFollowing ? "check" : "user"} aria-pressed={onlyFollowing} onClick={() => setOnlyFollowing((v) => !v)} data-testid="board-following">
-                {onlyFollowing ? `following only (${following.size})` : "show only players I follow"}
+                {onlyFollowing ? t("social.leaderboard.followingOnly", { n: following.size }) : t("social.leaderboard.followingShow")}
               </KeycapButton>
             ) : null}
           </div>
@@ -128,47 +146,47 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
         ) : players && tab === "active" ? (
           <TabPanel idBase={tabsId} id="active">
             <ActivityBoard client={client} only={only} />
-            <p className="fd-field__hint">Counts signed actions recorded by signed-in players in the last 7 days (activity_snacc).</p>
+            <p className="fd-field__hint">{t("social.leaderboard.activeNote")}</p>
           </TabPanel>
         ) : players && tab === "streaks" ? (
           <TabPanel idBase={tabsId} id="streaks">
             <StreakBoard client={client} only={only} />
-            <p className="fd-field__hint">Days in a row with at least one recorded feed (streaks_snacc).</p>
+            <p className="fd-field__hint">{t("social.leaderboard.streakNote")}</p>
           </TabPanel>
         ) : players && tab === "season" ? (
           <TabPanel idBase={tabsId} id="season">
             <SeasonBoardPanel client={client} only={only} />
           </TabPanel>
         ) : live && rpcBoard === "loading" && !fromBackend ? (
-          <Empty icon="eye">reading get_appetite_meter and get_top_feeder…</Empty>
+          <Empty icon="eye">{t("social.leaderboard.readingFeast")}</Empty>
         ) : !board ? (
-          <Empty icon="podium">No Great Feast data yet: the backend and the testnet RPC returned nothing. Nothing is shown in its place.</Empty>
+          <Empty icon="podium">{t("social.leaderboard.noData")}</Empty>
         ) : (
           <>
             <dl className="fd-kv" data-testid="feast-stats">
               <div className="fd-kv__row">
-                <dt>epoch</dt>
+                <dt>{t("social.leaderboard.epoch")}</dt>
                 <dd className="fd-kv__num">
                   {board.epoch ?? "—"} <S />
                 </dd>
               </div>
               <div className="fd-kv__row">
-                <dt>zone · temp</dt>
+                <dt>{t("social.leaderboard.zoneTemp")}</dt>
                 <dd className="fd-kv__num">
                   {board.zone ?? "—"} · {board.crucibleTempMk ?? "—"} mK <S />
                 </dd>
               </div>
               <div className="fd-kv__row">
-                <dt>feast volume</dt>
+                <dt>{t("social.leaderboard.feastVolume")}</dt>
                 <dd className="fd-kv__num">
-                  {formatSnacc(board.feastVolume)} of {formatSnacc(board.feastTarget)} $SNACC <S />
+                  {t("social.leaderboard.volumeOf", { vol: formatSnacc(board.feastVolume), target: formatSnacc(board.feastTarget) })} <S />
                 </dd>
               </div>
             </dl>
             {board.topFeeders.length === 0 ? (
-              <Empty icon="podium">No feeds recorded this epoch.</Empty>
+              <Empty icon="podium">{t("social.leaderboard.noFeeds")}</Empty>
             ) : (
-              <ol className="fd-list" aria-label="top feeders" data-testid="feast-podium">
+              <ol className="fd-list" aria-label={t("social.leaderboard.podiumLabel")} data-testid="feast-podium">
                 {(only ? feeders : board.topFeeders.slice(0, 3)).map((f, i) => (
                   <li key={f.account_id} className="fd-row" data-first={i === 0 ? "" : undefined}>
                     <span className="fd-list__rank" aria-hidden="true">
@@ -186,15 +204,13 @@ export function SocialLeaderboardModal({ onClose, appetite, mode, skin = "biolab
                 ))}
               </ol>
             )}
-            <section className="fd-stack" aria-label="near.social post">
+            <section className="fd-stack" aria-label={t("social.leaderboard.postRegion")}>
               <div className="fd-row fd-row--between">
-                <span className="fd-sub">near.social post (markdown)</span>
-                <CopyButton label="copy post" text={formatSocialPost(board, { simulated: !live })} />
+                <span className="fd-sub">{t("social.leaderboard.postTitle")}</span>
+                <CopyButton label={t("social.leaderboard.postCopy")} text={formatSocialPost(board, { simulated: !live })} />
               </div>
               <pre className="fd-pre">{formatSocialPost(board, { simulated: !live })}</pre>
-              <p className="fd-field__hint">
-                This app posts nothing; copy the text and post it yourself on <ExtLink href="https://near.social">near.social</ExtLink>.
-              </p>
+              <p className="fd-field__hint">{rich("social.leaderboard.postNote", { link: <ExtLink href="https://near.social">near.social</ExtLink> })}</p>
             </section>
           </>
         )}

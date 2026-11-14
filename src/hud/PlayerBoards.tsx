@@ -12,6 +12,7 @@ import { followeesOf, levelsByAccounts, profilesByAccounts, profilesByUsers, top
 import { mergeNames, rankActivity, type StreakRow } from "../account/model.ts";
 import { levelMap } from "../account/quests.ts";
 import { profilePath } from "../account/config.ts";
+import { useT } from "../i18n/react.tsx";
 import { Empty } from "../ui/controls.tsx";
 import { LevelBadge } from "./XpWidgets.tsx";
 import "../account/account.css";
@@ -119,6 +120,7 @@ export function useFollowing(client: SupabaseClient | null): Set<string> | null 
 type Rows<T> = T[] | null | "error";
 
 export function ActivityBoard({ client, only }: { client: SupabaseClient | null; only: Set<string> | null }) {
+  const { t } = useT();
   const [rows, setRows] = useState<Rows<{ account_id: string; count: number }>>(null);
   useEffect(() => {
     if (!client) return;
@@ -133,20 +135,18 @@ export function ActivityBoard({ client, only }: { client: SupabaseClient | null;
   const shown = Array.isArray(rows) ? rows.filter((r) => !only || only.has(r.account_id)).slice(0, 10) : [];
   const names = useNames(client, shown.map((r) => r.account_id));
   const levels = useLevels(client, shown.map((r) => r.account_id));
-  if (rows === null) return <Empty icon="eye">reading activity_snacc…</Empty>;
-  if (rows === "error") return <Empty icon="warn">The profile database did not answer. Nothing is shown in its place.</Empty>;
-  if (shown.length === 0) return <Empty icon="podium">{only ? "Nobody you follow has recorded activity in the last 7 days." : "No recorded activity in the last 7 days."}</Empty>;
+  if (rows === null) return <Empty icon="eye">{t("social.boards.readingActivity")}</Empty>;
+  if (rows === "error") return <Empty icon="warn">{t("social.boards.dbDown")}</Empty>;
+  if (shown.length === 0) return <Empty icon="podium">{only ? t("social.boards.noActivityFollow") : t("social.boards.noActivity")}</Empty>;
   return (
-    <ol className="fd-list" aria-label="most active players, last 7 days" data-testid="board-active">
+    <ol className="fd-list" aria-label={t("social.boards.activeLabel")} data-testid="board-active">
       {shown.map((r, i) => (
         <li key={r.account_id} className="fd-row" data-first={i === 0 ? "" : undefined}>
           <span className="fd-list__rank" aria-hidden="true">
             {i + 1}
           </span>
           <PlayerName account={r.account_id} username={names.get(r.account_id) ?? null} level={levels.get(r.account_id)} />
-          <span className="fd-num feast-amount">
-            {r.count} signed action{r.count === 1 ? "" : "s"}
-          </span>
+          <span className="fd-num feast-amount">{t(r.count === 1 ? "social.boards.actionOne" : "social.boards.actionMany", { n: r.count })}</span>
         </li>
       ))}
     </ol>
@@ -154,6 +154,7 @@ export function ActivityBoard({ client, only }: { client: SupabaseClient | null;
 }
 
 export function StreakBoard({ client, only }: { client: SupabaseClient | null; only: Set<string> | null }) {
+  const { t } = useT();
   const [rows, setRows] = useState<Rows<StreakRow>>(null);
   useEffect(() => {
     if (!client) return;
@@ -168,20 +169,18 @@ export function StreakBoard({ client, only }: { client: SupabaseClient | null; o
   const shown = Array.isArray(rows) ? rows.filter((r) => !only || only.has(r.near_account_id)).slice(0, 10) : [];
   const names = useNames(client, shown.map((r) => r.near_account_id));
   const levels = useLevels(client, shown.map((r) => r.near_account_id));
-  if (rows === null) return <Empty icon="eye">reading streaks_snacc…</Empty>;
-  if (rows === "error") return <Empty icon="warn">The profile database did not answer. Nothing is shown in its place.</Empty>;
-  if (shown.length === 0) return <Empty icon="podium">{only ? "Nobody you follow has a feed streak right now." : "No feed streaks yet."}</Empty>;
+  if (rows === null) return <Empty icon="eye">{t("social.boards.readingStreaks")}</Empty>;
+  if (rows === "error") return <Empty icon="warn">{t("social.boards.dbDown")}</Empty>;
+  if (shown.length === 0) return <Empty icon="podium">{only ? t("social.boards.noStreakFollow") : t("social.boards.noStreaks")}</Empty>;
   return (
-    <ol className="fd-list" aria-label="longest feed streaks" data-testid="board-streaks">
+    <ol className="fd-list" aria-label={t("social.boards.streaksLabel")} data-testid="board-streaks">
       {shown.map((r, i) => (
         <li key={r.near_account_id} className="fd-row" data-first={i === 0 ? "" : undefined}>
           <span className="fd-list__rank" aria-hidden="true">
             {i + 1}
           </span>
           <PlayerName account={r.near_account_id} username={names.get(r.near_account_id) ?? null} level={levels.get(r.near_account_id)} />
-          <span className="fd-num feast-amount">
-            {r.current_streak_days} day{r.current_streak_days === 1 ? "" : "s"}
-          </span>
+          <span className="fd-num feast-amount">{t(r.current_streak_days === 1 ? "social.boards.dayOne" : "social.boards.dayMany", { n: r.current_streak_days })}</span>
         </li>
       ))}
     </ol>

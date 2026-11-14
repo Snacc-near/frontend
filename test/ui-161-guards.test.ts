@@ -133,6 +133,15 @@ function convertedFiles(): string[] {
     "src/hud/MyCollection.tsx",
     "src/hud/StrainDetailModal.tsx",
     "src/hud/Graveyard.tsx",
+    "src/hud/ProfileModal.tsx",
+    "src/hud/InviteFriends.tsx",
+    "src/hud/GuestLabelModal.tsx",
+    "src/hud/QuestsModal.tsx",
+    "src/hud/SeasonBoard.tsx",
+    "src/hud/PlayerBoards.tsx",
+    "src/hud/SocialLeaderboardModal.tsx",
+    "src/hud/NotificationsModal.tsx",
+    "src/hud/IrisOverlay.tsx",
   ];
   return [...landing, ...hud, ...actions, ...windows,"src/help/LanguageSettings.tsx", "src/i18n/LanguageToggle.tsx", "src/i18n/react.tsx"];
 }

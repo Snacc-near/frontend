@@ -14,6 +14,7 @@ import landing from "./landing.ts";
 import market from "./market.ts";
 import settings from "./settings.ts";
 import skin from "./skin.ts";
+import social from "./social.ts";
 import tx from "./tx.ts";
 
-export const en = { actions, collection, common, demos, hud, landing, market, settings, skin, tx };
+export const en = { actions, collection, common, demos, hud, landing, market, settings, skin, social, tx };

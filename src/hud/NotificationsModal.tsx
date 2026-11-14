@@ -4,21 +4,17 @@
  * an urgency line plus a "Feed now" button that opens the signed feed window for that Snacc. The
  * Settings window holds a toggle per kind (`notification_prefs_snacc`), the optional browser alerts (tab open)
  * and "Push to this device" (UI-160: Web Push, reaches a closed tab).
+ *
+ * UI-161 phase B3: text comes from the `social.notif` dictionary. A notification's title and body are
+ * written by the server and are shown as they arrive.
  */
 import { useEffect, useState } from "react";
 import { useNotifications, type BrowserAlertState } from "../account/notifications.tsx";
 import { useAccount } from "../account/session.tsx";
 import { loadNotificationPrefs, saveNotificationPrefs } from "../account/api.ts";
-import {
-  NOTIFICATION_KINDS,
-  NOTIFICATION_KIND_LABELS,
-  NOTIFICATION_KIND_TAGS,
-  feedTargetOf,
-  opensStrain,
-  urgencyOf,
-  type NotificationPrefs,
-  type NotificationRow,
-} from "../account/model.ts";
+import { NOTIFICATION_KINDS, feedTargetOf, opensStrain, type NotificationPrefs, type NotificationRow } from "../account/model.ts";
+import { useT } from "../i18n/react.tsx";
+import { urgencyText } from "../i18n/socialText.ts";
 import { PushToggle } from "../push/PushToggle.tsx";
 import { Modal } from "../ui/Modal.tsx";
 import { Empty, KeycapButton } from "../ui/controls.tsx";
@@ -37,6 +33,7 @@ export function NotificationsModal({
   /** Present only while a wallet is connected (the feed is a signed transaction). */
   onFeedStrain?: (strainId: number) => void;
 }) {
+  const { t } = useT();
   const n = useNotifications();
   const open = (item: NotificationRow) => {
     n.markRead(item.id);
@@ -48,31 +45,31 @@ export function NotificationsModal({
   };
   return (
     <Modal
-      title="notifications.log"
-      heading="Notifications"
+      title={t("social.notif.title")}
+      heading={t("social.notif.heading")}
       onClose={onClose}
       testId="notif-modal"
       footer={
         <>
-          <span>live from the Snacc profile database · choose kinds in settings</span>
-          <Tag>{n.unread} unread</Tag>
+          <span>{t("social.notif.footer")}</span>
+          <Tag>{t("social.notif.unread", { n: n.unread })}</Tag>
         </>
       }
     >
       <div className="fd-stack">
         <div className="fd-row fd-row--between">
-          <span className="fd-sub">{n.items.length === 0 ? "nothing yet" : `${n.items.length} shown, newest first`}</span>
+          <span className="fd-sub">{n.items.length === 0 ? t("social.notif.nothing") : t("social.notif.shown", { n: n.items.length })}</span>
           <KeycapButton mono icon="check" onClick={n.markAllRead} disabled={n.unread === 0} data-testid="notif-mark-all">
-            mark all read
+            {t("social.notif.markAll")}
           </KeycapButton>
         </div>
         {n.items.length === 0 ? (
-          <Empty icon="warn">No notifications. Alerts about hungry Snaccs, the industrial pool and the starter pack appear here while you are signed in.</Empty>
+          <Empty icon="warn">{t("social.notif.empty")}</Empty>
         ) : (
           <ol className="fd-list" data-testid="notif-list">
             {n.items.map((item) => {
               const feedId = feedTargetOf(item);
-              const urgency = urgencyOf(item);
+              const urgency = urgencyText(t, item);
               return (
               <li key={item.id} className="acct-notif" data-unread={item.read_at ? undefined : ""} data-urgent={urgency ? "" : undefined}>
                 <span className="acct-notif__dot" aria-hidden="true" />
@@ -91,19 +88,19 @@ export function NotificationsModal({
                     </span>
                   ) : null}
                   <span className="acct-notif__when">
-                    {NOTIFICATION_KIND_TAGS[item.kind] ?? item.kind} · {when(item.created_at)}
-                    {item.read_at ? " · read" : ""}
+                    {NOTIFICATION_KINDS.includes(item.kind) ? t(`social.notif.tags.${item.kind}`) : item.kind} · {when(item.created_at)}
+                    {item.read_at ? t("social.notif.readSuffix") : ""}
                   </span>
                 </span>
                 <span className="fd-stack" style={{ gap: 4, alignItems: "flex-end" }}>
                   {feedId !== null && onFeedStrain ? (
-                    <KeycapButton mono icon="warn" onClick={() => feed(item, feedId)} data-testid={`notif-feed-${item.id}`} aria-label={`feed Snacc #${feedId} now`}>
-                      feed now
+                    <KeycapButton mono icon="warn" onClick={() => feed(item, feedId)} data-testid={`notif-feed-${item.id}`} aria-label={t("social.notif.feedLabel", { id: feedId })}>
+                      {t("social.notif.feedNow")}
                     </KeycapButton>
                   ) : null}
                   {item.read_at ? null : (
-                    <KeycapButton mono onClick={() => n.markRead(item.id)} aria-label={`mark "${item.title}" as read`}>
-                      read
+                    <KeycapButton mono onClick={() => n.markRead(item.id)} aria-label={t("social.notif.markRead", { title: item.title })}>
+                      {t("social.notif.read")}
                     </KeycapButton>
                   )}
                 </span>
@@ -113,7 +110,7 @@ export function NotificationsModal({
           </ol>
         )}
         {n.items.some((i) => feedTargetOf(i) !== null) && !onFeedStrain ? (
-          <span className="fd-sub" data-testid="notif-connect-hint">Connect a wallet to feed a hungry Snacc straight from here.</span>
+          <span className="fd-sub" data-testid="notif-connect-hint">{t("social.notif.connectHint")}</span>
         ) : null}
         <BrowserAlertsToggle />
       </div>
@@ -121,14 +118,15 @@ export function NotificationsModal({
   );
 }
 
-const ALERT_TEXT: Record<BrowserAlertState, string> = {
-  unsupported: "This browser has no notification support.",
-  off: "Browser alerts are off. Turning them on asks the browser for permission; alerts show only while this tab is open. To be notified when Snacc is closed, use push to this device below.",
-  on: "Browser alerts are on while this tab is open. To be notified when Snacc is closed, use push to this device below.",
-  blocked: "The browser blocks notifications for this site. Allow them in the site settings to use browser alerts.",
-};
+const ALERT_KEYS = {
+  unsupported: "social.notif.alertsUnsupported",
+  off: "social.notif.alertsOffText",
+  on: "social.notif.alertsOnText",
+  blocked: "social.notif.alertsBlocked",
+} as const satisfies Record<BrowserAlertState, string>;
 
 export function BrowserAlertsToggle() {
+  const { t } = useT();
   const n = useNotifications();
   if (!n.enabled) return null;
   return (
@@ -136,15 +134,15 @@ export function BrowserAlertsToggle() {
       <div className="fd-row">
         {n.browserAlerts === "on" ? (
           <KeycapButton mono icon="close" onClick={n.disableBrowserAlerts}>
-            turn off browser alerts
+            {t("social.notif.turnOff")}
           </KeycapButton>
         ) : n.browserAlerts === "off" ? (
           <KeycapButton mono icon="warn" onClick={() => void n.enableBrowserAlerts()} data-testid="browser-alerts-on">
-            turn on browser alerts
+            {t("social.notif.turnOn")}
           </KeycapButton>
         ) : null}
       </div>
-      <p className="fd-field__hint">{ALERT_TEXT[n.browserAlerts]}</p>
+      <p className="fd-field__hint">{t(ALERT_KEYS[n.browserAlerts])}</p>
       <PushToggle />
     </div>
   );
@@ -152,6 +150,7 @@ export function BrowserAlertsToggle() {
 
 /** Settings section: which kinds of notifications to receive (`notification_prefs_snacc`). */
 export function NotificationSettings() {
+  const { t } = useT();
   const account = useAccount();
   const { client, userId } = account;
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -172,9 +171,9 @@ export function NotificationSettings() {
     return (
       <section className="guide-section" aria-labelledby="settings-notif-h" data-testid="settings-notif">
         <h4 id="settings-notif-h" className="fd-h">
-          Notifications
+          {t("social.notif.settingsTitle")}
         </h4>
-        <p className="fd-field__hint">Sign in to the profile (the key next to your wallet) to choose which notifications you receive.</p>
+        <p className="fd-field__hint">{t("social.notif.settingsSignIn")}</p>
       </section>
     );
   }
@@ -184,22 +183,22 @@ export function NotificationSettings() {
     const next = { ...prefs, [kind]: !prefs[kind] };
     setPrefs(next);
     const err = await saveNotificationPrefs(client, userId, next);
-    setMsg(err ? `Not saved: ${err}` : "Saved.");
+    setMsg(err ? t("social.notif.notSaved", { err }) : t("social.notif.saved"));
   };
 
   return (
     <section className="guide-section" aria-labelledby="settings-notif-h" data-testid="settings-notif">
       <h4 id="settings-notif-h" className="fd-h">
-        Notifications
+        {t("social.notif.settingsTitle")}
       </h4>
-      <p className="fd-field__hint">These choices are saved to your profile in the Snacc profile database, not in this browser.</p>
+      <p className="fd-field__hint">{t("social.notif.settingsSaved")}</p>
       {prefs === null ? (
-        <p className="fd-field__hint">reading your notification settings…</p>
+        <p className="fd-field__hint">{t("social.notif.settingsReading")}</p>
       ) : (
         <div className="fd-stack">
           {NOTIFICATION_KINDS.map((k) => (
             <KeycapButton key={k} mono icon={prefs[k] ? "check" : "close"} role="switch" aria-checked={prefs[k]} onClick={() => void toggle(k)} data-testid={`notif-pref-${k}`}>
-              {NOTIFICATION_KIND_LABELS[k]}
+              {t(`social.notif.kinds.${k}`)}
             </KeycapButton>
           ))}
           {msg ? (
